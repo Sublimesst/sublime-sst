@@ -1,0 +1,158 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Users, CheckCircle, Clock, Building2, TrendingUp, Download } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
+
+interface Stats {
+  totalLeads: number
+  eligibleLeads: number
+  backofficeLeads: number
+  registrations: number
+  partners: number
+  referrals: number
+}
+
+interface RecentLead {
+  id: string
+  companyName: string
+  name: string
+  status: string
+  createdAt: string
+  eligibilityAssessments: { eligible: boolean }[]
+}
+
+function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: number | string; color: string }) {
+  return (
+    <div className="bg-white rounded-[12px] border border-gray-200 p-5">
+      <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center mb-3 ${color}`}>
+        <Icon size={18} className="text-white" />
+      </div>
+      <div className="text-2xl font-bold text-gray-900 mb-0.5">{value}</div>
+      <div className="text-[13px] text-gray-500">{label}</div>
+    </div>
+  )
+}
+
+const STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  captured: { label: 'Capturado', color: 'bg-gray-100 text-gray-700' },
+  assessed: { label: 'Avaliado', color: 'bg-blue-100 text-blue-700' },
+  eligible: { label: 'Elegível', color: 'bg-green-100 text-green-700' },
+  backoffice: { label: 'Backoffice', color: 'bg-amber-100 text-amber-700' },
+  registered: { label: 'Cadastrado', color: 'bg-teal-100 text-teal-700' },
+  converted: { label: 'Convertido', color: 'bg-purple-100 text-purple-700' },
+}
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [recentLeads, setRecentLeads] = useState<RecentLead[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const secret = sessionStorage.getItem('admin_secret') ?? ''
+    const headers = { 'x-admin-secret': secret }
+
+    Promise.all([
+      fetch('/api/leads?limit=10', { headers }).then(r => r.json()),
+      fetch('/api/partners', { headers }).then(r => r.json()),
+    ]).then(([leadsRes, partnersRes]) => {
+      if (leadsRes.success) {
+        const leads: RecentLead[] = leadsRes.data.leads
+        setRecentLeads(leads)
+        setStats({
+          totalLeads: leadsRes.data.total,
+          eligibleLeads: leads.filter(l => l.status === 'eligible' || l.status === 'registered' || l.status === 'converted').length,
+          backofficeLeads: leads.filter(l => l.status === 'backoffice').length,
+          registrations: leads.filter(l => l.status === 'registered' || l.status === 'converted').length,
+          partners: partnersRes.success ? partnersRes.data.length : 0,
+          referrals: partnersRes.success ? partnersRes.data.flatMap((p: { referrals: unknown[] }) => p.referrals).length : 0,
+        })
+      }
+    }).catch(console.error).finally(() => setLoading(false))
+  }, [])
+
+  const exportCSV = async () => {
+    const secret = sessionStorage.getItem('admin_secret') ?? ''
+    const res = await fetch('/api/leads?limit=1000', { headers: { 'x-admin-secret': secret } })
+    const data = await res.json()
+    if (!data.success) return
+
+    const leads: RecentLead[] = data.data.leads
+    const rows = [
+      ['ID','Empresa','Responsável','Status','Data'],
+      ...leads.map((l) => [l.id, l.companyName, l.name, l.status, formatDate(l.createdAt)]),
+    ]
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'leads_sublime_sst.csv'; a.click()
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="text-gray-500 text-[14px]">Carregando...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-[1.6rem] font-bold text-gray-900">Dashboard</h1>
+          <p className="text-[14px] text-gray-500">Visão geral da plataforma Sublime SST</p>
+        </div>
+        <button className="btn btn-outline-dark btn-sm" onClick={exportCSV}>
+          <Download size={15} /> Exportar CSV
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <StatCard icon={Users} label="Total de leads" value={stats?.totalLeads ?? 0} color="bg-petrol" />
+        <StatCard icon={CheckCircle} label="Elegíveis" value={stats?.eligibleLeads ?? 0} color="bg-teal" />
+        <StatCard icon={Clock} label="Backoffice" value={stats?.backofficeLeads ?? 0} color="bg-amber-500" />
+        <StatCard icon={Building2} label="Cadastros" value={stats?.registrations ?? 0} color="bg-green-600" />
+        <StatCard icon={TrendingUp} label="Parceiros" value={stats?.partners ?? 0} color="bg-blue-500" />
+        <StatCard icon={TrendingUp} label="Indicações" value={stats?.referrals ?? 0} color="bg-purple-500" />
+      </div>
+
+      {/* Recent leads */}
+      <div className="bg-white rounded-[12px] border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold text-gray-900">Leads recentes</h2>
+          <a href="/admin/leads" className="text-[13px] text-teal hover:underline">Ver todos →</a>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                {['Empresa','Responsável','Status','Data'].map(h => (
+                  <th key={h} className="text-left px-5 py-3 font-semibold text-gray-600 text-[12px] uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {recentLeads.length === 0 ? (
+                <tr><td colSpan={4} className="px-5 py-8 text-center text-gray-400">Nenhum lead registrado ainda.</td></tr>
+              ) : recentLeads.map((lead) => {
+                const st = STATUS_LABEL[lead.status] ?? { label: lead.status, color: 'bg-gray-100 text-gray-700' }
+                return (
+                  <tr key={lead.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 font-medium text-gray-900">{lead.companyName}</td>
+                    <td className="px-5 py-3 text-gray-600">{lead.name}</td>
+                    <td className="px-5 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${st.color}`}>{st.label}</span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-500">{formatDate(lead.createdAt)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}

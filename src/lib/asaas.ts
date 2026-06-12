@@ -1,0 +1,145 @@
+// ═══════════════════════════════════════════════════════════
+// SUBLIME SST — Adapter Asaas (Pagamentos)
+// MOCK ativo até configuração das credenciais reais
+// Para ativar: configure ASAAS_API_KEY no .env.local
+// ═══════════════════════════════════════════════════════════
+
+const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL ?? 'https://sandbox.asaas.com/api/v3'
+const ASAAS_API_KEY = process.env.ASAAS_API_KEY ?? ''
+const IS_MOCK = !ASAAS_API_KEY || ASAAS_API_KEY.startsWith('$aact_SuaChave')
+
+interface AsaasCustomer {
+  id: string
+  name: string
+  cpfCnpj: string
+  email: string
+  mobilePhone: string
+}
+
+interface AsaasCharge {
+  id: string
+  status: string
+  value: number
+  dueDate: string
+  invoiceUrl: string
+  bankSlipUrl?: string
+  pixQrCodeId?: string
+  invoiceNumber: string
+}
+
+interface CreateChargeParams {
+  customer: string
+  value: number
+  dueDate: string
+  description: string
+  billingType?: 'BOLETO' | 'PIX' | 'CREDIT_CARD' | 'UNDEFINED'
+  externalReference?: string
+}
+
+// ── MOCK RESPONSES ────────────────────────────────────────────
+function mockCustomer(cnpj: string, name: string): AsaasCustomer {
+  return {
+    id: `cus_mock_${Date.now()}`,
+    name,
+    cpfCnpj: cnpj.replace(/\D/g, ''),
+    email: '',
+    mobilePhone: '',
+  }
+}
+
+function mockCharge(value: number): AsaasCharge {
+  const id = `pay_mock_${Date.now()}`
+  return {
+    id,
+    status: 'PENDING',
+    value,
+    dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    invoiceUrl: `https://sandbox.asaas.com/i/${id}`,
+    bankSlipUrl: `https://sandbox.asaas.com/b/${id}`,
+    invoiceNumber: `MOCK-${Date.now()}`,
+  }
+}
+
+// ── ASAAS API CALLS ───────────────────────────────────────────
+async function asaasFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${ASAAS_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      access_token: ASAAS_API_KEY,
+      ...options.headers,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(`Asaas API error ${res.status}: ${JSON.stringify(err)}`)
+  }
+  return res.json()
+}
+
+// ── PUBLIC API ────────────────────────────────────────────────
+export async function createOrFindCustomer(params: {
+  cnpj: string
+  name: string
+  email: string
+  phone: string
+}): Promise<AsaasCustomer> {
+  if (IS_MOCK) {
+    console.warn('[ASAAS MOCK] createOrFindCustomer — configure ASAAS_API_KEY para usar produção')
+    return mockCustomer(params.cnpj, params.name)
+  }
+
+  return asaasFetch<AsaasCustomer>('/customers', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: params.name,
+      cpfCnpj: params.cnpj.replace(/\D/g, ''),
+      email: params.email,
+      mobilePhone: params.phone.replace(/\D/g, ''),
+      notificationDisabled: false,
+    }),
+  })
+}
+
+export async function createImplantacaoCharge(params: {
+  customerId: string
+  isPromo: boolean
+  companyId: string
+  cnpj: string
+}): Promise<AsaasCharge> {
+  const value = params.isPromo
+    ? Number(process.env.ASAAS_IMPLANTACAO_PROMO ?? 100)
+    : Number(process.env.ASAAS_IMPLANTACAO_PADRAO ?? 190)
+
+  if (IS_MOCK) {
+    console.warn('[ASAAS MOCK] createImplantacaoCharge — retornando mock')
+    return mockCharge(value)
+  }
+
+  const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0]
+
+  return asaasFetch<AsaasCharge>('/payments', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer: params.customerId,
+      billingType: 'UNDEFINED', // usuário escolhe
+      value,
+      dueDate,
+      description: params.isPromo
+        ? `Sublime Digital — Implantação Promocional (R$ 100,00)`
+        : `Sublime Digital — Implantação (R$ 190,00)`,
+      externalReference: params.companyId,
+    }),
+  })
+}
+
+export async function getCharge(chargeId: string): Promise<AsaasCharge> {
+  if (IS_MOCK) {
+    return mockCharge(190)
+  }
+  return asaasFetch<AsaasCharge>(`/payments/${chargeId}`)
+}
+
+export const isAsaasMock = IS_MOCK

@@ -1,0 +1,221 @@
+// ═══════════════════════════════════════════════════════════
+// SUBLIME SST — Schema do Banco de Dados
+// ═══════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── PLANOS ──────────────────────────────────────────────────
+model Plan {
+  id           String   @id @default(cuid())
+  name         String   // "1-5" | "6-10" | "11-20"
+  label        String   // "1 a 5 funcionários"
+  monthlyPrice Int      // em centavos
+  maxEmployees Int
+  minEmployees Int
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  companies Company[]
+
+  @@map("plans")
+}
+
+// ── CATÁLOGO CNAE ────────────────────────────────────────────
+model CnaeCatalog {
+  id                  String   @id @default(cuid())
+  code                String   @unique // "69.20-6"
+  description         String
+  grauRiscoNr4        Int      @default(1)
+  sourcePagePdf       Int?
+  onlineCatalogStatus String   @default("pending") // approved | pending | blocked
+  eligivelOnline      Boolean  @default(false)
+  notes               String?
+  approvedBy          String?  // responsável técnico
+  approvedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  companies           Company[]
+
+  @@map("cnae_catalog")
+}
+
+// ── LEADS ────────────────────────────────────────────────────
+model Lead {
+  id          String   @id @default(cuid())
+  cnpj        String
+  companyName String
+  name        String
+  email       String
+  whatsapp    String
+  source      String   @default("site") // site | partner | campaign | organic | whatsapp
+  campaign    String?
+  partnerId   String?
+  status      String   @default("captured") // captured | assessed | eligible | backoffice | registered | converted
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  partner              Partner?              @relation(fields: [partnerId], references: [id])
+  eligibilityAssessments EligibilityAssessment[]
+  company              Company?
+  contactRequests      ContactRequest[]
+
+  @@map("leads")
+}
+
+// ── AVALIAÇÕES DE ELEGIBILIDADE ──────────────────────────────
+model EligibilityAssessment {
+  id               String   @id @default(cuid())
+  leadId           String
+  cnae             String
+  cnaeCode         String
+  employees        String   // "1-5" | "6-10" | "11-20" | "21+"
+  usesMachines     Boolean
+  usesChemicals    Boolean
+  worksAtHeight    Boolean
+  hasExternalWork  Boolean
+  declaration      Boolean
+  eligible         Boolean
+  reasons          String[] // CNAE_NAO_GR1 | MAIS_DE_20 | MAQUINAS | etc.
+  resultShownAt    DateTime?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id])
+
+  @@map("eligibility_assessments")
+}
+
+// ── EMPRESAS ─────────────────────────────────────────────────
+model Company {
+  id             String   @id @default(cuid())
+  leadId         String   @unique
+  planId         String?
+  cnaeId         String?
+  cnpj           String   @unique
+  razaoSocial    String
+  nomeFantasia   String?
+  responsavel    String
+  email          String
+  whatsapp       String
+  cep            String
+  cidade         String
+  estado         String
+  endereco       String
+  numFuncionarios Int
+  cargos         String?
+  observations   String?
+  partnerId      String?
+  source         String   @default("site")
+  implantacaoValor Int    @default(19000) // centavos
+  implantacaoPromo Boolean @default(false)
+  promoDeadline  DateTime?
+  status         String   @default("pending") // pending | active | inactive | cancelled
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  lead     Lead         @relation(fields: [leadId], references: [id])
+  plan     Plan?        @relation(fields: [planId], references: [id])
+  cnae     CnaeCatalog? @relation(fields: [cnaeId], references: [id])
+  partner  Partner?     @relation(fields: [partnerId], references: [id])
+  payments Payment[]
+
+  @@map("companies")
+}
+
+// ── PARCEIROS ────────────────────────────────────────────────
+model Partner {
+  id              String   @id @default(cuid())
+  code            String   @unique @default(cuid()) // código único do parceiro
+  name            String
+  office          String
+  cnpj            String?
+  email           String
+  whatsapp        String
+  city            String?
+  state           String?
+  clientsEstimate Int?
+  status          String   @default("pending") // pending | active | inactive
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  leads      Lead[]
+  referrals  PartnerReferral[]
+  companies  Company[]
+
+  @@map("partners")
+}
+
+// ── INDICAÇÕES DE PARCEIROS ──────────────────────────────────
+model PartnerReferral {
+  id              String   @id @default(cuid())
+  partnerId       String
+  companyName     String
+  cnpj            String?
+  contactName     String?
+  phone           String?
+  email           String?
+  employeesEst    Int?
+  observations    String?
+  status          String   @default("pending") // pending | contacted | converted | lost
+  convertedAt     DateTime?
+  rewardAmount    Int?     // centavos
+  rewardPaidAt    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@map("partner_referrals")
+}
+
+// ── PAGAMENTOS ───────────────────────────────────────────────
+model Payment {
+  id              String   @id @default(cuid())
+  companyId       String
+  asaasId         String?  // ID do pagamento no Asaas
+  type            String   // implantacao | mensalidade
+  amount          Int      // centavos
+  status          String   @default("pending") // pending | confirmed | failed | refunded
+  dueDate         DateTime?
+  paidAt          DateTime?
+  checkoutUrl     String?
+  invoiceUrl      String?
+  billingType     String?  // BOLETO | PIX | CREDIT_CARD
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("payments")
+}
+
+// ── SOLICITAÇÕES DE CONTATO ───────────────────────────────────
+model ContactRequest {
+  id        String   @id @default(cuid())
+  leadId    String?
+  name      String
+  email     String
+  whatsapp  String?
+  message   String?
+  origin    String   @default("site") // site | backoffice | whatsapp
+  status    String   @default("open") // open | in_progress | resolved
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead Lead? @relation(fields: [leadId], references: [id])
+
+  @@map("contact_requests")
+}

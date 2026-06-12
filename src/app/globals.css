@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'DM Serif Display', Georgia, serif;
+
+  /* Brand tokens */
+  --petrol: #0d4a5c;
+  --petrol-dark: #082f3b;
+  --petrol-deep: #051e26;
+  --teal: #1a9e8c;
+  --teal-light: #4dbfb0;
+  --teal-pale: #e0f5f2;
+  --green: #2d9e6b;
+  --green-pale: #e4f5ed;
+  --blue-light: #e8f4fb;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.05);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,.10), 0 4px 12px rgba(0,0,0,.06);
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply text-gray-900 bg-white; }
+  h1, h2, h3, h4 { @apply tracking-tight; }
+}
+
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-brand font-semibold text-[15px] cursor-pointer transition-all duration-200 border-none whitespace-nowrap;
+  }
+  .btn-primary {
+    @apply bg-teal text-white hover:bg-teal-light hover:-translate-y-px;
+    &:hover { box-shadow: 0 8px 24px rgba(26,158,140,.3); }
+  }
+  .btn-petrol {
+    @apply bg-petrol text-white hover:bg-petrol-dark hover:-translate-y-px;
+  }
+  .btn-white {
+    @apply bg-white text-petrol hover:bg-gray-50 hover:-translate-y-px;
+    &:hover { box-shadow: var(--shadow-md); }
+  }
+  .btn-outline {
+    @apply bg-transparent text-white border border-white/30 hover:bg-white/10 hover:border-white/50;
+  }
+  .btn-outline-dark {
+    @apply bg-transparent text-petrol border border-gray-300 hover:border-petrol hover:bg-gray-50;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-gray-700 hover:bg-gray-100 hover:text-petrol px-5 py-3;
+  }
+  .btn-sm { @apply px-5 py-2.5 text-sm; }
+  .btn-lg { @apply px-9 py-4 text-base; }
+
+  /* Form inputs */
+  .form-input {
+    @apply w-full px-3.5 py-2.5 border border-gray-200 rounded-[6px] text-[15px] text-gray-900 bg-white outline-none transition-all duration-200;
+    &:focus { @apply border-teal; box-shadow: 0 0 0 3px rgba(26,158,140,.12); }
+    &::placeholder { @apply text-gray-300; }
+    &.error { @apply border-red-500; }
+  }
+  .form-label {
+    @apply block text-[13px] font-semibold text-gray-700 mb-1.5;
+    &.required::after { content: ' *'; @apply text-red-500; }
+  }
+
+  /* Section tag */
+  .section-tag {
+    @apply inline-block bg-teal-pale text-teal text-[12px] font-semibold tracking-widest uppercase px-3.5 py-1.5 rounded-full mb-4;
+  }
+  .section-tag-dark {
+    @apply inline-block text-teal-light text-[12px] font-semibold tracking-widest uppercase px-3.5 py-1.5 rounded-full mb-4;
+    background: rgba(29,158,140,.15);
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-brand-lg border border-gray-200;
+    box-shadow: var(--shadow-sm);
+  }
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:border-teal;
+    &:hover { box-shadow: var(--shadow-md); }
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: var(--font-display); }
+  .text-balance { text-wrap: balance; }
+  .scrollbar-hide { scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+}

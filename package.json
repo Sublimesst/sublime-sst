@@ -29,7 +29,8 @@
     "lucide-react": "^0.363.0",
     "date-fns": "^3.4.0",
     "axios": "^1.6.8",
-    "nodemailer": "^6.9.9"
+    "nodemailer": "^6.9.9",
+    "resend": "^3.2.0"
   },
   "devDependencies": {
     "@types/node": "^20",

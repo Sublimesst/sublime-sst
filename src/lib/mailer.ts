@@ -192,6 +192,42 @@ export async function sendWelcomeEmail(data: {
   ).catch(err => console.error('[MAILER] sendWelcomeEmail:', err))
 }
 
+export async function sendOnboardingReminder(data: {
+  to: string; responsavel: string; companyName: string; loginUrl: string
+}) {
+  await sendEmail(data.to, `Lembrete: preencha seus dados para iniciarmos o PGR`,
+    baseHtml('Seus documentos SST aguardam seus dados',
+      `<p style="font-size:15px;color:#334155;margin-bottom:16px">
+        Olá, <strong>${data.responsavel}</strong>! Seu pagamento foi confirmado, mas ainda não recebemos
+        os dados necessários para elaborar o PGR e PCMSO da <strong>${data.companyName}</strong>.
+      </p>
+      <p style="font-size:14px;color:#334155;margin-bottom:20px">
+        Preencha o formulário de onboarding no portal para que nossa equipe possa começar.
+        Leva menos de 5 minutos.
+      </p>
+      <a href="${data.loginUrl}" class="cta">📋 Preencher dados agora</a>`
+    )
+  ).catch(err => console.error('[MAILER] sendOnboardingReminder:', err))
+}
+
+export async function sendPaymentReminder(data: {
+  to: string; responsavel: string; companyName: string; checkoutUrl: string; amount: number
+}) {
+  const value = `R$ ${(data.amount / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  await sendEmail(data.to, `Lembrete: pagamento pendente — Sublime Digital`,
+    baseHtml('Pagamento da implantação ainda não confirmado',
+      `<p style="font-size:15px;color:#334155;margin-bottom:16px">
+        Olá, <strong>${data.responsavel}</strong>! O pagamento de implantação da <strong>${data.companyName}</strong>
+        (${value}) ainda não foi confirmado.
+      </p>
+      <p style="font-size:14px;color:#334155;margin-bottom:20px">
+        Assim que confirmado, iniciaremos imediatamente a elaboração dos seus documentos SST.
+      </p>
+      <a href="${data.checkoutUrl}" class="cta">💳 Realizar pagamento agora</a>`
+    )
+  ).catch(err => console.error('[MAILER] sendPaymentReminder:', err))
+}
+
 export async function notifyNewPartner(data: {
   name: string; office: string; email: string; whatsapp: string
   city: string; state: string; clientsEstimate?: number | null

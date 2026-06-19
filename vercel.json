@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/remind-onboarding",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/remind-payment",
+      "schedule": "0 11 * * *"
+    }
+  ]
+}

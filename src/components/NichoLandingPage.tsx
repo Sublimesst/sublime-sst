@@ -3,6 +3,7 @@ import { CheckCircle, ArrowRight } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
+import { JsonLd } from '@/components/JsonLd'
 
 export interface NichoPain {
   icon: string
@@ -52,8 +53,19 @@ export interface NichoConfig {
 }
 
 export function NichoLandingPage({ config }: { config: NichoConfig }) {
+  const faqSchema = config.faq && config.faq.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: config.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  } : null
+
   return (
     <>
+      {faqSchema && <JsonLd data={faqSchema} />}
       <Navbar />
       <main>
         {/* Hero */}

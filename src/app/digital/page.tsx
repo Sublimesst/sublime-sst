@@ -8,6 +8,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Sublime Digital — Conformidade em SST para empresas de baixo risco',
   description: 'Produto digital da Sublime SST para regularização de empresas de baixo risco com até 20 funcionários. Contratação, gestão e organização documental digitais.',
+  alternates: { canonical: 'https://sublimesst.com/digital' },
 }
 
 const FEATURES = [

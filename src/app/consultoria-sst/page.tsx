@@ -1,88 +1,53 @@
-'use client'
-
-import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle, ArrowRight, Phone, MessageCircle } from 'lucide-react'
+import { CheckCircle, Phone, MessageCircle } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
+import { ConsultoriaForm } from '@/components/forms/ConsultoriaForm'
+import { JsonLd } from '@/components/JsonLd'
+import type { Metadata } from 'next'
 
-const SERVICES = [
-  {
-    icon: '📋',
-    title: 'PGR — Programa de Gerenciamento de Riscos',
-    body: 'Identificação e controle dos riscos ocupacionais conforme a NR-1. Obrigatório para todas as empresas com funcionários.',
-  },
-  {
-    icon: '🏥',
-    title: 'PCMSO — Programa de Controle Médico',
-    body: 'Planejamento e controle da saúde dos trabalhadores, incluindo ASOs e acompanhamento médico ocupacional.',
-  },
-  {
-    icon: '📊',
-    title: 'LTCAT — Laudo Técnico das Condições Ambientais',
-    body: 'Avaliação dos agentes nocivos no ambiente de trabalho para fins previdenciários e de aposentadoria especial.',
-  },
-  {
-    icon: '🔬',
-    title: 'Laudos técnicos e periciais',
-    body: 'Laudos de insalubridade, periculosidade e ergonomia elaborados por profissionais habilitados.',
-  },
-  {
-    icon: '🎓',
-    title: 'Treinamentos obrigatórios',
-    body: 'Capacitações previstas nas Normas Regulamentadoras (NR-35, NR-10, CIPA, brigada, entre outras).',
-  },
-  {
-    icon: '🧠',
-    title: 'Riscos psicossociais — NR-1',
-    body: 'Avaliação e gestão de riscos psicossociais conforme a atualização da NR-1, vigente a partir de 2025.',
-  },
-]
-
-type FormData = {
-  name: string
-  company: string
-  email: string
-  whatsapp: string
-  description: string
+export const metadata: Metadata = {
+  title: 'Consultoria SST Personalizada | Sublime SST',
+  description: 'Atendimento especializado em SST para empresas de qualquer porte e risco. PGR, PCMSO, LTCAT, laudos técnicos, treinamentos e avaliação de riscos psicossociais.',
+  alternates: { canonical: 'https://sublimesst.com/consultoria-sst' },
 }
 
-type Status = 'idle' | 'loading' | 'success' | 'error'
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Quais serviços a consultoria SST da Sublime oferece?',
+      acceptedAnswer: { '@type': 'Answer', text: 'PGR, PCMSO, LTCAT, laudos de insalubridade e periculosidade, treinamentos obrigatórios (NR-35, NR-10, CIPA, brigada) e avaliação de riscos psicossociais conforme a NR-1 atualizada.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'A consultoria SST atende empresas de qualquer tamanho?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Sim. A consultoria personalizada atende empresas de qualquer porte e Grau de Risco (GR1 a GR4), incluindo indústria, construção, saúde e serviços.' },
+    },
+    {
+      '@type': 'Question',
+      name: 'Qual o prazo para receber o orçamento?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Nossa equipe entra em contato em até 1 dia útil após o recebimento da solicitação.' },
+    },
+  ],
+}
+
+const SERVICES = [
+  { icon: '📋', title: 'PGR — Programa de Gerenciamento de Riscos', body: 'Identificação e controle dos riscos ocupacionais conforme a NR-1. Obrigatório para todas as empresas com funcionários.' },
+  { icon: '🏥', title: 'PCMSO — Programa de Controle Médico', body: 'Planejamento e controle da saúde dos trabalhadores, incluindo ASOs e acompanhamento médico ocupacional.' },
+  { icon: '📊', title: 'LTCAT — Laudo Técnico das Condições Ambientais', body: 'Avaliação dos agentes nocivos no ambiente de trabalho para fins previdenciários e de aposentadoria especial.' },
+  { icon: '🔬', title: 'Laudos técnicos e periciais', body: 'Laudos de insalubridade, periculosidade e ergonomia elaborados por profissionais habilitados.' },
+  { icon: '🎓', title: 'Treinamentos obrigatórios', body: 'Capacitações previstas nas Normas Regulamentadoras (NR-35, NR-10, CIPA, brigada, entre outras).' },
+  { icon: '🧠', title: 'Riscos psicossociais — NR-1', body: 'Avaliação e gestão de riscos psicossociais conforme a atualização da NR-1, vigente a partir de 2025.' },
+]
 
 export default function ConsultoriaPage() {
-  const [form, setForm] = useState<FormData>({ name: '', company: '', email: '', whatsapp: '', description: '' })
-  const [status, setStatus] = useState<Status>('idle')
-  const [errorMsg, setErrorMsg] = useState('')
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setStatus('loading')
-    setErrorMsg('')
-
-    try {
-      const res = await fetch('/api/consultoria', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error((data as { error?: string }).error ?? 'Erro ao enviar')
-      }
-      setStatus('success')
-    } catch (err) {
-      setStatus('error')
-      setErrorMsg(err instanceof Error ? err.message : 'Erro ao enviar. Tente novamente.')
-    }
-  }
-
   return (
     <>
+      <JsonLd data={faqSchema} />
       <Navbar />
       <main>
         {/* Hero */}
@@ -105,17 +70,10 @@ export default function ConsultoriaPage() {
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <a href="#formulario" className="btn btn-primary btn-lg">
-                <Phone size={17} />
-                Solicitar Orçamento
+                <Phone size={17} /> Solicitar Orçamento
               </a>
-              <a
-                href="https://wa.me/5521997248630"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline btn-lg"
-              >
-                <MessageCircle size={17} />
-                Falar no WhatsApp
+              <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-lg">
+                <MessageCircle size={17} /> Falar no WhatsApp
               </a>
             </div>
           </div>
@@ -126,9 +84,7 @@ export default function ConsultoriaPage() {
           <div className="max-w-[1120px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-14">
               <span className="section-tag">Serviços</span>
-              <h2 className="font-display text-3xl md:text-4xl text-gray-900">
-                O que a consultoria abrange
-              </h2>
+              <h2 className="font-display text-3xl md:text-4xl text-gray-900">O que a consultoria abrange</h2>
               <p className="text-[15px] text-gray-500 mt-3 leading-relaxed">
                 Atendemos empresas de qualquer atividade, porte e Grau de Risco com soluções técnicas completas.
               </p>
@@ -136,10 +92,8 @@ export default function ConsultoriaPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {SERVICES.map((s) => (
                 <div key={s.title} className="card card-hover p-7">
-                  <div
-                    className="w-12 h-12 rounded-[12px] flex items-center justify-center text-[22px] mb-4"
-                    style={{ background: 'linear-gradient(135deg, var(--teal-pale), #bae6fd)' }}
-                  >
+                  <div className="w-12 h-12 rounded-[12px] flex items-center justify-center text-[22px] mb-4"
+                    style={{ background: 'linear-gradient(135deg, var(--teal-pale), #bae6fd)' }}>
                     {s.icon}
                   </div>
                   <h3 className="text-[15px] font-bold text-gray-900 mb-2">{s.title}</h3>
@@ -155,9 +109,7 @@ export default function ConsultoriaPage() {
           <div className="max-w-[900px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-12">
               <span className="section-tag">Para quem é</span>
-              <h2 className="font-display text-3xl text-gray-900">
-                A consultoria é indicada para empresas que…
-              </h2>
+              <h2 className="font-display text-3xl text-gray-900">A consultoria é indicada para empresas que…</h2>
             </div>
             <div className="grid md:grid-cols-2 gap-5">
               {[
@@ -199,128 +151,12 @@ export default function ConsultoriaPage() {
                 enviar uma proposta adequada ao seu perfil.
               </p>
             </div>
-
-            {status === 'success' ? (
-              <div className="card p-10 text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5 text-3xl">
-                  ✅
-                </div>
-                <h3 className="font-display text-2xl text-gray-900 mb-3">Solicitação recebida!</h3>
-                <p className="text-[15px] text-gray-500 leading-relaxed mb-6">
-                  Nossa equipe analisará sua necessidade e entrará em contato em breve por e-mail ou WhatsApp.
-                </p>
-                <a
-                  href="https://wa.me/5521997248630"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary"
-                >
-                  <MessageCircle size={16} />
-                  Falar no WhatsApp também
-                </a>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="card p-8 flex flex-col gap-5">
-                <div className="grid sm:grid-cols-2 gap-5">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold text-gray-700">Nome *</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                      placeholder="Seu nome completo"
-                      className="input"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold text-gray-700">Empresa *</label>
-                    <input
-                      type="text"
-                      name="company"
-                      value={form.company}
-                      onChange={handleChange}
-                      required
-                      placeholder="Nome da empresa"
-                      className="input"
-                    />
-                  </div>
-                </div>
-                <div className="grid sm:grid-cols-2 gap-5">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold text-gray-700">E-mail *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      placeholder="seu@email.com"
-                      className="input"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-semibold text-gray-700">WhatsApp *</label>
-                    <input
-                      type="tel"
-                      name="whatsapp"
-                      value={form.whatsapp}
-                      onChange={handleChange}
-                      required
-                      placeholder="(21) 99999-9999"
-                      className="input"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[13px] font-semibold text-gray-700">
-                    Descreva sua necessidade *
-                  </label>
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    required
-                    rows={4}
-                    placeholder="Ex: Preciso de PGR e PCMSO para uma empresa com 15 funcionários no setor de construção civil..."
-                    className="input resize-none"
-                  />
-                </div>
-
-                {status === 'error' && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-[13px] text-red-700">
-                    {errorMsg}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={status === 'loading'}
-                  className="btn btn-primary btn-lg self-start"
-                >
-                  {status === 'loading' ? 'Enviando…' : (
-                    <>
-                      Enviar Solicitação
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
-                <p className="text-[12px] text-gray-400">
-                  Seus dados são tratados com confidencialidade e não serão compartilhados com terceiros.
-                </p>
-              </form>
-            )}
-
+            <ConsultoriaForm />
             <div className="mt-6 text-center">
               <p className="text-[14px] text-gray-500">
                 Prefere falar diretamente?{' '}
-                <a
-                  href="https://wa.me/5521997248630"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-teal font-semibold hover:underline"
-                >
+                <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer"
+                  className="text-teal font-semibold hover:underline">
                   Entre em contato pelo WhatsApp
                 </a>
               </p>

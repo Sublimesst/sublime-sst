@@ -8,6 +8,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Sobre — Sublime SST',
   description: 'Conheça a Sublime SST, empresa especializada em Segurança e Saúde Ocupacional com atendimento consultivo e modelo digital para pequenas empresas.',
+  alternates: { canonical: 'https://sublimesst.com/sobre' },
 }
 
 const VALUES = [

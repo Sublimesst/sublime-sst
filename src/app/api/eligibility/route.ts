@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { runEligibilityEngine } from '@/lib/eligibility'
 import { notifyEligibleResult, notifyBackofficeResult } from '@/lib/mailer'
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
 
 const schema = z.object({
   cnpj: z.string().min(14),
@@ -21,6 +22,9 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const limit = Number(process.env.RATE_LIMIT_ELIGIBILITY ?? 10)
+  if (!rateLimit(req, limit)) return rateLimitResponse()
+
   try {
     const body = await req.json()
     const data = schema.parse(body)
@@ -78,6 +82,32 @@ export async function POST(req: NextRequest) {
       where: { id: lead.id },
       data: { status: result.eligible ? 'eligible' : 'backoffice' },
     })
+
+    // Notify team (non-blocking)
+    if (result.eligible && result.plan) {
+      notifyEligibleResult({
+        name: data.name,
+        email: data.email,
+        whatsapp: data.whatsapp,
+        companyName: data.companyName,
+        cnpj: data.cnpj,
+        cnae: data.cnae,
+        employees: data.employees,
+        planLabel: result.plan.label,
+        planMonthly: result.plan.monthly,
+      }).catch(() => {})
+    } else {
+      notifyBackofficeResult({
+        name: data.name,
+        email: data.email,
+        whatsapp: data.whatsapp,
+        companyName: data.companyName,
+        cnpj: data.cnpj,
+        cnae: data.cnae,
+        employees: data.employees,
+        reasons: result.reasons,
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true, data: result })
   } catch (err) {

@@ -11,9 +11,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Início' },
   { href: '/digital', label: 'Sublime Digital' },
   { href: '/parceiros', label: 'Parceiros' },
-  { href: '/integrations', label: 'Integrações' },
 ]
-// ⚠️ Menu de testes removido para produção
 
 export function Navbar() {
   const pathname = usePathname()

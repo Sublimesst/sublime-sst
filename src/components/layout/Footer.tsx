@@ -7,7 +7,6 @@ const PRODUCT_LINKS = [
 ]
 const COMPANY_LINKS = [
   { href: '/parceiros', label: 'Parceiros Contadores' },
-  { href: '/integrations', label: 'Integrações' },
   { href: 'mailto:contato@sublimesst.com', label: 'Contato' },
 ]
 const LEGAL_LINKS = [

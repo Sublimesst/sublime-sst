@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { notifyNewPartner } from '@/lib/mailer'
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
 
 const referralSchema = z.object({
   companyName: z.string().optional(),
@@ -27,6 +28,8 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  if (!rateLimit(req, 5)) return rateLimitResponse()
+
   try {
     const body = await req.json()
     const data = schema.parse(body)

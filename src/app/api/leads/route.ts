@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { notifyNewLead } from '@/lib/mailer'
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
 
 // POST /api/leads — captura inicial do lead
 const leadSchema = z.object({
@@ -15,6 +16,9 @@ const leadSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  const limit = Number(process.env.RATE_LIMIT_LEADS ?? 5)
+  if (!rateLimit(req, limit)) return rateLimitResponse()
+
   try {
     const body = await req.json()
     const data = leadSchema.parse(body)

@@ -124,11 +124,13 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  lead     Lead         @relation(fields: [leadId], references: [id])
-  plan     Plan?        @relation(fields: [planId], references: [id])
-  cnae     CnaeCatalog? @relation(fields: [cnaeId], references: [id])
-  partner  Partner?     @relation(fields: [partnerId], references: [id])
-  payments Payment[]
+  lead           Lead            @relation(fields: [leadId], references: [id])
+  plan           Plan?           @relation(fields: [planId], references: [id])
+  cnae           CnaeCatalog?    @relation(fields: [cnaeId], references: [id])
+  partner        Partner?        @relation(fields: [partnerId], references: [id])
+  payments       Payment[]
+  clientSessions ClientSession[]
+  onboardingData OnboardingData?
 
   @@map("companies")
 }
@@ -200,6 +202,38 @@ model Payment {
   company Company @relation(fields: [companyId], references: [id])
 
   @@map("payments")
+}
+
+// ── SESSÕES DE CLIENTE (magic link auth) ─────────────────────
+model ClientSession {
+  id        String    @id @default(cuid())
+  companyId String
+  token     String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("client_sessions")
+}
+
+// ── DADOS DE ONBOARDING (preenchimento pós-contratação) ───────
+model OnboardingData {
+  id              String   @id @default(cuid())
+  companyId       String   @unique
+  numFuncionarios Int
+  cargos          String?
+  turnoTrabalho   String?
+  observacoes     String?
+  dataUltimoPcmso String?
+  possuiPgr       Boolean  @default(false)
+  submittedAt     DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("onboarding_data")
 }
 
 // ── SOLICITAÇÕES DE CONTATO ───────────────────────────────────

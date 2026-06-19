@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export async function GET(req: NextRequest) {
+  const token = req.nextUrl.searchParams.get('token')
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://sublimesst.com'
+
+  if (!token) {
+    return NextResponse.redirect(`${base}/cliente/login?error=token_missing`)
+  }
+
+  const session = await prisma.clientSession.findUnique({ where: { token } })
+
+  if (!session || session.usedAt || session.expiresAt < new Date()) {
+    return NextResponse.redirect(`${base}/cliente/login?error=token_invalid`)
+  }
+
+  await prisma.clientSession.update({ where: { token }, data: { usedAt: new Date() } })
+
+  // Issue a long-lived session cookie (company ID)
+  const cookieValue = Buffer.from(
+    JSON.stringify({ companyId: session.companyId, email: session.email, issuedAt: Date.now() })
+  ).toString('base64')
+
+  const response = NextResponse.redirect(`${base}/cliente/dashboard`)
+  response.cookies.set('sublime_client', cookieValue, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+    path: '/',
+  })
+  return response
+}

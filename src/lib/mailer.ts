@@ -151,6 +151,47 @@ export async function notifyConsultancyRequest(data: {
   ).catch(err => console.error('[MAILER] notifyConsultancyRequest:', err))
 }
 
+export async function sendMagicLink(data: {
+  to: string; companyName: string; link: string
+}) {
+  await sendEmail(data.to, `Seu link de acesso — Sublime SST`,
+    baseHtml('Acesso ao Portal do Cliente',
+      `<p style="font-size:15px;color:#334155;margin-bottom:20px">
+        Olá! Clique no botão abaixo para acessar o portal da <strong>${data.companyName}</strong>.<br>
+        O link expira em <strong>15 minutos</strong> e é de uso único.
+      </p>
+      <a href="${data.link}" class="cta">🔐 Acessar meu portal</a>
+      <p style="font-size:12px;color:#94a3b8;margin-top:16px">
+        Se você não solicitou esse acesso, ignore este e-mail.
+      </p>`
+    )
+  ).catch(err => console.error('[MAILER] sendMagicLink:', err))
+}
+
+export async function sendWelcomeEmail(data: {
+  to: string; companyName: string; responsavel: string; loginUrl: string
+}) {
+  await sendEmail(data.to, `Bem-vindo(a) ao Sublime Digital! 🎉`,
+    baseHtml('Pagamento confirmado — próximos passos',
+      `<p style="font-size:15px;color:#334155;margin-bottom:16px">
+        Olá, <strong>${data.responsavel}</strong>!<br><br>
+        O pagamento da implantação da <strong>${data.companyName}</strong> foi confirmado.
+        Sua conta está ativa e pronta para os próximos passos.
+      </p>
+      <div style="background:#f0fdf9;border-radius:10px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;color:#0d4a5c;margin-bottom:10px">📋 O que acontece agora:</div>
+        <div style="font-size:13px;color:#334155;line-height:1.8">
+          1. Acesse seu portal e preencha o formulário de onboarding<br>
+          2. Nossa equipe analisa os dados e inicia a elaboração dos documentos<br>
+          3. PGR e PCMSO ficam disponíveis no portal em até 5 dias úteis<br>
+          4. Você recebe notificação por e-mail quando os documentos estiverem prontos
+        </div>
+      </div>
+      <a href="${data.loginUrl}" class="cta">🏠 Acessar meu portal</a>`
+    )
+  ).catch(err => console.error('[MAILER] sendWelcomeEmail:', err))
+}
+
 export async function notifyNewPartner(data: {
   name: string; office: string; email: string; whatsapp: string
   city: string; state: string; clientsEstimate?: number | null

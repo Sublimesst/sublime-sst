@@ -8,6 +8,8 @@ const PRODUCT_LINKS = [
 ]
 const COMPANY_LINKS = [
   { href: '/sobre', label: 'Sobre a Sublime' },
+  { href: '/conteudos', label: 'Conteúdos SST' },
+  { href: '/faq', label: 'Perguntas Frequentes' },
   { href: '/parceiros', label: 'Parceiros Contadores' },
   { href: 'mailto:contato@sublimesst.com', label: 'Contato' },
 ]

@@ -9,8 +9,10 @@ import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
   { href: '/', label: 'Início' },
+  { href: '/consultoria-sst', label: 'Consultoria SST' },
   { href: '/digital', label: 'Sublime Digital' },
   { href: '/parceiros', label: 'Parceiros' },
+  { href: '/sobre', label: 'Sobre' },
 ]
 
 export function Navbar() {
@@ -31,21 +33,21 @@ export function Navbar() {
         scrolled && 'shadow-brand-sm'
       )}
     >
-      <div className="max-w-[1120px] mx-auto px-6 h-[68px] flex items-center justify-between gap-6">
+      <div className="max-w-[1120px] mx-auto px-6 h-[88px] flex items-center justify-between gap-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
           <Image
             src="/logo.jpeg"
             alt="Sublime SST"
-            width={38}
-            height={38}
+            width={72}
+            height={72}
             className="rounded-lg object-cover"
             priority
           />
           <div className="leading-tight">
             <span className="block text-[15px] font-bold text-petrol tracking-tight">SUBLIME</span>
             <span className="block text-[10px] font-medium text-gray-500 tracking-[.06em] uppercase">
-              Seg. e Saúde Ocupacional
+              Segurança e Saúde Ocupacional
             </span>
           </div>
         </Link>

@@ -131,6 +131,26 @@ export async function notifyBackofficeResult(data: {
   ).catch(err => console.error('[MAILER] notifyBackofficeResult:', err))
 }
 
+export async function notifyConsultancyRequest(data: {
+  name: string; company: string; email: string; whatsapp: string; description: string
+}) {
+  const waLink = `https://wa.me/55${data.whatsapp.replace(/\D/g, '')}`
+  await sendEmail(NOTIFY, `📋 Orçamento solicitado: ${data.company}`,
+    baseHtml('Nova solicitação de orçamento de Consultoria SST',
+      `<div style="margin-bottom:14px"><span class="badge badge-blue">📋 CONSULTORIA SST</span></div>
+       <div class="row"><span class="label">Nome</span><span class="value">${data.name}</span></div>
+       <div class="row"><span class="label">Empresa</span><span class="value">${data.company}</span></div>
+       <div class="row"><span class="label">E-mail</span><span class="value">${data.email}</span></div>
+       <div class="row"><span class="label">WhatsApp</span><span class="value">${data.whatsapp}</span></div>
+       <div style="background:#f1f5f9;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:13px;color:#334155">
+         <div style="font-weight:700;margin-bottom:6px">Descrição da necessidade:</div>
+         ${data.description}
+       </div>
+       <a href="${waLink}" class="cta">💬 Responder no WhatsApp</a>`
+    )
+  ).catch(err => console.error('[MAILER] notifyConsultancyRequest:', err))
+}
+
 export async function notifyNewPartner(data: {
   name: string; office: string; email: string; whatsapp: string
   city: string; state: string; clientsEstimate?: number | null

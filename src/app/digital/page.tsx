@@ -6,8 +6,8 @@ import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Sublime Digital — Conformidade em SST 100% online',
-  description: 'Produto digital da Sublime SST para regularização de empresas de baixo risco com até 20 funcionários.',
+  title: 'Sublime Digital — Conformidade em SST para empresas de baixo risco',
+  description: 'Produto digital da Sublime SST para regularização de empresas de baixo risco com até 20 funcionários. Contratação, gestão e organização documental digitais.',
 }
 
 const FEATURES = [
@@ -20,9 +20,9 @@ const FEATURES = [
 ]
 
 const COMPARISON = [
-  { feat: 'Processo de contratação', trad: 'Presencial e burocrático', digital: true, digitalText: '100% online' },
+  { feat: 'Processo de contratação', trad: 'Por projeto, com visitas técnicas', digital: true, digitalText: 'Contratação e gestão digitais' },
   { feat: 'Preço previsível', trad: 'Variável por projeto', digital: true, digitalText: 'Mensalidade fixa' },
-  { feat: 'Tempo de implantação', trad: 'Semanas', digital: true, digitalText: 'Ágil e estruturado' },
+  { feat: 'Tempo de implantação', trad: 'Variável conforme escopo', digital: true, digitalText: 'Ágil e estruturado' },
   { feat: 'Documentação digital', trad: 'Física / e-mail avulso', digital: true, digitalText: 'Organizada digitalmente' },
   { feat: 'Para todos os perfis', trad: true, tradText: 'Sim', digital: false, digitalText: 'Baixo risco, até 20 func.' },
   { feat: 'Atendimento especializado', trad: true, tradText: 'Sim', digital: true, digitalText: 'Para perfis enquadrados' },
@@ -44,8 +44,9 @@ export default function DigitalPage() {
               Sublime Digital
             </h1>
             <p className="text-[17px] text-white/70 leading-relaxed mb-8 max-w-lg mx-auto">
-              Regularização e conformidade em SST com experiência simples, segura e totalmente
-              digital para pequenas empresas de baixo risco operacional.
+              Regularização e conformidade em SST com contratação, gestão e organização documental
+              digitais para pequenas empresas de baixo risco operacional, com direcionamento para
+              etapas presenciais quando aplicáveis.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link href="/elegibilidade" className="btn btn-primary btn-lg">
@@ -150,11 +151,74 @@ export default function DigitalPage() {
           </div>
         </section>
 
+        {/* Incluído vs. sob demanda */}
+        <section className="py-20 px-6">
+          <div className="max-w-[900px] mx-auto">
+            <div className="text-center max-w-xl mx-auto mb-12">
+              <span className="section-tag">Escopo</span>
+              <h2 className="font-display text-3xl text-gray-900">O que está incluído vs. o que é sob demanda</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="card p-7">
+                <h3 className="text-[15px] font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[12px]">✓</span>
+                  Incluso na mensalidade
+                </h3>
+                <ul className="flex flex-col gap-2.5">
+                  {[
+                    'PGR (Programa de Gerenciamento de Riscos)',
+                    'PCMSO (Programa de Controle Médico de Saúde Ocupacional)',
+                    'Organização e arquivamento documental',
+                    'Atualizações anuais dos documentos',
+                    'Verificação de conformidade com NRs aplicáveis',
+                    'Suporte por WhatsApp e e-mail',
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-[13px] text-gray-600">
+                      <CheckCircle size={14} className="text-teal shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card p-7 bg-gray-50">
+                <h3 className="text-[15px] font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[12px]">+</span>
+                  Sob orçamento separado
+                </h3>
+                <ul className="flex flex-col gap-2.5">
+                  {[
+                    'ASOs (Atestados de Saúde Ocupacional) — coordenados com clínicas parceiras',
+                    'Treinamentos presenciais (NR-35, NR-10, Brigada, CIPA)',
+                    'Laudos de insalubridade ou periculosidade',
+                    'LTCAT (quando aplicável ao perfil)',
+                    'Consultoria presencial ou visita técnica',
+                    'Gestão de riscos psicossociais (NR-1 atualizada)',
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5 text-[13px] text-gray-500">
+                      <span className="shrink-0 mt-0.5 text-amber-500">•</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[12px] text-gray-400 mt-4">
+                  Itens sob demanda são avaliados caso a caso. Quando necessários, sua empresa é orientada
+                  sobre as melhores opções e encaminhada para atendimento adequado.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="py-16 px-6 text-center"
           style={{ background: 'linear-gradient(135deg, var(--petrol), var(--teal))' }}>
           <h2 className="font-display text-3xl text-white mb-3">Sua empresa pode ser elegível ao modelo digital</h2>
-          <p className="text-white/70 mb-8">Faça o teste gratuito e descubra em menos de 5 minutos.</p>
+          <p className="text-white/70 mb-2">Faça o teste gratuito e descubra em menos de 5 minutos.</p>
+          <p className="text-[13px] text-white/40 mb-8">
+            Planos válidos exclusivamente para empresas GR1 com até 20 funcionários aprovadas no teste de elegibilidade.
+            Para outros perfis, consulte nossa{' '}
+            <Link href="/consultoria-sst" className="text-teal-light hover:underline">consultoria personalizada</Link>.
+          </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link href="/elegibilidade" className="btn btn-white btn-lg">
               Fazer o Teste de Elegibilidade

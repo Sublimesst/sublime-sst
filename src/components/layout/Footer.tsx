@@ -1,11 +1,13 @@
 import Link from 'next/link'
 
 const PRODUCT_LINKS = [
+  { href: '/consultoria-sst', label: 'Consultoria SST' },
   { href: '/digital', label: 'Sublime Digital' },
   { href: '/elegibilidade', label: 'Teste de Elegibilidade' },
   { href: '/#planos', label: 'Planos e Preços' },
 ]
 const COMPANY_LINKS = [
+  { href: '/sobre', label: 'Sobre a Sublime' },
   { href: '/parceiros', label: 'Parceiros Contadores' },
   { href: 'mailto:contato@sublimesst.com', label: 'Contato' },
 ]
@@ -28,7 +30,7 @@ export function Footer() {
               </div>
             </div>
             <p className="text-[13px] text-white/40 leading-relaxed max-w-xs">
-              Conformidade em SST de forma simples, segura e digital para pequenas empresas brasileiras.
+              Soluções em Segurança e Saúde Ocupacional com atendimento consultivo e opções digitais para perfis elegíveis.
             </p>
             <div className="mt-5 flex flex-col gap-2">
               <a

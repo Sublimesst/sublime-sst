@@ -170,10 +170,10 @@ export default function SobrePage() {
                 <h3 className="font-display text-xl text-gray-900 mb-3">Sublime Digital</h3>
                 <p className="text-[14px] text-gray-500 leading-relaxed mb-5">
                   Modelo simplificado para empresas GR1 com até 20 funcionários. Contratação, gestão e
-                  organização documental digitais, com mensalidade fixa e previsível.
+                  organização documental digitais, com valor mensal fixo e previsível.
                 </p>
                 <ul className="flex flex-col gap-2 mb-6">
-                  {['Até 20 funcionários, CNAE GR1', 'Processo inteiramente digital', 'Mensalidade fixa'].map((i) => (
+                  {['Até 20 funcionários, CNAE GR1', 'Processo inteiramente digital', 'Assinatura anual com valor fixo'].map((i) => (
                     <li key={i} className="flex items-center gap-2 text-[13px] text-gray-600">
                       <CheckCircle size={14} className="text-teal shrink-0" />
                       {i}

@@ -224,7 +224,7 @@ export default function CadastroPage() {
               <div className="mt-6 p-5 bg-teal-pale rounded-[12px] border border-teal/20">
                 <p className="text-[14px] font-semibold text-petrol mb-3">Resumo do plano</p>
                 <div className="flex justify-between mb-2">
-                  <span className="text-[14px] text-gray-600">Mensalidade ({plan.label})</span>
+                  <span className="text-[14px] text-gray-600">Parcela mensal ({plan.label})</span>
                   <span className="text-[16px] font-bold text-teal">{maskCurrencyBRL(plan.monthly)}/mês</span>
                 </div>
                 <div className="flex justify-between">

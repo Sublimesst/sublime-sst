@@ -118,7 +118,7 @@ const serviceSchema = {
         itemOffered: {
           '@type': 'Service',
           name: 'Sublime Digital',
-          description: 'Regularização em SST com processo digital para empresas GR1 com até 20 funcionários. PGR, PCMSO e organização documental com mensalidade fixa.',
+          description: 'Regularização em SST com processo digital para empresas GR1 com até 20 funcionários. PGR, PCMSO e organização documental com assinatura anual de valor fixo.',
         },
       },
     ],

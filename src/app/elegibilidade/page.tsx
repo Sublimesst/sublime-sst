@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, ArrowRight, ArrowLeft, Search, Clock } from 'lucide-react'
+import { CheckCircle, ArrowRight, ArrowLeft, Search, Clock, HelpCircle, Pencil, Loader2 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import { maskCNPJ, maskPhone, validateCNPJ, validateEmail, validatePhone, maskCurrencyBRL } from '@/lib/utils'
@@ -21,6 +21,12 @@ async function loadCnae(q: string): Promise<{ code: string; desc: string }[]> {
     }))
   } catch { /* silently ignore */ }
   return []
+}
+
+// ── CNAE formatter (BrasilAPI retorna número, ex: 6920601 → 69.20-6/01) ──────
+function formatCNAECode(raw: number | string): string {
+  const d = String(raw).replace(/\D/g, '').padStart(7, '0')
+  return `${d.slice(0, 2)}.${d.slice(2, 4)}-${d.slice(4, 5)}/${d.slice(5, 7)}`
 }
 
 // ── Motor client-side ─────────────────────────────────────────────────────────
@@ -74,19 +80,25 @@ function runEngine(params: {
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Step = 1 | 2 | 3 | 'eligible' | 'backoffice'
+type Step = 1 | 2 | 'eligible' | 'backoffice'
 
 interface FormState {
-  // Step 1 — perfil operacional
-  cnaeDisplay: string; cnaeCode: string; cnaeInCatalog: boolean
+  // Etapa 1 — empresa + perfil operacional
+  cnpj: string
+  companyName: string
+  cnaeDisplay: string
+  cnaeCode: string
+  cnaeInCatalog: boolean
   employees: EmployeeRange | ''
-  usesMachines: boolean | null; usesChemicals: boolean | null
-  worksAtHeight: boolean | null; hasExternalWork: boolean | null
+  usesMachines: boolean | null
+  usesChemicals: boolean | null
+  worksAtHeight: boolean | null
+  hasExternalWork: boolean | null
   declaration: boolean
-  // Step 2 — dados da empresa
-  cnpj: string; companyName: string
-  // Step 3 — contato
-  name: string; email: string; whatsapp: string
+  // Etapa 2 — contato
+  name: string
+  email: string
+  whatsapp: string
 }
 
 const EMPLOYEE_OPTIONS: { value: EmployeeRange; label: string }[] = [
@@ -97,7 +109,7 @@ const EMPLOYEE_OPTIONS: { value: EmployeeRange; label: string }[] = [
 ]
 
 const RADIO_Q = [
-  { key: 'usesMachines'   as const, label: 'Sua empresa utiliza máquinas industriais?' },
+  { key: 'usesMachines'    as const, label: 'Sua empresa utiliza máquinas industriais?' },
   { key: 'usesChemicals'  as const, label: 'Manipula produtos químicos perigosos?' },
   { key: 'worksAtHeight'  as const, label: 'Possui trabalho em altura?' },
   { key: 'hasExternalWork'as const, label: 'Realiza atividades externas frequentes?' },
@@ -133,15 +145,19 @@ function ElegibilidadeInner() {
 
   const [step, setStep] = useState<Step>(1)
   const [form, setForm] = useState<FormState>({
-    cnaeDisplay: '', cnaeCode: '', cnaeInCatalog: false, employees: '',
+    cnpj: '', companyName: '',
+    cnaeDisplay: '', cnaeCode: '', cnaeInCatalog: false,
+    employees: '',
     usesMachines: null, usesChemicals: null, worksAtHeight: null, hasExternalWork: null,
     declaration: false,
-    cnpj: '', companyName: '',
     name: '', email: '', whatsapp: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [cnaeResults, setCnaeResults] = useState<{ code: string; desc: string }[]>([])
   const [showCnae, setShowCnae] = useState(false)
+  const [cnaeEditable, setCnaeEditable] = useState(true)
+  const [showCnaeHelp, setShowCnaeHelp] = useState(false)
+  const [cnpjLoading, setCnpjLoading] = useState(false)
   const [result, setResult] = useState<EngineResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [promoEnd] = useState(() => Date.now() + 24 * 60 * 60 * 1000)
@@ -152,32 +168,80 @@ function ElegibilidadeInner() {
     setErrors(e => { const n = {...e}; delete n[k]; return n })
   }
 
+  // ── CNPJ lookup ──────────────────────────────────────────────
+  const lookupCNPJ = useCallback(async (cnpj: string) => {
+    const digits = cnpj.replace(/\D/g, '')
+    if (digits.length !== 14) return
+    setCnpjLoading(true)
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
+      if (!res.ok) throw new Error('not found')
+      const data = await res.json()
+      if (data.razao_social) {
+        set('companyName', data.razao_social)
+      }
+      if (data.cnae_fiscal) {
+        const formatted = formatCNAECode(data.cnae_fiscal)
+        const results = await loadCnae(formatted)
+        if (results.length > 0) {
+          set('cnaeDisplay', `${results[0].code} — ${results[0].desc}`)
+          set('cnaeCode', results[0].code)
+          set('cnaeInCatalog', true)
+          setCnaeEditable(false)
+        } else {
+          set('cnaeDisplay', formatted)
+          set('cnaeCode', formatted)
+          set('cnaeInCatalog', false)
+          setCnaeEditable(true)
+        }
+      }
+    } catch {
+      // CNPJ não encontrado — usuário preenche manualmente
+    } finally {
+      setCnpjLoading(false)
+    }
+  }, [])
+
+  // ── CNAE search ──────────────────────────────────────────────
+  const handleCnaeInput = useCallback(async (val: string) => {
+    set('cnaeDisplay', val)
+    set('cnaeCode', '')
+    set('cnaeInCatalog', false)
+    if (val.length < 2) { setCnaeResults([]); setShowCnae(false); return }
+    const results = await loadCnae(val)
+    setCnaeResults(results)
+    setShowCnae(results.length > 0)
+  }, [])
+
+  const selectCnae = (code: string, desc: string, inCatalog: boolean) => {
+    set('cnaeDisplay', `${code} — ${desc}`)
+    set('cnaeCode', code)
+    set('cnaeInCatalog', inCatalog)
+    setShowCnae(false)
+    setCnaeResults([])
+    setCnaeEditable(false)
+  }
+
   // ── Validators ───────────────────────────────────────────────
   const validateStep1 = () => {
     const e: Record<string, string> = {}
-    if (!form.cnaeCode) e.cnaeDisplay = 'Selecione o CNAE da empresa na lista.'
-    if (!form.employees) e.employees = 'Informe o número de funcionários.'
-    if (form.usesMachines === null)    e.usesMachines    = 'Responda esta pergunta.'
-    if (form.usesChemicals === null)   e.usesChemicals   = 'Responda esta pergunta.'
-    if (form.worksAtHeight === null)   e.worksAtHeight   = 'Responda esta pergunta.'
+    if (!validateCNPJ(form.cnpj))    e.cnpj        = 'CNPJ inválido. Verifique e tente novamente.'
+    if (!form.companyName.trim())     e.companyName  = 'Informe o nome da empresa.'
+    if (!form.cnaeCode)               e.cnaeDisplay  = 'Selecione o CNAE da empresa na lista.'
+    if (!form.employees)              e.employees    = 'Informe o número de funcionários.'
+    if (form.usesMachines === null)   e.usesMachines    = 'Responda esta pergunta.'
+    if (form.usesChemicals === null)  e.usesChemicals   = 'Responda esta pergunta.'
+    if (form.worksAtHeight === null)  e.worksAtHeight   = 'Responda esta pergunta.'
     if (form.hasExternalWork === null) e.hasExternalWork = 'Responda esta pergunta.'
-    if (!form.declaration) e.declaration = 'Aceite a declaração para continuar.'
+    if (!form.declaration)            e.declaration  = 'Aceite a declaração para continuar.'
     setErrors(e)
     return Object.keys(e).length === 0
   }
 
   const validateStep2 = () => {
     const e: Record<string, string> = {}
-    if (!validateCNPJ(form.cnpj)) e.cnpj = 'CNPJ inválido. Verifique e tente novamente.'
-    if (!form.companyName.trim()) e.companyName = 'Informe o nome da empresa.'
-    setErrors(e)
-    return Object.keys(e).length === 0
-  }
-
-  const validateStep3 = () => {
-    const e: Record<string, string> = {}
-    if (!form.name.trim())           e.name     = 'Informe seu nome.'
-    if (!validateEmail(form.email))  e.email    = 'Informe um e-mail válido.'
+    if (!form.name.trim())             e.name     = 'Informe seu nome.'
+    if (!validateEmail(form.email))    e.email    = 'Informe um e-mail válido.'
     if (!validatePhone(form.whatsapp)) e.whatsapp = 'Informe um WhatsApp válido.'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -191,17 +255,10 @@ function ElegibilidadeInner() {
     setStep(2)
   }
 
-  const handleStep2 = () => {
-    if (!validateStep2()) return
-    track('eligibility_step_completed', { step: 2, ...utmRef.current })
-    setStep(3)
-  }
-
   const handleSubmit = async () => {
-    if (!validateStep3()) return
+    if (!validateStep2()) return
     setLoading(true)
 
-    // Salva lead em segundo plano
     fetch('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -211,7 +268,7 @@ function ElegibilidadeInner() {
       }),
     }).catch(() => {})
     track('lead_captured', utmRef.current)
-    track('eligibility_step_completed', { step: 3, ...utmRef.current })
+    track('eligibility_step_completed', { step: 2, ...utmRef.current })
 
     const engineResult = runEngine({
       cnaeCode: form.cnaeCode, cnaeInCatalog: form.cnaeInCatalog,
@@ -239,7 +296,6 @@ function ElegibilidadeInner() {
 
     setLoading(false)
 
-    // Registra no banco em segundo plano
     fetch('/api/eligibility', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -255,26 +311,7 @@ function ElegibilidadeInner() {
     }).catch(() => {})
   }
 
-  // ── CNAE search ──────────────────────────────────────────────
-  const handleCnaeInput = useCallback(async (val: string) => {
-    set('cnaeDisplay', val)
-    set('cnaeCode', '')
-    set('cnaeInCatalog', false)
-    if (val.length < 2) { setCnaeResults([]); setShowCnae(false); return }
-    const results = await loadCnae(val)
-    setCnaeResults(results)
-    setShowCnae(results.length > 0)
-  }, [])
-
-  const selectCnae = (code: string, desc: string, inCatalog: boolean) => {
-    set('cnaeDisplay', `${code} — ${desc}`)
-    set('cnaeCode', code)
-    set('cnaeInCatalog', inCatalog)
-    setShowCnae(false)
-    setCnaeResults([])
-  }
-
-  const progress = step === 1 ? 33 : step === 2 ? 66 : 100
+  const progress = step === 1 ? 50 : 100
 
   return (
     <>
@@ -287,9 +324,8 @@ function ElegibilidadeInner() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-2">
                 {[
-                  { n: 1, label: 'Perfil' },
-                  { n: 2, label: 'Empresa' },
-                  { n: 3, label: 'Contato' },
+                  { n: 1, label: 'Sua empresa' },
+                  { n: 2, label: 'Seu contato' },
                 ].map((s, i) => (
                   <div key={s.n} className="flex items-center gap-2 flex-1">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0 transition-colors ${
@@ -302,7 +338,7 @@ function ElegibilidadeInner() {
                     <span className={`text-[12px] font-medium ${step === s.n ? 'text-petrol' : 'text-gray-400'}`}>
                       {s.label}
                     </span>
-                    {i < 2 && <div className="flex-1 h-px bg-gray-200 mx-2" />}
+                    {i < 1 && <div className="flex-1 h-px bg-gray-200 mx-2" />}
                   </div>
                 ))}
               </div>
@@ -316,28 +352,116 @@ function ElegibilidadeInner() {
           <div className="bg-white rounded-[20px] border border-gray-200 p-7 sm:p-9"
             style={{ boxShadow: '0 4px 16px rgba(0,0,0,.08)' }}>
 
-            {/* ══ ETAPA 1 — Perfil operacional ══ */}
+            {/* ══ ETAPA 1 — Empresa + perfil operacional ══ */}
             {step === 1 && (
               <div>
-                <span className="section-tag text-[11px]">Etapa 1 — Perfil operacional</span>
-                <h2 className="font-display text-2xl text-gray-900 mb-2">Como funciona a sua empresa?</h2>
+                <span className="section-tag text-[11px]">Etapa 1 — Sua empresa</span>
+                <h2 className="font-display text-2xl text-gray-900 mb-2">Vamos identificar sua empresa</h2>
                 <p className="text-[14px] text-gray-500 mb-7">
-                  Responda para descobrir qual solução da Sublime SST é adequada para você.
+                  Informe o CNPJ e responda algumas perguntas para descobrir se sua empresa é elegível.
                 </p>
 
-                {/* CNAE search */}
-                <div className="mb-5 relative">
-                  <label className="form-label required">CNAE principal</label>
+                {/* CNPJ */}
+                <div className="mb-4">
+                  <label className="form-label required">CNPJ</label>
                   <div className="relative">
-                    <Search size={15} className="absolute left-3.5 top-3.5 text-gray-400 pointer-events-none" />
                     <input
-                      className={`form-input pl-9 ${errors.cnaeDisplay ? 'error' : ''}`}
-                      placeholder="Digite o código ou nome da atividade"
-                      value={form.cnaeDisplay}
-                      onChange={e => handleCnaeInput(e.target.value)}
-                      onFocus={() => cnaeResults.length > 0 && setShowCnae(true)}
+                      className={`form-input pr-10 ${errors.cnpj ? 'error' : ''}`}
+                      placeholder="00.000.000/0000-00"
+                      value={form.cnpj}
+                      inputMode="numeric"
+                      maxLength={18}
+                      onChange={e => set('cnpj', maskCNPJ(e.target.value))}
+                      onBlur={e => lookupCNPJ(e.target.value)}
                     />
+                    {cnpjLoading && (
+                      <Loader2 size={16} className="absolute right-3 top-3.5 text-teal animate-spin" />
+                    )}
                   </div>
+                  {errors.cnpj && <p className="text-[12px] text-red-500 mt-1">{errors.cnpj}</p>}
+                  {cnpjLoading && (
+                    <p className="text-[12px] text-teal mt-1">Buscando dados na Receita Federal...</p>
+                  )}
+                </div>
+
+                {/* Razão social */}
+                <div className="mb-5">
+                  <label className="form-label required">Nome da empresa</label>
+                  <input
+                    className={`form-input ${errors.companyName ? 'error' : ''}`}
+                    placeholder="Preenchido automaticamente ou digite aqui"
+                    value={form.companyName}
+                    onChange={e => set('companyName', e.target.value)}
+                  />
+                  {errors.companyName && <p className="text-[12px] text-red-500 mt-1">{errors.companyName}</p>}
+                </div>
+
+                {/* CNAE */}
+                <div className="mb-5 relative">
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className="form-label required mb-0">CNAE principal</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCnaeHelp(v => !v)}
+                      className="text-gray-400 hover:text-teal transition-colors"
+                      aria-label="O que é CNAE?"
+                    >
+                      <HelpCircle size={15} />
+                    </button>
+                  </div>
+
+                  {/* Painel de ajuda CNAE */}
+                  {showCnaeHelp && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-[10px] p-4 mb-3">
+                      <p className="text-[13px] font-semibold text-blue-800 mb-1">O que é o CNAE?</p>
+                      <p className="text-[13px] text-blue-700 mb-2">
+                        É o código que classifica a atividade econômica da sua empresa. Você encontra:
+                      </p>
+                      <ul className="text-[13px] text-blue-700 space-y-1 mb-2">
+                        <li>• No cartão do CNPJ (impresso ou no site da Receita Federal)</li>
+                        <li>• No contrato social ou estatuto da empresa</li>
+                      </ul>
+                      <a
+                        href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[13px] text-blue-600 underline"
+                      >
+                        Consultar meu CNPJ na Receita Federal →
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Campo CNAE — preenchido ou editável */}
+                  {form.cnaeCode && !cnaeEditable ? (
+                    <div className="flex items-center justify-between p-3 bg-teal-pale border border-teal rounded-[8px]">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[12px] font-bold text-teal">{form.cnaeCode}</span>
+                        <span className="text-[13px] text-gray-700 ml-2 leading-snug">
+                          {form.cnaeDisplay.split('—')[1]?.trim() ?? ''}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setCnaeEditable(true); set('cnaeCode', ''); set('cnaeDisplay', '') }}
+                        className="ml-3 flex items-center gap-1 text-[12px] text-teal hover:underline shrink-0"
+                      >
+                        <Pencil size={12} /> Alterar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Search size={15} className="absolute left-3.5 top-3.5 text-gray-400 pointer-events-none" />
+                      <input
+                        className={`form-input pl-9 ${errors.cnaeDisplay ? 'error' : ''}`}
+                        placeholder="Digite o código ou nome da atividade"
+                        value={form.cnaeDisplay}
+                        onChange={e => handleCnaeInput(e.target.value)}
+                        onFocus={() => cnaeResults.length > 0 && setShowCnae(true)}
+                      />
+                    </div>
+                  )}
+
                   {showCnae && (
                     <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-[8px] mt-1 max-h-52 overflow-y-auto"
                       style={{ boxShadow: '0 4px 16px rgba(0,0,0,.08)' }}>
@@ -352,12 +476,14 @@ function ElegibilidadeInner() {
                     </div>
                   )}
                   {errors.cnaeDisplay && <p className="text-[12px] text-red-500 mt-1">{errors.cnaeDisplay}</p>}
-                  <p className="text-[12px] text-gray-400 mt-1">
-                    Digite o código CNAE ou parte da descrição e selecione na lista.
-                  </p>
+                  {!form.cnaeCode && (
+                    <p className="text-[12px] text-gray-400 mt-1">
+                      Digite o código CNAE ou parte da descrição da atividade e selecione na lista.
+                    </p>
+                  )}
                 </div>
 
-                {/* Employees */}
+                {/* Funcionários */}
                 <div className="mb-5">
                   <label className="form-label required">Número de funcionários CLT</label>
                   <div className="flex flex-wrap gap-2">
@@ -376,7 +502,7 @@ function ElegibilidadeInner() {
                   {errors.employees && <p className="text-[12px] text-red-500 mt-1">{errors.employees}</p>}
                 </div>
 
-                {/* Risk questions */}
+                {/* Perguntas de risco */}
                 <div className="bg-gray-50 rounded-[12px] p-5 mb-5 space-y-4">
                   <p className="text-[13px] font-semibold text-gray-700">Responda com atenção:</p>
                   {RADIO_Q.map(({ key, label }) => (
@@ -399,7 +525,7 @@ function ElegibilidadeInner() {
                   ))}
                 </div>
 
-                {/* Declaration */}
+                {/* Declaração */}
                 <div className={`flex items-start gap-3 p-4 rounded-[8px] border mb-6 ${
                   errors.declaration ? 'border-red-300 bg-red-50' : 'bg-gray-50 border-gray-200'
                 }`}>
@@ -418,46 +544,10 @@ function ElegibilidadeInner() {
               </div>
             )}
 
-            {/* ══ ETAPA 2 — Dados da empresa ══ */}
+            {/* ══ ETAPA 2 — Contato ══ */}
             {step === 2 && (
               <div>
-                <span className="section-tag text-[11px]">Etapa 2 — Dados da empresa</span>
-                <h2 className="font-display text-2xl text-gray-900 mb-2">Identifique sua empresa</h2>
-                <p className="text-[14px] text-gray-500 mb-7">
-                  Precisamos do CNPJ e nome da empresa para registrar sua solicitação.
-                </p>
-                <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="form-label required">CNPJ</label>
-                    <input className={`form-input ${errors.cnpj ? 'error' : ''}`}
-                      placeholder="00.000.000/0000-00" value={form.cnpj}
-                      onChange={e => set('cnpj', maskCNPJ(e.target.value))}
-                      inputMode="numeric" maxLength={18} />
-                    {errors.cnpj && <p className="text-[12px] text-red-500 mt-1">{errors.cnpj}</p>}
-                  </div>
-                  <div>
-                    <label className="form-label required">Nome da empresa</label>
-                    <input className={`form-input ${errors.companyName ? 'error' : ''}`}
-                      placeholder="Razão social ou fantasia" value={form.companyName}
-                      onChange={e => set('companyName', e.target.value)} />
-                    {errors.companyName && <p className="text-[12px] text-red-500 mt-1">{errors.companyName}</p>}
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <button className="btn btn-ghost" onClick={() => setStep(1)}>
-                    <ArrowLeft size={16} /> Voltar
-                  </button>
-                  <button className="btn btn-primary flex-1" onClick={handleStep2}>
-                    Continuar <ArrowRight size={18} />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ══ ETAPA 3 — Contato ══ */}
-            {step === 3 && (
-              <div>
-                <span className="section-tag text-[11px]">Etapa 3 — Seus dados</span>
+                <span className="section-tag text-[11px]">Etapa 2 — Seu contato</span>
                 <h2 className="font-display text-2xl text-gray-900 mb-2">Quase lá! Informe seus dados</h2>
                 <p className="text-[14px] text-gray-500 mb-7">
                   Usaremos seus dados apenas para enviar o resultado e, se necessário, entrar em contato.
@@ -489,7 +579,7 @@ function ElegibilidadeInner() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button className="btn btn-ghost" onClick={() => setStep(2)}>
+                  <button className="btn btn-ghost" onClick={() => setStep(1)}>
                     <ArrowLeft size={16} /> Voltar
                   </button>
                   <button className="btn btn-primary flex-1" onClick={handleSubmit} disabled={loading}>
@@ -531,12 +621,12 @@ function ElegibilidadeInner() {
                     </div>
 
                     {/* Plano indicado */}
-                    <div className="border border-gray-200 rounded-[12px] p-5 mb-6">
+                    <div className="border border-gray-200 rounded-[12px] p-5 mb-4">
                       <h4 className="text-[14px] font-semibold text-gray-700 mb-4">📊 Plano indicado</h4>
                       {[
                         { l: 'Faixa de funcionários', v: result.plan.label },
-                        { l: 'Mensalidade', v: maskCurrencyBRL(result.plan.monthly), highlight: true },
-                        { l: 'Modelo', v: 'Plano anual com cobrança mensal' },
+                        { l: 'Parcela mensal*', v: maskCurrencyBRL(result.plan.monthly), highlight: true },
+                        { l: 'Modelo', v: 'Assinatura anual · cobrado mensalmente' },
                         { l: 'Implantação padrão', v: 'R$ 190,00' },
                         { l: '🎁 Implantação promocional (24h)', v: maskCurrencyBRL(result.plan.implantacaoPromo), promo: true },
                       ].map(row => (
@@ -547,6 +637,11 @@ function ElegibilidadeInner() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Nota legal */}
+                    <p className="text-[11px] text-gray-400 mb-5 leading-relaxed">
+                      * Assinatura anual com renovação automática, cobrada mensalmente. Cancelamento disponível antes da data de renovação anual.
+                    </p>
                   </>
                 )}
 

@@ -111,12 +111,12 @@ export default function ParceirosPage() {
                 style={{ background: 'linear-gradient(135deg, var(--teal-pale), var(--blue-light))', borderColor: 'rgba(26,158,140,.25)' }}>
                 <h4 className="text-[12px] font-bold text-teal uppercase tracking-widest mb-3">💰 Recompensa por indicação</h4>
                 <p className="text-[14px] text-petrol leading-relaxed mb-4">
-                  Parceiros cadastrados podem receber recompensa equivalente a uma mensalidade do plano contratado por cada novo cliente elegível que aderir ao plano anual, conforme condições do programa.
+                  Parceiros cadastrados podem receber recompensa equivalente a uma parcela mensal do plano contratado por cada novo cliente elegível que aderir à assinatura anual, conforme condições do programa.
                 </p>
                 <table className="w-full text-[13px] border-collapse">
                   <thead>
                     <tr>
-                      {['Faixa de funcionários','Mensalidade','Recompensa potencial'].map(h => (
+                      {['Faixa de funcionários','Parcela mensal','Recompensa potencial'].map(h => (
                         <th key={h} className="text-left py-2 px-3 text-[11px] font-bold text-teal uppercase tracking-wider"
                           style={{ background: 'rgba(26,158,140,.1)' }}>{h}</th>
                       ))}

@@ -22,7 +22,7 @@ const FEATURES = [
 
 const COMPARISON = [
   { feat: 'Processo de contratação', trad: 'Por projeto, com visitas técnicas', digital: true, digitalText: 'Contratação e gestão digitais' },
-  { feat: 'Preço previsível', trad: 'Variável por projeto', digital: true, digitalText: 'Mensalidade fixa' },
+  { feat: 'Preço previsível', trad: 'Variável por projeto', digital: true, digitalText: 'Valor fixo mensal' },
   { feat: 'Tempo de implantação', trad: 'Variável conforme escopo', digital: true, digitalText: 'Ágil e estruturado' },
   { feat: 'Documentação digital', trad: 'Física / e-mail avulso', digital: true, digitalText: 'Organizada digitalmente' },
   { feat: 'Para todos os perfis', trad: true, tradText: 'Sim', digital: false, digitalText: 'Baixo risco, até 20 func.' },
@@ -95,7 +95,7 @@ export default function DigitalPage() {
                 { icon: '✅', title: 'Têm até 20 funcionários', body: 'O modelo digital foi desenhado para pequenas empresas com operação enxuta.' },
                 { icon: '✅', title: 'Possuem CNAE de Grau de Risco 1', body: 'Atividades classificadas como GR1 na NR-4, sem riscos operacionais elevados.' },
                 { icon: '✅', title: 'Não operam com riscos críticos', body: 'Sem máquinas industriais, químicos perigosos, trabalho em altura ou atividades externas de alto risco.' },
-                { icon: '✅', title: 'Buscam previsibilidade financeira', body: 'Mensalidade fixa, sem surpresas — você sabe exatamente o custo da conformidade.' },
+                { icon: '✅', title: 'Buscam previsibilidade financeira', body: 'Valor fixo mensal, sem surpresas — você sabe exatamente o custo da conformidade.' },
               ].map((c) => (
                 <div key={c.title} className="card p-6 flex gap-4 items-start">
                   <span className="text-2xl shrink-0">{c.icon}</span>
@@ -163,7 +163,7 @@ export default function DigitalPage() {
               <div className="card p-7">
                 <h3 className="text-[15px] font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[12px]">✓</span>
-                  Incluso na mensalidade
+                  Incluso na assinatura
                 </h3>
                 <ul className="flex flex-col gap-2.5">
                   {[

@@ -17,7 +17,7 @@ const config: NichoConfig = {
     { icon: '💸', title: 'Medo de multa mas sem tempo para resolver', body: 'A equipe está focada em produto e cliente. SST vai ficando para depois — até virar um problema.' },
     { icon: '🏢', title: 'Time remoto ou híbrido complica a gestão', body: 'Com parte do time em home office, fica difícil saber quais obrigações se aplicam e como documentá-las.' },
     { icon: '🔍', title: 'Não sabe por onde começar', body: 'PGR, PCMSO, GR1, NR-1... siglas demais para quem nunca precisou lidar com isso antes.' },
-    { icon: '💰', title: 'Preço variável assusta', body: 'Orçamentos de SST costumam ser imprevisíveis. Empresa de tech prefere mensalidade fixa e previsível.' },
+    { icon: '💰', title: 'Preço variável assusta', body: 'Orçamentos de SST costumam ser imprevisíveis. Empresa de tech prefere valor fixo mensal e previsível.' },
   ],
   solution: {
     title: 'Regularização completa em SST, sem visita presencial.',
@@ -26,7 +26,7 @@ const config: NichoConfig = {
       'PGR e PCMSO elaborados conforme NR-1 e NR-7',
       'Documentação organizada e acessível digitalmente',
       'Atendimento 100% remoto por WhatsApp e e-mail',
-      'Mensalidade fixa — sem surpresas no final do mês',
+      'Valor fixo mensal — sem surpresas no final do mês',
       'Cobertura para equipes presenciais, híbridas e remotas',
     ],
   },

@@ -134,7 +134,7 @@ export default function ConsultoriaPage() {
               <span>
                 Se sua empresa tem até 20 funcionários e CNAE GR1, pode se enquadrar no{' '}
                 <Link href="/elegibilidade" className="font-semibold underline">modelo digital</Link>{' '}
-                — mais simples e com mensalidade previsível.
+                — mais simples e com valor mensal previsível.
               </span>
             </div>
           </div>

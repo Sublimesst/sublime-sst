@@ -20,12 +20,12 @@ const config: NichoConfig = {
     { icon: '🏃', title: 'Equipe pequena, sem alguém para cuidar disso', body: 'Em escritórios enxutos, ninguém tem tempo ou conhecimento para gerenciar SST internamente.' },
   ],
   solution: {
-    title: 'Conformidade em SST com mensalidade previsível e processo digital.',
+    title: 'Conformidade em SST com valor mensal fixo e processo digital.',
     body: 'O Sublime Digital organiza as obrigações de SST de escritórios e empresas administrativas de baixo risco de forma simples e acessível. Sem visita presencial, sem surpresas no preço.',
     bullets: [
       'PGR e PCMSO elaborados para o seu perfil operacional',
       'Processo de contratação e gestão inteiramente digitais',
-      'Mensalidade fixa — saiba exatamente o que pagar todo mês',
+      'Valor fixo mensal — saiba exatamente o que pagar todo mês',
       'Documentação organizada e pronta para fiscalizações',
       'Atendimento por WhatsApp e e-mail',
     ],
@@ -52,7 +52,7 @@ const config: NichoConfig = {
     { q: 'Um escritório de advocacia ou contabilidade precisa de PGR?', a: 'Sim. Qualquer empresa com funcionários CLT é obrigada a ter PGR desde a atualização da NR-1 em 2021, independentemente do setor ou nível de risco.' },
     { q: 'O que é o Grau de Risco 1 (GR1) e como sei se minha empresa se enquadra?', a: 'O Grau de Risco é uma classificação da NR-4 que define o nível de perigo da atividade econômica. Escritórios e empresas administrativas normalmente são GR1 — mas o teste de elegibilidade confirma isso de forma rápida.' },
     { q: 'Preciso de visita técnica presencial?', a: 'Para a maioria dos escritórios GR1, não. O PGR e o PCMSO são elaborados com base nas informações coletadas digitalmente. Quando for necessária alguma etapa presencial, você será orientado.' },
-    { q: 'Qual é o valor?', a: 'A mensalidade varia de acordo com o número de funcionários. Os planos começam em R$ 142/mês para empresas com até 5 funcionários. Faça o teste de elegibilidade para ver o valor exato para o seu perfil.' },
+    { q: 'Qual é o valor?', a: 'A assinatura anual é cobrada mensalmente e começa em R$ 142/mês para empresas com até 5 funcionários. Faça o teste de elegibilidade para ver o valor exato para o seu perfil.' },
   ],
   ctas: [
     { label: 'Verificar Elegibilidade', href: '/elegibilidade?utm_source=lp-escritorios&utm_campaign=nicho', variant: 'primary' },

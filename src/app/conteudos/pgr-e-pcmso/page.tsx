@@ -119,7 +119,7 @@ export default function ArtPgrPcmso() {
       </p>
       <p>
         Para empresas de baixo risco operacional (GR1) com até 20 funcionários, a Sublime SST oferece um modelo
-        digital que organiza PGR e PCMSO de forma simplificada, com mensalidade previsível e sem necessidade de
+        digital que organiza PGR e PCMSO de forma simplificada, com valor mensal fixo e sem necessidade de
         visitas presenciais na maioria dos casos.
       </p>
       <p>

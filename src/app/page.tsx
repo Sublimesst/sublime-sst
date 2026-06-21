@@ -123,7 +123,7 @@ export default function HomePage() {
                     'Empresas com até 20 funcionários',
                     'CNAE de Grau de Risco 1 (GR1)',
                     'Sem riscos operacionais críticos',
-                    'Mensalidade fixa e previsível',
+                    'Valor fixo e previsível',
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-[14px] text-gray-600">
                       <CheckCircle size={15} className="text-teal shrink-0 mt-0.5" />
@@ -184,7 +184,7 @@ export default function HomePage() {
                     { label: 'Grau de Risco', value: 'Somente GR1 (conforme NR-4)' },
                     { label: 'Atividade', value: 'Escritórios, comércio, serviços administrativos, tecnologia, contabilidade' },
                     { label: 'Necessidade', value: 'PGR e PCMSO, organização documental, conformidade com eSocial' },
-                    { label: 'Preferência', value: 'Processo digital, mensalidade previsível, sem reuniões presenciais' },
+                    { label: 'Preferência', value: 'Processo digital, valor mensal fixo e previsível, sem reuniões presenciais' },
                   ].map((row) => (
                     <div key={row.label} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
                       <span className="text-[12px] font-semibold text-gray-400 uppercase tracking-wider w-28 shrink-0 pt-0.5">{row.label}</span>
@@ -270,7 +270,7 @@ export default function HomePage() {
                     R$ {(plan.monthly / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                     <span className="font-sans text-[14px] font-normal text-white/40">/mês</span>
                   </div>
-                  <div className="text-[12px] text-white/40 mb-6">Plano anual com cobrança mensal</div>
+                  <div className="text-[12px] text-white/40 mb-6">Assinatura anual · cobrado mensalmente</div>
                   <div className="h-px bg-white/10 mb-6" />
                   <ul className="space-y-2.5 mb-7">
                     {['Gestão de obrigações SST', 'Documentação estruturada', 'Acompanhamento remoto', i === 1 ? 'Suporte prioritário' : i === 2 ? 'Suporte completo e reuniões' : 'Suporte por e-mail e WhatsApp'].map((f) => (

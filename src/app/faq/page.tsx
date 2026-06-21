@@ -43,7 +43,7 @@ const FAQS = [
     items: [
       {
         q: 'O que é o Sublime Digital?',
-        a: 'O Sublime Digital é um plano mensal para empresas GR1 com até 20 funcionários que permite regularizar a SST de forma totalmente digital — sem visitas técnicas presenciais na maioria dos casos. Inclui PGR, PCMSO, gestão documental e suporte.',
+        a: 'O Sublime Digital é uma assinatura anual para empresas GR1 com até 20 funcionários que permite regularizar a SST de forma totalmente digital — sem visitas técnicas presenciais na maioria dos casos. Inclui PGR, PCMSO, gestão documental e suporte.',
       },
       {
         q: 'O que é a Consultoria SST Personalizada?',
@@ -51,7 +51,7 @@ const FAQS = [
       },
       {
         q: 'Qual o preço do Sublime Digital?',
-        a: 'Os planos do Sublime Digital começam a partir de R$ 142/mês para empresas com até 5 funcionários. O valor varia conforme o número de funcionários. Consulte a página de planos para ver todas as faixas.',
+        a: 'A assinatura anual do Sublime Digital começa a partir de R$ 142/mês (cobrado mensalmente) para empresas com até 5 funcionários. O valor varia conforme o número de funcionários. Consulte a página de planos para ver todas as faixas.',
       },
       {
         q: 'Como sei se minha empresa se enquadra no modelo digital?',

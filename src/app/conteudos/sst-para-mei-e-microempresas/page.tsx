@@ -24,7 +24,7 @@ export default function ArtMei() {
       category="MEI e ME"
       cta={{
         title: 'Tem funcionários? Descubra o que sua empresa precisa',
-        body: 'Faça o teste gratuito e veja se sua empresa se enquadra no modelo digital — simples, digital e com mensalidade a partir de R$ 142/mês.',
+        body: 'Faça o teste gratuito e veja se sua empresa se enquadra no modelo digital — simples, digital e com assinatura anual a partir de R$ 142/mês.',
         href: '/elegibilidade',
         label: 'Verificar Elegibilidade',
       }}

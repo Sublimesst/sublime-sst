@@ -24,7 +24,7 @@ export default function ArtBaixoRisco() {
       category="Grau de Risco"
       cta={{
         title: 'Sua empresa é GR1? Veja se pode usar o modelo digital',
-        body: 'Empresas GR1 com até 20 funcionários podem se enquadrar no Sublime Digital — modelo simples, digital e com mensalidade fixa.',
+        body: 'Empresas GR1 com até 20 funcionários podem se enquadrar no Sublime Digital — modelo simples, digital e com assinatura anual de valor fixo.',
         href: '/elegibilidade',
         label: 'Verificar Elegibilidade',
       }}

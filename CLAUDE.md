@@ -137,6 +137,39 @@ Next.js 14 (App Router) · TypeScript · Tailwind CSS · Prisma v5 · Supabase (
 
 ---
 
+## Agenda da próxima sessão (prioridade em ordem)
+
+### 1. Refinamento do contrato
+- Revisar o modelo gerado (`Contrato_Sublime_Digital_MODELO.docx`) após reunião com sócios
+- Ajustar cláusulas conforme decisões tomadas internamente
+- Preencher campos em vermelho: CNPJ da Sublime SST, endereço, representante legal, foro
+
+### 2. Estruturação do produto digital
+- Definir com clareza o que está **incluído** no Sublime Digital (sem custo adicional)
+- Definir o que é **upsell / pago à parte** (ex: PCMSO com médico, LTCAT, visita presencial)
+- Definir o que está **fora do escopo** de qualquer plano
+- Atualizar a página `/digital` com essa clareza após decisão dos sócios
+- Definir prazo típico de implantação para comunicar ao cliente
+
+### 3. Programa de parceria — estruturação completa
+- Modelo de remuneração: % mensal (ex: 10%) ou valor fixo — decidir e formalizar
+- Periodicidade do pagamento da comissão (mensal? trimestral?)
+- Fluxo operacional: como o parceiro indica → como a Sublime registra → como a comissão é calculada e paga
+- Backoffice para controle de comissões (tela interna no `/admin`)
+- **Área logada para o parceiro indicador:** login, painel de acompanhamento dos indicados, extrato de comissões
+- Avaliar se mostrar ou não a remuneração publicamente no site (recomendação: não mostrar para cliente final)
+
+### 4. Área logada do cliente — funcionalidades
+- Mapear o que o cliente precisa acessar após contratar:
+  - Status do processo de implantação
+  - Documentos gerados (PGR, laudos, etc.)
+  - Formulário de onboarding / coleta de dados
+  - Histórico de pagamentos
+  - Canal de comunicação com a equipe
+- Definir o que já está construído (portal básico existe) vs. o que precisa ser desenvolvido
+
+---
+
 ## Itens P0 do backlog ainda pendentes (requerem ação manual)
 
 - **P0.3 — Jurídico:** revisão humana de `/privacidade` e `/termos`; remover aviso de rascunho/MVP após aprovação

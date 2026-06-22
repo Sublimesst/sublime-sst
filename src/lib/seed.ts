@@ -8,26 +8,7 @@ import cnaeCatalog from './cnae_catalog.json'
 
 const prisma = new PrismaClient()
 
-// CNAEs pré-aprovados pelo responsável técnico (lista branca inicial)
-const APPROVED_CODES = new Set([
-  '69.20-6', // Contabilidade
-  '70.20-4', // Consultoria em gestão
-  '73.11-4', // Agências de publicidade
-  '73.19-0', // Publicidade
-  '73.20-3', // Pesquisa de mercado
-  '74.10-2', // Design
-  '74.90-1', // Atividades técnicas
-  '71.11-1', // Arquitetura
-  '71.12-0', // Engenharia
-  '71.19-7', // Técnicas de arquitetura
-  '82.11-3', // Escritório e apoio administrativo
-  '68.21-8', // Imobiliária — compra/venda
-  '68.22-6', // Gestão imobiliária
-  '66.21-5', // Avaliação de riscos (seguros)
-  '66.22-3', // Corretores de seguros
-  '69.11-7', // Atividades jurídicas
-  '69.12-5', // Cartórios
-])
+// Todos os CNAEs do catálogo são GR1 — aprovados pela responsável técnica em SST
 
 async function seed() {
   console.log('🌱 Iniciando seed...')
@@ -56,26 +37,23 @@ async function seed() {
     notes: string | null
   }> }).entries
 
-  let approved = 0
   for (const entry of entries) {
-    const isApproved = APPROVED_CODES.has(entry.nr4_class_code)
     await prisma.cnaeCatalog.create({
       data: {
         code: entry.nr4_class_code,
         description: entry.description,
         grauRiscoNr4: entry.grau_risco_nr4 ?? 1,
         sourcePagePdf: entry.source_page_pdf,
-        onlineCatalogStatus: isApproved ? 'approved' : 'pending',
-        eligivelOnline: isApproved,
+        onlineCatalogStatus: 'approved',
+        eligivelOnline: true,
         notes: entry.notes,
-        approvedBy: isApproved ? 'seed_inicial' : null,
-        approvedAt: isApproved ? new Date() : null,
+        approvedBy: 'rt_tecnica_sst',
+        approvedAt: new Date(),
       },
     })
-    if (isApproved) approved++
   }
 
-  console.log(`✅ ${entries.length} CNAEs importados (${approved} aprovados)`)
+  console.log(`✅ ${entries.length} CNAEs importados e aprovados (todos GR1)`)
   console.log('🎉 Seed concluído!')
 }
 

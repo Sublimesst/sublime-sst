@@ -144,4 +144,36 @@ Next.js 14 (App Router) · TypeScript · Tailwind CSS · Prisma v5 · Supabase (
 
 ---
 
-*Atualizado em: 2026-06-22*
+## Contexto comercial e operacional (atualizado 2026-06-22)
+
+### Estágio atual
+- Site no ar mas ainda **não aberto para clientes reais** — sendo usado para posicionamento interno
+- Zero leads gerados até o momento
+- Sem concorrentes monitorados ativamente
+
+### Bloqueadores para o primeiro cliente
+1. Produto não está completamente definido: falta especificar o que está incluído no Sublime Digital, o que é upsell e o que não é coberto
+2. Contrato de prestação de serviço ainda não existe
+3. Asaas integrado mas não ativado para clientes — aguarda definição do produto e contrato
+4. Apenas 17 CNAEs aprovados — muito conservador, reduz demais o público elegível
+
+### Produto (o que se sabe até agora)
+- Equipe interna elabora laudos pertinentes (ex: SAC) e envia ao cliente
+- PCMSO com médico do trabalho: terceirizado quando necessário, custo de R$ 150 por laudo (repassado ou absorvido — a definir)
+- Documentos entregues por e-mail hoje; objetivo futuro: disponibilizar na área logada do cliente
+- Prazo de implantação: a ser definido com a equipe interna
+
+### Parceiros
+- 2 parceiros contadores ativos (1 solo + 1 pequeno escritório) — sem contrato formal, sem indicações ainda
+- Modelo de remuneração discutido informalmente: 1ª mensalidade ou % mensal (ex: 10%) — a formalizar
+- Sprint 8 (white label) não é urgente ainda
+
+### CNAEs
+- Sócia técnica em SST pode validar e expandir a lista branca além dos 17 atuais
+- Todos os CNAEs de baixo risco (GR1) podem ser aprovados após validação dela
+- Ação pendente: gerar lista formatada para revisão da sócia
+
+### Preferências técnicas
+- Orçamento apertado: preferência por ferramentas gratuitas ou muito baratas
+- Stack atual já está dentro desse critério (Supabase free, Vercel free, Resend free, Asaas sem mensalidade)
+- Evoluir ferramentas conforme a empresa gerar resultados

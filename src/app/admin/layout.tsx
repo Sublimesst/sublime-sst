@@ -16,8 +16,12 @@ const NAV = [
 
 function AdminGate({ children }: { children: React.ReactNode }) {
   const [authed, setAuthed] = useState(false)
+  const [step, setStep] = useState<'password' | 'otp'>('password')
   const [pw, setPw] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpSentTo, setOtpSentTo] = useState('')
   const [err, setErr] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     setAuthed(sessionStorage.getItem('admin_authed') === '1')
@@ -25,15 +29,45 @@ function AdminGate({ children }: { children: React.ReactNode }) {
 
   if (authed) return <>{children}</>
 
-  const login = () => {
-    // Simple secret check — server validates on each API call
-    if (pw.length >= 6) {
-      sessionStorage.setItem('admin_authed', '1')
-      sessionStorage.setItem('admin_secret', pw)
-      setAuthed(true)
-    } else {
-      setErr('Senha inválida.')
-    }
+  const requestOtp = async () => {
+    if (pw.length < 6) { setErr('Senha inválida.'); return }
+    setLoading(true); setErr('')
+    try {
+      const res = await fetch('/api/admin/otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ secret: pw }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setOtpSentTo(data.sentTo)
+        setStep('otp')
+      } else {
+        setErr(data.error ?? 'Credencial inválida.')
+      }
+    } catch { setErr('Erro de rede.') }
+    finally { setLoading(false) }
+  }
+
+  const verifyOtp = async () => {
+    if (otp.length !== 6) { setErr('Digite o código de 6 dígitos.'); return }
+    setLoading(true); setErr('')
+    try {
+      const res = await fetch('/api/admin/otp', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        sessionStorage.setItem('admin_authed', '1')
+        sessionStorage.setItem('admin_secret', pw)
+        setAuthed(true)
+      } else {
+        setErr(data.error ?? 'Código incorreto.')
+      }
+    } catch { setErr('Erro de rede.') }
+    finally { setLoading(false) }
   }
 
   return (
@@ -44,17 +78,47 @@ function AdminGate({ children }: { children: React.ReactNode }) {
           <Settings size={22} className="text-white" />
         </div>
         <h1 className="font-display text-2xl text-gray-900 mb-1">Admin</h1>
-        <p className="text-[13px] text-gray-500 mb-6">Sublime SST — Área restrita</p>
-        <input
-          type="password"
-          className="form-input mb-3 text-center"
-          placeholder="Senha de acesso"
-          value={pw}
-          onChange={e => setPw(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && login()}
-        />
-        {err && <p className="text-[12px] text-red-500 mb-3">{err}</p>}
-        <button className="btn btn-petrol w-full" onClick={login}>Entrar</button>
+        <p className="text-[13px] text-gray-500 mb-6">
+          {step === 'password' ? 'Sublime SST — Área restrita' : `Código enviado para ${otpSentTo}`}
+        </p>
+
+        {step === 'password' ? (
+          <>
+            <input
+              type="password"
+              className="form-input mb-3 text-center"
+              placeholder="Senha de acesso"
+              value={pw}
+              onChange={e => setPw(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && requestOtp()}
+            />
+            {err && <p className="text-[12px] text-red-500 mb-3">{err}</p>}
+            <button className="btn btn-petrol w-full" onClick={requestOtp} disabled={loading}>
+              {loading ? 'Verificando…' : 'Continuar →'}
+            </button>
+          </>
+        ) : (
+          <>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              className="form-input mb-3 text-center tracking-widest text-lg font-mono"
+              placeholder="000000"
+              value={otp}
+              onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={e => e.key === 'Enter' && verifyOtp()}
+              autoFocus
+            />
+            {err && <p className="text-[12px] text-red-500 mb-3">{err}</p>}
+            <button className="btn btn-petrol w-full mb-2" onClick={verifyOtp} disabled={loading}>
+              {loading ? 'Verificando…' : 'Entrar'}
+            </button>
+            <button className="text-[12px] text-gray-400 hover:text-gray-600" onClick={() => { setStep('password'); setOtp(''); setErr('') }}>
+              ← Voltar
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

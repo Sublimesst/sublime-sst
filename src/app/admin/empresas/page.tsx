@@ -48,6 +48,7 @@ export default function EmpresasPage() {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   const fetchCompanies = useCallback(() => {
     setLoading(true)
@@ -62,6 +63,7 @@ export default function EmpresasPage() {
 
   async function updateStatus(companyId: string, status: string) {
     setUpdatingId(companyId)
+    setStatusError(null)
     try {
       const res = await fetch(`/api/admin/empresas/${companyId}`, {
         method: 'PATCH',
@@ -71,9 +73,12 @@ export default function EmpresasPage() {
       const data = await res.json()
       if (data.success) {
         setCompanies(cs => cs.map(c => c.id === companyId ? { ...c, status: data.data.status } : c))
+      } else {
+        setStatusError(data.error ?? 'Erro ao atualizar status.')
       }
     } catch (e) {
       console.error(e)
+      setStatusError('Erro de rede.')
     } finally {
       setUpdatingId(null)
     }
@@ -146,6 +151,13 @@ export default function EmpresasPage() {
           ))}
         </select>
       </div>
+
+      {statusError && (
+        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-[8px] text-[13px] text-red-700 flex items-center justify-between">
+          <span>⚠️ {statusError}</span>
+          <button onClick={() => setStatusError(null)} className="text-red-400 hover:text-red-600 text-[11px] ml-4">Fechar</button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-[12px] border border-gray-200 overflow-hidden">

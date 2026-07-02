@@ -48,6 +48,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const company = await prisma.company.findUnique({ where: { id: params.id } })
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })
 
+  if (status === 'documents_delivered' && !company.reviewedBy && !reviewedBy) {
+    return NextResponse.json(
+      { success: false, error: 'É obrigatório informar o técnico responsável (reviewedBy) antes de marcar documentos como entregues.' },
+      { status: 422 }
+    )
+  }
+
   const updated = await prisma.company.update({
     where: { id: params.id },
     data: {

@@ -4,21 +4,26 @@ import { NextRequest, NextResponse } from 'next/server'
 // In production, replace with Upstash Redis or similar
 const store = new Map<string, { count: number; reset: number }>()
 
-export function rateLimit(req: NextRequest, limit = 10, windowMs = 60_000): boolean {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  const key = `${ip}:${req.nextUrl.pathname}`
+function checkLimit(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
-
   const entry = store.get(key)
   if (!entry || now > entry.reset) {
     store.set(key, { count: 1, reset: now + windowMs })
-    return true // allowed
+    return true
   }
-
-  if (entry.count >= limit) return false // blocked
-
+  if (entry.count >= limit) return false
   entry.count++
   return true
+}
+
+export function rateLimit(req: NextRequest, limit = 10, windowMs = 60_000): boolean {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const key = `${ip}:${req.nextUrl.pathname}`
+  return checkLimit(key, limit, windowMs)
+}
+
+export function rateLimitByKey(key: string, limit: number, windowMs: number): boolean {
+  return checkLimit(key, limit, windowMs)
 }
 
 export function rateLimitResponse(): NextResponse {

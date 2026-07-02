@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
+import { rateLimit, rateLimitByKey, rateLimitResponse } from '@/lib/rateLimit'
 import { sendMagicLink } from '@/lib/mailer'
 import crypto from 'crypto'
 
@@ -17,6 +17,11 @@ export async function POST(req: NextRequest) {
   }
 
   const { email } = parsed.data
+
+  // Secondary rate limit per email: 3 magic links per 10 minutes
+  if (!rateLimitByKey(`magic:${email.toLowerCase()}`, 3, 10 * 60_000)) {
+    return rateLimitResponse()
+  }
 
   const company = await prisma.company.findFirst({
     where: { email: { equals: email, mode: 'insensitive' } },

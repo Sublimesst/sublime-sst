@@ -16,7 +16,9 @@ export default function CadastroPage() {
     numFuncionarios: '', cargos: '', observations: '',
     consentDataUsage: false, consentDeclaration: false, consentTerms: false,
   })
-  const [plan, setPlan] = useState<{ monthly: number; implantacaoPromo: number; label: string } | null>(null)
+  const [plan, setPlan] = useState<{ monthly: number; implantacaoPromo: number; label: string; planType?: string; planName?: string } | null>(null)
+  const [planType, setPlanType] = useState<'essencial' | 'premium'>('essencial')
+  const [contractAccepted, setContractAccepted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -34,6 +36,8 @@ export default function CadastroPage() {
         whatsapp: data.whatsapp || '',
       }))
       if (data.plan) setPlan(data.plan)
+      if (data.planType) setPlanType(data.planType)
+      if (data.contractAccepted) setContractAccepted(true)
     }
   }, [])
 
@@ -67,7 +71,7 @@ export default function CadastroPage() {
       const res = await fetch('/api/leads/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, planType, contractAccepted }),
       })
       const data = await res.json()
       if (data.success) {
@@ -134,7 +138,7 @@ export default function CadastroPage() {
             <div className="flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-[12px] p-4 mb-6">
               <span className="text-xl">⏱️</span>
               <p className="text-[13px] text-amber-800">
-                Finalize agora e garanta a implantação por <strong>R$ 100</strong> (oferta válida por 24h após o teste).
+                Finalize agora e garanta a implantação por <strong>{maskCurrencyBRL(plan.implantacaoPromo)}</strong> (oferta válida por 24h após o teste).
               </p>
             </div>
           )}
@@ -229,7 +233,7 @@ export default function CadastroPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[13px] text-gray-500">Implantação promocional (24h)</span>
-                  <span className="text-[14px] font-semibold">R$ 100,00</span>
+                  <span className="text-[14px] font-semibold">{maskCurrencyBRL(plan.implantacaoPromo)}</span>
                 </div>
               </div>
             )}

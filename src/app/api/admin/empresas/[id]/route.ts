@@ -24,6 +24,18 @@ function auth(req: NextRequest) {
   return req.headers.get('x-admin-secret') === process.env.ADMIN_SECRET
 }
 
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  if (!auth(req)) return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
+
+  const company = await prisma.company.findUnique({
+    where: { id: params.id },
+    include: { plan: true, payments: { where: { type: 'implantacao' }, take: 1 } },
+  })
+  if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })
+
+  return NextResponse.json({ success: true, data: company })
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   if (!auth(req)) return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
 

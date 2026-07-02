@@ -172,8 +172,8 @@ export default function EmpresasPage() {
                   return (
                     <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <p className="font-medium text-gray-900">{c.razaoSocial}</p>
-                        <a href={waLink} target="_blank" rel="noopener noreferrer" className="text-[11px] text-gray-400 hover:text-teal">{c.whatsapp}</a>
+                        <a href={`/admin/empresas/${c.id}`} className="font-medium text-gray-900 hover:text-teal">{c.razaoSocial}</a>
+                        <a href={waLink} target="_blank" rel="noopener noreferrer" className="block text-[11px] text-gray-400 hover:text-teal">{c.whatsapp}</a>
                         {c.ltcatAddon && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">+LTCAT</span>}
                       </td>
                       <td className="px-5 py-3.5">

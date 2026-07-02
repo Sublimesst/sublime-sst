@@ -183,6 +183,7 @@ function ElegibilidadeInner() {
   const [promoEnd] = useState(() => Date.now() + PROMO_WINDOW_MS)
   const countdown = useCountdown(promoEnd)
   const [planType, setPlanType] = useState<PlanType>('essencial')
+  const [ltcatAddon, setLtcatAddon] = useState(false)
   const [contractAccepted, setContractAccepted] = useState(false)
   const [contractError, setContractError] = useState('')
 
@@ -346,12 +347,13 @@ function ElegibilidadeInner() {
         ...form,
         plan: { ...selectedPlan, planType, planName: PLAN_TYPES[planType].name },
         planType,
+        ltcatAddon,
         promoEnd,
         contractAccepted: true,
         contractAcceptedAt: new Date().toISOString(),
       }))
     }
-    track('registration_started', { planType, employees, ...utmRef.current })
+    track('registration_started', { planType, employees, ltcatAddon, ...utmRef.current })
     router.push('/cadastro')
   }
 
@@ -753,6 +755,28 @@ function ElegibilidadeInner() {
                   <p className="text-[11px] text-gray-400 mb-5 mt-1 leading-relaxed">
                     * Assinatura anual com renovação automática. Cancelamento disponível antes da data de renovação.
                   </p>
+
+                  {/* Add-on LTCAT — apenas Essencial, todas as empresas elegíveis qualificam */}
+                  {planType === 'essencial' && (
+                    <div className="p-4 rounded-[10px] border border-blue-200 bg-blue-50 mb-4">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          id="ltcatAddon"
+                          checked={ltcatAddon}
+                          onChange={e => setLtcatAddon(e.target.checked)}
+                          className="w-4 h-4 mt-0.5 accent-teal shrink-0 cursor-pointer"
+                        />
+                        <label htmlFor="ltcatAddon" className="text-[13px] text-blue-800 leading-snug cursor-pointer">
+                          <span className="font-semibold">LTCAT disponível como serviço adicional</span>
+                          {' '}— R$ 450,00 (cobrado separadamente)
+                          <span className="block text-[11px] text-blue-600 mt-1">
+                            Laudo Técnico das Condições Ambientais do Trabalho. Necessário para histórico previdenciário e PPP. Incluso no plano Premium.
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Aceite de contrato */}
                   <div className={`p-4 rounded-[10px] border mb-2 ${

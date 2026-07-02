@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
         contractAcceptanceIp: clientIp,
         contractAcceptanceUa: clientUa,
         contractVersion:      CONTRACT_VERSION,
+        ltcatAddon:           data.ltcatAddon,
         status:               'pending',
       },
     })

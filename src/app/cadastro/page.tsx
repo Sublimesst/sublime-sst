@@ -18,6 +18,7 @@ export default function CadastroPage() {
   })
   const [plan, setPlan] = useState<{ monthly: number; implantacaoPromo: number; label: string; planType?: string; planName?: string } | null>(null)
   const [planType, setPlanType] = useState<'essencial' | 'premium'>('essencial')
+  const [ltcatAddon, setLtcatAddon] = useState(false)
   const [contractAccepted, setContractAccepted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -37,6 +38,7 @@ export default function CadastroPage() {
       }))
       if (data.plan) setPlan(data.plan)
       if (data.planType) setPlanType(data.planType)
+      if (data.ltcatAddon) setLtcatAddon(true)
       if (data.contractAccepted) setContractAccepted(true)
     }
   }, [])
@@ -71,7 +73,7 @@ export default function CadastroPage() {
       const res = await fetch('/api/leads/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, planType, contractAccepted }),
+        body: JSON.stringify({ ...form, planType, ltcatAddon, contractAccepted }),
       })
       const data = await res.json()
       if (data.success) {

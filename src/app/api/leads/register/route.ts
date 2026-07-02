@@ -24,6 +24,7 @@ const schema = z.object({
   consentTerms:       z.boolean(),
   contractAccepted:   z.boolean(),
   ltcatAddon:         z.boolean().optional().default(false),
+  partnerRef:         z.string().optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -64,6 +65,11 @@ export async function POST(req: NextRequest) {
 
     const dbPlan = await prisma.plan.findFirst({ where: { name: employees } })
 
+    // Resolve partner from ref code
+    const partner = data.partnerRef
+      ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
+      : null
+
     const customer = await createOrFindCustomer({
       cnpj:  lead.cnpj,
       name:  data.razaoSocial,
@@ -93,7 +99,6 @@ export async function POST(req: NextRequest) {
         numFuncionarios:      data.numFuncionarios,
         cargos:               data.cargos,
         observations:         data.observations,
-        source:               'site',
         planType,
         implantacaoValor:     implantacaoValorCentavos,
         implantacaoPromo:     isPromo,
@@ -103,6 +108,8 @@ export async function POST(req: NextRequest) {
         contractAcceptanceUa: clientUa,
         contractVersion:      CONTRACT_VERSION,
         ltcatAddon:           data.ltcatAddon,
+        partnerId:            partner?.id,
+        source:               partner ? 'partner' : 'site',
         status:               'pending',
       },
     })
@@ -128,7 +135,10 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await prisma.lead.update({ where: { id: lead.id }, data: { status: 'registered' } })
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { status: 'registered', ...(partner ? { partnerId: partner.id } : {}) },
+    })
 
     return NextResponse.json({
       success: true,

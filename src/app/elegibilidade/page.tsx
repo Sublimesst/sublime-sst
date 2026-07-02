@@ -160,6 +160,11 @@ function ElegibilidadeInner() {
       const v = searchParams.get(k)
       if (v) utmRef.current[k] = v
     })
+    // Partner tracking: ?ref=CODE
+    const ref = searchParams.get('ref')
+    if (ref && typeof window !== 'undefined') {
+      sessionStorage.setItem('sublime_partner_ref', ref)
+    }
     track('cta_digital_test_click', utmRef.current)
   }, [searchParams])
 
@@ -343,12 +348,14 @@ function ElegibilidadeInner() {
     const employees = form.employees as '1-5' | '6-10' | '11-20'
     const selectedPlan = PLAN_TYPES[planType].plans[employees]
     if (typeof window !== 'undefined') {
+      const partnerRef = sessionStorage.getItem('sublime_partner_ref')
       sessionStorage.setItem('sublime_eligibility', JSON.stringify({
         ...form,
         plan: { ...selectedPlan, planType, planName: PLAN_TYPES[planType].name },
         planType,
         ltcatAddon,
         promoEnd,
+        partnerRef: partnerRef ?? undefined,
         contractAccepted: true,
         contractAcceptedAt: new Date().toISOString(),
       }))

@@ -25,6 +25,18 @@ interface Checklist {
   observacoes?: string | null
 }
 
+interface EsocialLog {
+  id: string
+  tipoEvento: string
+  protocolo?: string | null
+  status: string
+  descricao?: string | null
+  observacoes?: string | null
+  enviadoEm?: string | null
+  confirmadoEm?: string | null
+  createdAt: string
+}
+
 interface Company {
   id: string
   razaoSocial: string
@@ -65,6 +77,9 @@ export default function EmpresaDetailPage() {
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [form, setForm] = useState<Partial<Checklist>>({})
   const [reviewedBy, setReviewedBy] = useState('')
+  const [esocialLogs, setEsocialLogs] = useState<EsocialLog[]>([])
+  const [esocialForm, setEsocialForm] = useState({ tipoEvento: 'S-2220', protocolo: '', descricao: '', status: 'enviado' })
+  const [addingEsocial, setAddingEsocial] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savingReview, setSavingReview] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -72,14 +87,16 @@ export default function EmpresaDetailPage() {
   const headers = { 'x-admin-secret': getAdminSecret(), 'Content-Type': 'application/json' }
 
   const fetchData = useCallback(async () => {
-    const [compRes, ckRes] = await Promise.all([
+    const [compRes, ckRes, esRes] = await Promise.all([
       fetch(`/api/admin/empresas/${id}`, { headers }),
       fetch(`/api/admin/empresas/${id}/checklist`, { headers }),
+      fetch(`/api/admin/empresas/${id}/esocial`, { headers }),
     ])
-    const [compData, ckData] = await Promise.all([compRes.json(), ckRes.json()])
+    const [compData, ckData, esData] = await Promise.all([compRes.json(), ckRes.json(), esRes.json()])
     if (compData.success) { setCompany(compData.data); setReviewedBy(compData.data.reviewedBy ?? '') }
     if (ckData.success && ckData.data) { setChecklist(ckData.data); setForm(ckData.data) }
     else if (ckData.success) { setChecklist(null); setForm({}) }
+    if (esData.success) setEsocialLogs(esData.data)
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData() }, [fetchData])
@@ -107,6 +124,17 @@ export default function EmpresaDetailPage() {
 
   function setField<K extends keyof Checklist>(k: K, v: Checklist[K]) {
     setForm(f => ({ ...f, [k]: v }))
+  }
+
+  async function addEsocialLog() {
+    setAddingEsocial(true)
+    try {
+      const res = await fetch(`/api/admin/empresas/${id}/esocial`, {
+        method: 'POST', headers, body: JSON.stringify(esocialForm),
+      })
+      const data = await res.json()
+      if (data.success) setEsocialLogs(logs => [data.data, ...logs])
+    } finally { setAddingEsocial(false) }
   }
 
   function ChecklistRow({ label, statusKey, concluidoPorKey, concluidoEmValue, show = true }:
@@ -255,6 +283,95 @@ export default function EmpresaDetailPage() {
             className="w-full text-[13px] border border-gray-200 rounded-[8px] px-3 py-2 focus:outline-none focus:border-teal"
           />
         </div>
+      </div>
+
+      {/* eSocial Log */}
+      <div className="bg-white rounded-[12px] border border-gray-200 p-5">
+        <p className="text-[14px] font-semibold text-gray-800 mb-4">Registros eSocial SST</p>
+
+        {/* Add log form */}
+        <div className="grid grid-cols-[120px_1fr_180px_auto] gap-2 mb-4 items-end">
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Evento</label>
+            <select
+              value={esocialForm.tipoEvento}
+              onChange={e => setEsocialForm(f => ({ ...f, tipoEvento: e.target.value }))}
+              className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 bg-white focus:outline-none focus:border-teal"
+            >
+              <option value="S-2210">S-2210 (CAT)</option>
+              <option value="S-2220">S-2220 (Saúde)</option>
+              <option value="S-2240">S-2240 (Ambiente)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Descrição</label>
+            <input
+              type="text"
+              placeholder="Ex: Exame periódico anual"
+              value={esocialForm.descricao}
+              onChange={e => setEsocialForm(f => ({ ...f, descricao: e.target.value }))}
+              className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Status</label>
+            <select
+              value={esocialForm.status}
+              onChange={e => setEsocialForm(f => ({ ...f, status: e.target.value }))}
+              className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 bg-white focus:outline-none focus:border-teal"
+            >
+              <option value="pending">Pendente</option>
+              <option value="enviado">Enviado</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="erro">Erro</option>
+            </select>
+          </div>
+          <button
+            className="btn btn-primary btn-sm self-end"
+            onClick={addEsocialLog}
+            disabled={addingEsocial}
+          >
+            {addingEsocial ? '…' : '+ Log'}
+          </button>
+        </div>
+
+        {/* Log list */}
+        {esocialLogs.length === 0 ? (
+          <p className="text-[12px] text-gray-400 py-4 text-center">Nenhum registro eSocial cadastrado.</p>
+        ) : (
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Evento', 'Descrição', 'Status', 'Enviado em', 'Criado em'].map(h => (
+                  <th key={h} className="text-left py-2 font-semibold text-[10px] text-gray-400 uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {esocialLogs.map(log => {
+                const statusColors: Record<string, string> = {
+                  pending: 'bg-amber-100 text-amber-700',
+                  enviado: 'bg-blue-100 text-blue-700',
+                  confirmado: 'bg-green-100 text-green-700',
+                  erro: 'bg-red-100 text-red-700',
+                }
+                return (
+                  <tr key={log.id} className="border-b border-gray-50">
+                    <td className="py-2.5 font-mono font-medium">{log.tipoEvento}</td>
+                    <td className="py-2.5 text-gray-600">{log.descricao ?? '—'}</td>
+                    <td className="py-2.5">
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[log.status] ?? 'bg-gray-100 text-gray-500'}`}>
+                        {log.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-gray-400">{log.enviadoEm ? formatDate(log.enviadoEm) : '—'}</td>
+                    <td className="py-2.5 text-gray-400">{formatDate(log.createdAt)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )

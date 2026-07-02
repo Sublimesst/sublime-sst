@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   const companies = await prisma.company.findMany({
     where: {
-      status: 'active',
+      status: { in: ['active', 'onboarding_pending'] },
       onboardingData: null,
       payments: {
         some: { type: 'implantacao', status: 'confirmed', paidAt: { lt: since24h } },

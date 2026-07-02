@@ -90,11 +90,16 @@ export default function PartnerDashboardPage() {
             <p className="font-display text-[15px] text-gray-900">{partner.name}</p>
             <p className="text-[11px] text-gray-400">Portal do Parceiro · <span className="capitalize">{partner.tier}</span></p>
           </div>
-          <form action="/api/partner/logout" method="POST">
-            <button type="submit" className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800">
-              <LogOut size={14} /> Sair
-            </button>
-          </form>
+          <div className="flex items-center gap-4">
+            <a href="/parceiro/materiais" className="text-[13px] text-teal hover:text-petrol font-medium">
+              📦 Materiais
+            </a>
+            <form action="/api/partner/logout" method="POST">
+              <button type="submit" className="flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800">
+                <LogOut size={14} /> Sair
+              </button>
+            </form>
+          </div>
         </div>
       </header>
 

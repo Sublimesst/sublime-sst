@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { sendWelcomeEmail } from '@/lib/mailer'
 import { generateContractPdf } from '@/lib/contractPdf'
@@ -70,6 +71,13 @@ export async function POST(req: NextRequest) {
           contractAcceptanceUa: co.contractAcceptanceUa,
           contractVersion:      co.contractVersion ?? CONTRACT_VERSION,
         })
+        if (contractPdf) {
+          const hash = createHash('sha256').update(contractPdf).digest('hex')
+          await prisma.company.update({
+            where: { id: co.id },
+            data: { contractHash: hash },
+          }).catch(err => console.error('[WEBHOOK] Falha ao salvar contractHash:', err))
+        }
       } catch (err) {
         console.error('[WEBHOOK] Falha ao gerar PDF do contrato:', err)
       }

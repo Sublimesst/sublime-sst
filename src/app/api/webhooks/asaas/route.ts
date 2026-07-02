@@ -42,6 +42,32 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Commission engine: create Commission record for mensalidade payments with a partner
+    if (dbPayment.type === 'mensalidade' && dbPayment.company.partnerId) {
+      const mensalidadeCount = await prisma.payment.count({
+        where: { companyId: dbPayment.companyId, type: 'mensalidade', status: 'confirmed' },
+      })
+      if (mensalidadeCount <= 12) {
+        const net = dbPayment.amount // uses gross amount as net proxy (adjust if taxes are known)
+        const valorComissao = Math.round(net * 0.10)
+        const now = new Date()
+        await prisma.commission.create({
+          data: {
+            partnerId:     dbPayment.company.partnerId,
+            companyId:     dbPayment.companyId,
+            paymentId:     dbPayment.id,
+            mensalidadeNum: mensalidadeCount,
+            mensalidadeLiq: net,
+            percentual:    10,
+            valorComissao,
+            status:        'em_carencia',
+            liberadaEm:    new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            referencia:    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+          },
+        }).catch(err => console.error('[WEBHOOK] Falha ao criar Commission:', err))
+      }
+    }
+
     if (dbPayment.type === 'implantacao' && dbPayment.company.status === 'pending') {
       await prisma.company.update({
         where: { id: dbPayment.companyId },

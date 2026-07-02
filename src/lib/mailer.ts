@@ -8,17 +8,34 @@
 const NOTIFY = process.env.EMAIL_NOTIFY ?? 'contato@sublimesst.com'
 const FROM   = process.env.EMAIL_FROM   ?? 'Sublime SST <onboarding@resend.dev>'
 
+interface Attachment {
+  filename: string
+  content: Buffer   // base64 feito internamente
+}
+
 // ── ENVIO (tenta Resend primeiro, depois SMTP) ────────────
-async function sendEmail(to: string, subject: string, html: string) {
-  // Opção 1: Resend (mais simples, recomendado)
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  attachments?: Attachment[],
+) {
+  // Opção 1: Resend
   if (process.env.RESEND_API_KEY) {
+    const body: Record<string, unknown> = { from: FROM, to, subject, html }
+    if (attachments?.length) {
+      body.attachments = attachments.map(a => ({
+        filename: a.filename,
+        content: a.content.toString('base64'),
+      }))
+    }
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       },
-      body: JSON.stringify({ from: FROM, to, subject, html }),
+      body: JSON.stringify(body),
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
@@ -36,7 +53,10 @@ async function sendEmail(to: string, subject: string, html: string) {
       secure: process.env.SMTP_SECURE === 'true',
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     })
-    await transport.sendMail({ from: FROM, to, subject, html })
+    await transport.sendMail({
+      from: FROM, to, subject, html,
+      attachments: attachments?.map(a => ({ filename: a.filename, content: a.content })),
+    })
     return
   }
 
@@ -204,14 +224,23 @@ export async function sendMagicLink(data: {
 
 export async function sendWelcomeEmail(data: {
   to: string; companyName: string; responsavel: string; loginUrl: string
+  planType?: string; planLabel?: string
+  contractPdf?: Buffer
 }) {
+  const planName = data.planType === 'premium' ? 'Digital Premium' : 'Digital Essencial'
+  const planColor = data.planType === 'premium' ? '#1e40af' : '#0d4a5c'
+  const planBg    = data.planType === 'premium' ? '#dbeafe' : '#e0f2fe'
+
   await sendEmail(data.to, `Bem-vindo(a) ao Sublime Digital! 🎉`,
     baseHtml('Pagamento confirmado — próximos passos',
-      `<p style="font-size:15px;color:#334155;margin:0 0 16px">
+      `<p style="font-size:15px;color:#334155;margin:0 0 12px">
         Olá, <strong>${data.responsavel}</strong>!<br><br>
         O pagamento da implantação da <strong>${data.companyName}</strong> foi confirmado.
         Sua conta está ativa e pronta para os próximos passos.
       </p>
+      <div style="background:${planBg};border-radius:8px;padding:10px 14px;margin-bottom:16px">
+        <span style="font-size:13px;font-weight:700;color:${planColor}">Plano contratado: ${planName}${data.planLabel ? ' · ' + data.planLabel : ''}</span>
+      </div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0fdf9;border-radius:10px;margin-bottom:16px">
         <tr><td style="padding:16px 18px">
           <p style="margin:0 0 10px;font-weight:700;color:#0d4a5c;font-size:14px">📋 O que acontece agora:</p>
@@ -222,9 +251,17 @@ export async function sendWelcomeEmail(data: {
             4. Você recebe notificação por e-mail quando os documentos estiverem prontos
           </p>
         </td></tr>
-      </table>` +
+      </table>
+      <p style="font-size:12px;color:#94a3b8;margin:0 0 16px">
+        O contrato de prestação de serviços aceito na contratação fica disponível no portal.
+        Dúvidas? Responda este e-mail ou acesse
+        <a href="https://sublimesst.com/termos" style="color:#1a9e8c">sublimesst.com/termos</a>.
+      </p>` +
       cta(data.loginUrl, '🏠 Acessar meu portal')
-    )
+    ),
+    data.contractPdf
+      ? [{ filename: 'Contrato_Sublime_Digital.pdf', content: data.contractPdf }]
+      : undefined,
   ).catch(err => console.error('[MAILER] sendWelcomeEmail:', err))
 }
 
@@ -283,4 +320,41 @@ export async function notifyNewPartner(data: {
       cta(waLink, '💬 Contatar parceiro no WhatsApp')
     )
   ).catch(err => console.error('[MAILER] notifyNewPartner:', err))
+}
+
+export async function sendDocumentExpiryAlert(data: {
+  to: string; responsavel: string; companyName: string
+  documents: { nome: string; vencimento: Date; diasRestantes: number }[]
+  loginUrl: string
+}) {
+  const docsHtml = data.documents.map(d => {
+    const urgency = d.diasRestantes <= 7 ? '#dc2626' : d.diasRestantes <= 30 ? '#d97706' : '#0d4a5c'
+    const vencStr = d.vencimento.toLocaleDateString('pt-BR')
+    return `<tr>
+      <td style="padding:8px 0;font-size:13px;color:#334155;border-bottom:1px solid #f0f4f8">${d.nome}</td>
+      <td style="padding:8px 0;font-size:13px;text-align:right;border-bottom:1px solid #f0f4f8">
+        <span style="color:${urgency};font-weight:700">${vencStr} (${d.diasRestantes}d)</span>
+      </td>
+    </tr>`
+  }).join('')
+
+  await sendEmail(data.to, `⚠️ Documentos SST a vencer — ${data.companyName}`,
+    baseHtml('Atenção: documentos SST próximos do vencimento',
+      `<p style="font-size:15px;color:#334155;margin:0 0 16px">
+        Olá, <strong>${data.responsavel}</strong>! Os seguintes documentos SST da <strong>${data.companyName}</strong>
+        estão próximos do vencimento e precisam de renovação.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px">
+        <tr>
+          <th style="text-align:left;font-size:11px;color:#94a3b8;text-transform:uppercase;padding-bottom:6px">Documento</th>
+          <th style="text-align:right;font-size:11px;color:#94a3b8;text-transform:uppercase;padding-bottom:6px">Vencimento</th>
+        </tr>
+        ${docsHtml}
+      </table>
+      <p style="font-size:13px;color:#64748b;margin:0 0 20px">
+        Entre em contato com nossa equipe para agendar a renovação ou acesse o portal para mais informações.
+      </p>` +
+      cta(data.loginUrl, '📋 Acessar portal do cliente')
+    )
+  ).catch(err => console.error('[MAILER] sendDocumentExpiryAlert:', err))
 }

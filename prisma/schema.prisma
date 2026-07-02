@@ -38,7 +38,7 @@ model CnaeCatalog {
   onlineCatalogStatus String   @default("pending") // approved | pending | blocked
   eligivelOnline      Boolean  @default(false)
   notes               String?
-  approvedBy          String?  // responsável técnico
+  approvedBy          String?
   approvedAt          DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -85,7 +85,7 @@ model EligibilityAssessment {
   hasExternalWork  Boolean
   declaration      Boolean
   eligible         Boolean
-  reasons          String[] // CNAE_NAO_GR1 | MAIS_DE_20 | MAQUINAS | etc.
+  reasons          String[]
   resultShownAt    DateTime?
   ipAddress        String?
   userAgent        String?
@@ -98,47 +98,145 @@ model EligibilityAssessment {
 
 // ── EMPRESAS ─────────────────────────────────────────────────
 model Company {
-  id             String   @id @default(cuid())
-  leadId         String   @unique
-  planId         String?
-  cnaeId         String?
-  cnpj           String   @unique
-  razaoSocial    String
-  nomeFantasia   String?
-  responsavel    String
-  email          String
-  whatsapp       String
-  cep            String
-  cidade         String
-  estado         String
-  endereco       String
+  id              String   @id @default(cuid())
+  leadId          String   @unique
+  planId          String?
+  cnaeId          String?
+  cnpj            String   @unique
+  razaoSocial     String
+  nomeFantasia    String?
+  responsavel     String
+  email           String
+  whatsapp        String
+  cep             String
+  cidade          String
+  estado          String
+  endereco        String
   numFuncionarios Int
-  cargos         String?
-  observations   String?
-  partnerId      String?
-  source         String   @default("site")
-  implantacaoValor Int    @default(19000) // centavos
+  cargos          String?
+  observations    String?
+  partnerId       String?
+  source          String   @default("site")
+  implantacaoValor Int     @default(19900)
   implantacaoPromo Boolean @default(false)
-  promoDeadline  DateTime?
-  status         String   @default("pending") // pending | active | inactive | cancelled
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  promoDeadline   DateTime?
 
-  lead           Lead            @relation(fields: [leadId], references: [id])
-  plan           Plan?           @relation(fields: [planId], references: [id])
-  cnae           CnaeCatalog?    @relation(fields: [cnaeId], references: [id])
-  partner        Partner?        @relation(fields: [partnerId], references: [id])
-  payments       Payment[]
-  clientSessions ClientSession[]
-  onboardingData OnboardingData?
+  // Plano e contrato
+  planType             String?   // "essencial" | "premium"
+  ltcatAddon           Boolean   @default(false) // add-on LTCAT contratado (R$ 450)
+  contractAcceptedAt   DateTime?
+  contractAcceptanceIp String?
+  contractAcceptanceUa String?
+  contractVersion      String?
+  contractHash         String?   // SHA-256 do PDF do contrato (prova imutável)
+
+  // Pipeline de implantação
+  // pending | onboarding_pending | in_production | in_review | documents_delivered | active | overdue | suspended | migrating | cancelled
+  status       String   @default("pending")
+  reviewedBy   String?  // técnico responsável pela revisão antes de liberar documentos
+  reviewedAt   DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lead               Lead                @relation(fields: [leadId], references: [id])
+  plan               Plan?               @relation(fields: [planId], references: [id])
+  cnae               CnaeCatalog?        @relation(fields: [cnaeId], references: [id])
+  partner            Partner?            @relation(fields: [partnerId], references: [id])
+  payments           Payment[]
+  clientSessions     ClientSession[]
+  onboardingData     OnboardingData?
+  checklist          ImplantacaoChecklist?
+  esocialLogs        EsocialLog[]
+  documentAccessLogs DocumentAccessLog[]
+  commissions        Commission[]
 
   @@map("companies")
+}
+
+// ── CHECKLIST DE IMPLANTAÇÃO ─────────────────────────────────
+model ImplantacaoChecklist {
+  id        String @id @default(cuid())
+  companyId String @unique
+
+  // PGR + LPP
+  pgrStatus       String    @default("pending") // pending | in_progress | done
+  pgrConcluidoEm  DateTime?
+  pgrConcluidoPor String?
+
+  // PCMSO
+  pcmsoStatus       String    @default("pending")
+  pcmsoMedico       String?
+  pcmsoConcluidoEm  DateTime?
+  pcmsoConcluidoPor String?
+
+  // Declaração técnica
+  declaracaoStatus       String    @default("pending")
+  declaracaoConcluidaEm  DateTime?
+  declaracaoConcluidaPor String?
+
+  // Ordens de Serviço + Fichas de EPI
+  osEpiStatus       String    @default("pending")
+  osEpiConcluidoEm  DateTime?
+  osEpiConcluidoPor String?
+
+  // LTCAT (apenas quando ltcatAddon = true)
+  ltcatStatus       String?   // null = não aplicável
+  ltcatConcluidoEm  DateTime?
+  ltcatConcluidoPor String?
+
+  observacoes String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("implantacao_checklist")
+}
+
+// ── LOG ESOCIAL ──────────────────────────────────────────────
+model EsocialLog {
+  id        String @id @default(cuid())
+  companyId String
+
+  tipoEvento   String    // S-2210 | S-2220 | S-2240
+  protocolo    String?   // protocolo do eSocial
+  status       String    @default("pending") // pending | enviado | confirmado | erro
+  descricao    String?
+  enviadoEm    DateTime?
+  confirmadoEm DateTime?
+  observacoes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("esocial_logs")
+}
+
+// ── LOG DE ACESSO A DOCUMENTOS (auditoria LGPD) ───────────────
+model DocumentAccessLog {
+  id        String @id @default(cuid())
+  companyId String
+  sessionId String?
+
+  tipoDocumento String  // pgr | pcmso | declaracao | os_epi | ltcat | contrato
+  nomeDocumento String?
+  acao          String  @default("download") // view | download
+  ip            String?
+  userAgent     String?
+  accessedAt    DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("document_access_logs")
 }
 
 // ── PARCEIROS ────────────────────────────────────────────────
 model Partner {
   id              String   @id @default(cuid())
-  code            String   @unique @default(cuid()) // código único do parceiro
+  code            String   @unique @default(cuid())
   name            String
   office          String
   cnpj            String?
@@ -147,16 +245,34 @@ model Partner {
   city            String?
   state           String?
   clientsEstimate Int?
+  tier            String   @default("comum") // comum | recorrente | estratégico
   status          String   @default("pending") // pending | active | inactive
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  leads      Lead[]
-  referrals  PartnerReferral[]
-  companies  Company[]
+  leads           Lead[]
+  referrals       PartnerReferral[]
+  companies       Company[]
+  sessions        PartnerSession[]
+  commissions     Commission[]
 
   @@map("partners")
+}
+
+// ── SESSÕES DE PARCEIRO (magic link auth) ────────────────────
+model PartnerSession {
+  id        String    @id @default(cuid())
+  partnerId String
+  token     String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@map("partner_sessions")
 }
 
 // ── INDICAÇÕES DE PARCEIROS ──────────────────────────────────
@@ -172,7 +288,7 @@ model PartnerReferral {
   observations    String?
   status          String   @default("pending") // pending | contacted | converted | lost
   convertedAt     DateTime?
-  rewardAmount    Int?     // centavos
+  rewardAmount    Int?
   rewardPaidAt    DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -182,24 +298,55 @@ model PartnerReferral {
   @@map("partner_referrals")
 }
 
+// ── COMISSÕES DE PARCEIROS ───────────────────────────────────
+model Commission {
+  id        String @id @default(cuid())
+  partnerId String
+  companyId String
+  paymentId String?
+
+  mensalidadeNum  Int    // 1 a 12
+  mensalidadeLiq  Int    // centavos (líquido após impostos/taxas)
+  percentual      Int    @default(10)
+  valorComissao   Int    // centavos
+
+  // em_carencia (30 dias) | liberada | paga | estornada
+  status      String    @default("em_carencia")
+  liberadaEm  DateTime?
+  pagaEm      DateTime?
+
+  referencia  String?   // ex: "2026-08" (ano-mês da mensalidade)
+  observacoes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  partner Partner  @relation(fields: [partnerId], references: [id])
+  company Company  @relation(fields: [companyId], references: [id])
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@map("commissions")
+}
+
 // ── PAGAMENTOS ───────────────────────────────────────────────
 model Payment {
-  id              String   @id @default(cuid())
-  companyId       String
-  asaasId         String?  // ID do pagamento no Asaas
-  type            String   // implantacao | mensalidade
-  amount          Int      // centavos
-  status          String   @default("pending") // pending | confirmed | failed | refunded
-  dueDate         DateTime?
-  paidAt          DateTime?
-  checkoutUrl     String?
-  invoiceUrl      String?
-  billingType     String?  // BOLETO | PIX | CREDIT_CARD
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String   @id @default(cuid())
+  companyId   String
+  asaasId     String?
+  type        String   // implantacao | mensalidade
+  amount      Int      // centavos
+  status      String   @default("pending") // pending | confirmed | failed | refunded
+  dueDate     DateTime?
+  paidAt      DateTime?
+  checkoutUrl String?
+  invoiceUrl  String?
+  billingType String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  company Company @relation(fields: [companyId], references: [id])
+  company     Company    @relation(fields: [companyId], references: [id])
+  commissions Commission[]
 
   @@map("payments")
 }
@@ -219,7 +366,7 @@ model ClientSession {
   @@map("client_sessions")
 }
 
-// ── DADOS DE ONBOARDING (preenchimento pós-contratação) ───────
+// ── DADOS DE ONBOARDING ──────────────────────────────────────
 model OnboardingData {
   id              String   @id @default(cuid())
   companyId       String   @unique

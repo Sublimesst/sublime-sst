@@ -1,40 +1,79 @@
 import Link from 'next/link'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Star } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
+import { PRICING } from '@/lib/pricing'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Sublime Digital — Conformidade em SST para empresas de baixo risco',
-  description: 'Produto digital da Sublime SST para regularização de empresas de baixo risco com até 20 funcionários. Contratação, gestão e organização documental digitais.',
+  description: 'Produto digital da Sublime SST para regularização de empresas de baixo risco com até 20 funcionários. Dois planos: Digital Essencial a partir de R$199/mês e Digital Premium a partir de R$299/mês.',
   alternates: { canonical: 'https://sublimesst.com/digital' },
 }
 
 const FEATURES = [
-  { icon: '📋', title: 'PCMSO e PGR', body: 'Documentos obrigatórios elaborados conforme NR-7 e NR-1, adaptados ao perfil da sua empresa.' },
-  { icon: '🗂️', title: 'Organização documental', body: 'Registros de SST mantidos organizados e acessíveis para auditorias e fiscalizações.' },
-  { icon: '🔄', title: 'Atualizações anuais', body: 'Documentação revisada e atualizada conforme necessário ao longo do período contratado.' },
-  { icon: '📱', title: 'Atendimento remoto', body: 'Comunicação ágil por WhatsApp e e-mail, sem necessidade de reuniões presenciais.' },
-  { icon: '✅', title: 'Verificação de conformidade', body: 'Monitoramento das obrigações de SST aplicáveis conforme as Normas Regulamentadoras.' },
-  { icon: '🎯', title: 'Análise de perfil', body: 'Cada empresa passa por análise criteriosa antes da contratação, garantindo adequação ao modelo.' },
+  { icon: '📋', title: 'PGR + PCMSO na implantação', body: 'Documentos obrigatórios elaborados por especialista, incluindo médico coordenador para o PCMSO.' },
+  { icon: '🏛️', title: 'Gestão eSocial SST', body: 'Envio e monitoramento dos eventos S-2210, S-2220 e S-2240 conforme obrigatoriedade.' },
+  { icon: '🗂️', title: 'Portal do cliente', body: 'Todos os documentos organizados e acessíveis digitalmente, com histórico e alertas de vencimento.' },
+  { icon: '🔔', title: 'Monitoramento de exames', body: 'Notificação antecipada de vencimentos de exames periódicos para nenhum prazo ser perdido.' },
+  { icon: '📄', title: 'Declaração técnica de ausência de insalubridade', body: 'Declaração técnica preliminar de não identificação de agentes insalubres, incluída na implantação para perfis GR1.' },
+  { icon: '🎯', title: 'Teste de elegibilidade', body: 'Análise gratuita do CNAE e perfil operacional antes da contratação — sem surpresas.' },
 ]
 
 const COMPARISON = [
-  { feat: 'Processo de contratação', trad: 'Por projeto, com visitas técnicas', digital: true, digitalText: 'Contratação e gestão digitais' },
+  { feat: 'Processo de contratação', trad: 'Por projeto, com visitas técnicas', digital: true, digitalText: 'Contratação 100% digital' },
   { feat: 'Preço previsível', trad: 'Variável por projeto', digital: true, digitalText: 'Valor fixo mensal' },
-  { feat: 'Tempo de implantação', trad: 'Variável conforme escopo', digital: true, digitalText: 'Ágil e estruturado' },
-  { feat: 'Documentação digital', trad: 'Física / e-mail avulso', digital: true, digitalText: 'Organizada digitalmente' },
-  { feat: 'Para todos os perfis', trad: true, tradText: 'Sim', digital: false, digitalText: 'Baixo risco, até 20 func.' },
+  { feat: 'PGR + PCMSO', trad: 'Cobrado separado (R$600–2.000+)', digital: true, digitalText: 'Incluso na implantação' },
+  { feat: 'Gestão eSocial SST', trad: 'Cobrado à parte', digital: true, digitalText: 'Incluso na mensalidade' },
+  { feat: 'Para todos os perfis', trad: true, tradText: 'Sim', digital: false, digitalText: 'GR1 · até 20 func.' },
   { feat: 'Atendimento especializado', trad: true, tradText: 'Sim', digital: true, digitalText: 'Para perfis enquadrados' },
 ]
+
+const ESSENCIAL_ITEMS = [
+  'PGR + LPP (implantação)',
+  'PCMSO com médico coordenador (implantação)',
+  'Declaração técnica de ausência de insalubridade (implantação)',
+  'Ordens de Serviço + Fichas de EPI (implantação)',
+  'Gestão eSocial SST (S-2210, S-2220, S-2240)',
+  'Monitoramento de exames periódicos',
+  'Portal do cliente com repositório digital',
+  'Suporte por e-mail — resposta em até 48h',
+]
+
+const PREMIUM_EXTRAS = [
+  'PPP de novos funcionários incluso',
+  'Abertura de CAT — até 1 ocorrência/mês',
+  'Relatório analítico semestral',
+  'Suporte via WhatsApp — resposta em até 24h',
+]
+
+const UPSELL = [
+  'PPP avulso — R$ 60 por funcionário (Essencial)',
+  'Abertura de CAT avulsa — R$ 100/ocorrência (Essencial)',
+  'Agendamento de exames ocupacionais (parceiro clínico)',
+  'LTCAT — quando aplicável ao perfil',
+  'Treinamentos em NRs (NR-35, NR-10, Brigada, CIPA)',
+  'Relatório analítico avulso — R$ 250',
+  'Visita técnica presencial',
+]
+
+const PRICING_RANGES = [
+  { range: '1–5 funcionários',   essencial: PRICING.essencial.faixas['1-5'].monthly / 100,   premium: PRICING.premium.faixas['1-5'].monthly / 100 },
+  { range: '6–10 funcionários',  essencial: PRICING.essencial.faixas['6-10'].monthly / 100,  premium: PRICING.premium.faixas['6-10'].monthly / 100 },
+  { range: '11–20 funcionários', essencial: PRICING.essencial.faixas['11-20'].monthly / 100, premium: PRICING.premium.faixas['11-20'].monthly / 100 },
+]
+
+const IMPL_ESSENCIAL = { padrao: PRICING.essencial.implantacao.padrao / 100, promo: PRICING.essencial.implantacao.promo / 100 }
+const IMPL_PREMIUM   = { padrao: PRICING.premium.implantacao.padrao / 100,   promo: PRICING.premium.implantacao.promo / 100 }
 
 export default function DigitalPage() {
   return (
     <>
       <Navbar />
       <main>
-        {/* Hero */}
+
+        {/* ── Hero ─────────────────────────────────────────── */}
         <section className="py-20 px-6 text-center relative overflow-hidden"
           style={{ background: 'linear-gradient(160deg, #051e26 0%, #0d4a5c 60%, #0a7a78 100%)' }}>
           <div className="absolute inset-0 opacity-[.03]"
@@ -44,15 +83,17 @@ export default function DigitalPage() {
             <h1 className="font-display text-4xl md:text-5xl text-white mb-5 leading-tight">
               Sublime Digital
             </h1>
-            <p className="text-[17px] text-white/70 leading-relaxed mb-8 max-w-lg mx-auto">
-              Regularização e conformidade em SST com contratação, gestão e organização documental
-              digitais para pequenas empresas de baixo risco operacional, com direcionamento para
-              etapas presenciais quando aplicáveis.
+            <p className="text-[17px] text-white/70 leading-relaxed mb-3 max-w-lg mx-auto">
+              Conformidade em SST 100% online para pequenas empresas de baixo risco. PGR, PCMSO e
+              gestão eSocial — sem visita presencial, sem burocracia.
+            </p>
+            <p className="text-[14px] text-white/50 mb-8">
+              A partir de <span className="text-white font-bold text-[18px]">R$ 199/mês</span> · Implantação a partir de R$ 149
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link href="/elegibilidade" className="btn btn-primary btn-lg">
                 <CheckCircle size={18} />
-                Verificar Elegibilidade
+                Verificar Elegibilidade Grátis
               </Link>
               <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer"
                 className="btn btn-outline btn-lg">
@@ -62,7 +103,7 @@ export default function DigitalPage() {
           </div>
         </section>
 
-        {/* What's included */}
+        {/* ── O que está incluído ───────────────────────────── */}
         <section className="py-20 px-6 bg-gray-50">
           <div className="max-w-[1120px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-14">
@@ -83,8 +124,128 @@ export default function DigitalPage() {
           </div>
         </section>
 
-        {/* For whom */}
+        {/* ── Planos e Preços ───────────────────────────────── */}
         <section className="py-20 px-6">
+          <div className="max-w-[960px] mx-auto">
+            <div className="text-center max-w-xl mx-auto mb-14">
+              <span className="section-tag">Planos e Preços</span>
+              <h2 className="font-display text-3xl md:text-4xl text-gray-900 mb-3">
+                Escolha o plano ideal para sua empresa
+              </h2>
+              <p className="text-[14px] text-gray-500">
+                Ambos os planos incluem implantação completa com PGR, PCMSO e documentação inicial.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              {/* Digital Essencial */}
+              <div className="card p-8 border border-gray-200">
+                <p className="text-[12px] font-bold text-teal uppercase tracking-widest mb-2">Digital Essencial</p>
+                <p className="text-[13px] text-gray-500 mb-5">Conformidade completa com o melhor custo-benefício</p>
+
+                <div className="mb-6">
+                  {PRICING_RANGES.map((r, i) => (
+                    <div key={r.range}
+                      className={`flex justify-between items-center py-3 border-b border-gray-100 last:border-0 ${i === 0 ? 'border-t border-gray-100' : ''}`}>
+                      <span className="text-[13px] text-gray-500">{r.range}</span>
+                      <span className="text-[18px] font-bold text-petrol">
+                        R$ {r.essencial}<span className="text-[12px] font-normal text-gray-400">/mês</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-gray-50 rounded-[10px] p-4 mb-6 text-[13px]">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-500">Implantação normal</span>
+                    <span className="font-semibold text-gray-700">R$ {IMPL_ESSENCIAL.padrao}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-700 font-semibold">🎁 Promo 24h</span>
+                    <span className="font-bold text-green-700">R$ {IMPL_ESSENCIAL.promo} <span className="line-through font-normal text-gray-400 text-[11px]">R$ {IMPL_ESSENCIAL.padrao}</span></span>
+                  </div>
+                </div>
+
+                <ul className="flex flex-col gap-2 mb-8">
+                  {ESSENCIAL_ITEMS.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-[13px] text-gray-600">
+                      <CheckCircle size={14} className="text-teal shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+
+                <Link href="/elegibilidade" className="btn btn-outline-dark w-full text-center">
+                  Verificar Elegibilidade
+                </Link>
+              </div>
+
+              {/* Digital Premium */}
+              <div className="card p-8 border-2 border-blue-500 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-blue-600 text-white text-[11px] font-bold px-4 py-1 rounded-full flex items-center gap-1">
+                    <Star size={11} fill="white" /> Mais completo
+                  </span>
+                </div>
+                <p className="text-[12px] font-bold text-blue-600 uppercase tracking-widest mb-2">Digital Premium</p>
+                <p className="text-[13px] text-gray-500 mb-5">Tudo incluído — sem surpresas na fatura</p>
+
+                <div className="mb-6">
+                  {PRICING_RANGES.map((r, i) => (
+                    <div key={r.range}
+                      className={`flex justify-between items-center py-3 border-b border-gray-100 last:border-0 ${i === 0 ? 'border-t border-gray-100' : ''}`}>
+                      <span className="text-[13px] text-gray-500">{r.range}</span>
+                      <span className="text-[18px] font-bold text-blue-700">
+                        R$ {r.premium}<span className="text-[12px] font-normal text-gray-400">/mês</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-blue-50 rounded-[10px] p-4 mb-6 text-[13px]">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-500">Implantação normal</span>
+                    <span className="font-semibold text-gray-700">R$ {IMPL_PREMIUM.padrao}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-green-700 font-semibold">🎁 Promo 24h</span>
+                    <span className="font-bold text-green-700">R$ {IMPL_PREMIUM.promo} <span className="line-through font-normal text-gray-400 text-[11px]">R$ {IMPL_PREMIUM.padrao}</span></span>
+                  </div>
+                </div>
+
+                <ul className="flex flex-col gap-2 mb-6">
+                  {ESSENCIAL_ITEMS.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-[13px] text-gray-600">
+                      <CheckCircle size={14} className="text-teal shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[12px] font-semibold text-blue-600 uppercase tracking-wide mb-2">Exclusivo Premium:</p>
+                <ul className="flex flex-col gap-2 mb-8">
+                  {PREMIUM_EXTRAS.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-[13px] text-blue-700">
+                      <CheckCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+
+                <Link href="/elegibilidade" className="btn btn-primary w-full text-center">
+                  <CheckCircle size={16} /> Verificar Elegibilidade
+                </Link>
+              </div>
+            </div>
+
+            <p className="text-[12px] text-gray-400 text-center">
+              Contrato anual com pagamento mensal e renovação automática. Compromisso mínimo de 6 mensalidades após entrega dos documentos.
+              Planos válidos exclusivamente para empresas GR1 com até 20 funcionários aprovadas no teste de elegibilidade.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Para quem é ───────────────────────────────────── */}
+        <section className="py-20 px-6 bg-gray-50">
           <div className="max-w-[900px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-12">
               <span className="section-tag">Para quem é</span>
@@ -113,8 +274,8 @@ export default function DigitalPage() {
           </div>
         </section>
 
-        {/* Comparison */}
-        <section className="py-20 px-6 bg-gray-50">
+        {/* ── Comparativo ───────────────────────────────────── */}
+        <section className="py-20 px-6">
           <div className="max-w-[900px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-12">
               <span className="section-tag">Comparativo</span>
@@ -152,8 +313,8 @@ export default function DigitalPage() {
           </div>
         </section>
 
-        {/* Incluído vs. sob demanda */}
-        <section className="py-20 px-6">
+        {/* ── Escopo ────────────────────────────────────────── */}
+        <section className="py-20 px-6 bg-gray-50">
           <div className="max-w-[900px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-12">
               <span className="section-tag">Escopo</span>
@@ -163,23 +324,27 @@ export default function DigitalPage() {
               <div className="card p-7">
                 <h3 className="text-[15px] font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-[12px]">✓</span>
-                  Incluso na assinatura
+                  Incluso em ambos os planos
                 </h3>
                 <ul className="flex flex-col gap-2.5">
-                  {[
-                    'PGR (Programa de Gerenciamento de Riscos)',
-                    'PCMSO (Programa de Controle Médico de Saúde Ocupacional)',
-                    'Organização e arquivamento documental',
-                    'Atualizações anuais dos documentos',
-                    'Verificação de conformidade com NRs aplicáveis',
-                    'Suporte por WhatsApp e e-mail',
-                  ].map((item) => (
+                  {ESSENCIAL_ITEMS.map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-[13px] text-gray-600">
                       <CheckCircle size={14} className="text-teal shrink-0 mt-0.5" />
                       {item}
                     </li>
                   ))}
                 </ul>
+                <div className="mt-5 pt-4 border-t border-gray-100">
+                  <p className="text-[12px] font-semibold text-blue-600 mb-2">+ Exclusivo Digital Premium:</p>
+                  <ul className="flex flex-col gap-2">
+                    {PREMIUM_EXTRAS.map((item) => (
+                      <li key={item} className="flex items-start gap-2.5 text-[13px] text-blue-700">
+                        <CheckCircle size={14} className="text-blue-500 shrink-0 mt-0.5" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
               <div className="card p-7 bg-gray-50">
                 <h3 className="text-[15px] font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -187,14 +352,7 @@ export default function DigitalPage() {
                   Sob orçamento separado
                 </h3>
                 <ul className="flex flex-col gap-2.5">
-                  {[
-                    'ASOs (Atestados de Saúde Ocupacional) — coordenados com clínicas parceiras',
-                    'Treinamentos presenciais (NR-35, NR-10, Brigada, CIPA)',
-                    'Laudos de insalubridade ou periculosidade',
-                    'LTCAT (quando aplicável ao perfil)',
-                    'Consultoria presencial ou visita técnica',
-                    'Gestão de riscos psicossociais (NR-1 atualizada)',
-                  ].map((item) => (
+                  {UPSELL.map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-[13px] text-gray-500">
                       <span className="shrink-0 mt-0.5 text-amber-500">•</span>
                       {item}
@@ -202,15 +360,14 @@ export default function DigitalPage() {
                   ))}
                 </ul>
                 <p className="text-[12px] text-gray-400 mt-4">
-                  Itens sob demanda são avaliados caso a caso. Quando necessários, sua empresa é orientada
-                  sobre as melhores opções e encaminhada para atendimento adequado.
+                  Itens sob demanda são cotados separadamente. Quando necessários, sua empresa é orientada sobre as melhores opções.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* CTA */}
+        {/* ── CTA ───────────────────────────────────────────── */}
         <section className="py-16 px-6 text-center"
           style={{ background: 'linear-gradient(135deg, var(--petrol), var(--teal))' }}>
           <h2 className="font-display text-3xl text-white mb-3">Sua empresa pode ser elegível ao modelo digital</h2>
@@ -230,6 +387,7 @@ export default function DigitalPage() {
             </a>
           </div>
         </section>
+
       </main>
       <Footer />
       <WhatsAppButton />

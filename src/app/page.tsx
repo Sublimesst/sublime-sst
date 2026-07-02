@@ -284,7 +284,7 @@ export default function HomePage() {
                     Verificar Elegibilidade
                   </Link>
                   <p className="text-[11px] text-white/30 text-center mt-3">
-                    Implantação: R$ 190 (ou R$ 100 em 24h)
+                    Implantação: R$ {plan.implantacao / 100} (promo 24h: R$ {plan.implantacaoPromo / 100})
                   </p>
                 </div>
               ))}

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, ArrowRight, ArrowLeft, Search, Clock, HelpCircle, Pencil, Loader2 } from 'lucide-react'
+import { CheckCircle, ArrowRight, ArrowLeft, Search, Clock, HelpCircle, Pencil, Loader2, Shield } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import { maskCNPJ, maskPhone, validateCNPJ, validateEmail, validatePhone, maskCurrencyBRL } from '@/lib/utils'
@@ -29,6 +29,8 @@ function formatCNAECode(raw: number | string): string {
   return `${d.slice(0, 2)}.${d.slice(2, 4)}-${d.slice(4, 5)}/${d.slice(5, 7)}`
 }
 
+import { PRICING, PROMO_WINDOW_MS } from '@/lib/pricing'
+
 // ── Motor client-side ─────────────────────────────────────────────────────────
 const WHITELIST = new Set([
   '69.11-7','69.12-5','69.20-6','70.10-7','70.20-4',
@@ -37,10 +39,29 @@ const WHITELIST = new Set([
   '78.10-8','82.11-3','66.21-5','66.22-3','68.21-8','68.22-6',
 ])
 
-const PLANS: Record<string, { label: string; monthly: number; implantacao: number; implantacaoPromo: number }> = {
-  '1-5':   { label: '1 a 5 funcionários',   monthly: 14200, implantacao: 19000, implantacaoPromo: 10000 },
-  '6-10':  { label: '6 a 10 funcionários',  monthly: 25000, implantacao: 19000, implantacaoPromo: 10000 },
-  '11-20': { label: '11 a 20 funcionários', monthly: 43000, implantacao: 19000, implantacaoPromo: 10000 },
+type PlanType = 'essencial' | 'premium'
+
+interface PlanDetails { label: string; monthly: number; implantacao: number; implantacaoPromo: number }
+
+const PLAN_TYPES: Record<PlanType, { name: string; tagline: string; plans: Record<string, PlanDetails> }> = {
+  essencial: {
+    name:    PRICING.essencial.name,
+    tagline: PRICING.essencial.tagline,
+    plans: {
+      '1-5':   { label: PRICING.essencial.faixas['1-5'].label,   monthly: PRICING.essencial.faixas['1-5'].monthly,   implantacao: PRICING.essencial.implantacao.padrao, implantacaoPromo: PRICING.essencial.implantacao.promo },
+      '6-10':  { label: PRICING.essencial.faixas['6-10'].label,  monthly: PRICING.essencial.faixas['6-10'].monthly,  implantacao: PRICING.essencial.implantacao.padrao, implantacaoPromo: PRICING.essencial.implantacao.promo },
+      '11-20': { label: PRICING.essencial.faixas['11-20'].label, monthly: PRICING.essencial.faixas['11-20'].monthly, implantacao: PRICING.essencial.implantacao.padrao, implantacaoPromo: PRICING.essencial.implantacao.promo },
+    },
+  },
+  premium: {
+    name:    PRICING.premium.name,
+    tagline: PRICING.premium.tagline,
+    plans: {
+      '1-5':   { label: PRICING.premium.faixas['1-5'].label,   monthly: PRICING.premium.faixas['1-5'].monthly,   implantacao: PRICING.premium.implantacao.padrao, implantacaoPromo: PRICING.premium.implantacao.promo },
+      '6-10':  { label: PRICING.premium.faixas['6-10'].label,  monthly: PRICING.premium.faixas['6-10'].monthly,  implantacao: PRICING.premium.implantacao.padrao, implantacaoPromo: PRICING.premium.implantacao.promo },
+      '11-20': { label: PRICING.premium.faixas['11-20'].label, monthly: PRICING.premium.faixas['11-20'].monthly, implantacao: PRICING.premium.implantacao.padrao, implantacaoPromo: PRICING.premium.implantacao.promo },
+    },
+  },
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -56,7 +77,6 @@ const REASON_LABELS: Record<string, string> = {
 interface EngineResult {
   eligible: boolean
   reasons: EligibilityReason[]
-  plan?: { label: string; monthly: number; implantacao: number; implantacaoPromo: number }
 }
 
 function runEngine(params: {
@@ -75,8 +95,7 @@ function runEngine(params: {
   if (params.worksAtHeight)   reasons.push('TRABALHO_EM_ALTURA' as EligibilityReason)
   if (params.hasExternalWork) reasons.push('ATIVIDADES_EXTERNAS_FREQUENTES' as EligibilityReason)
   const eligible = reasons.length === 0
-  const plan = eligible && params.employees !== '21+' ? PLANS[params.employees] : undefined
-  return { eligible, reasons, plan }
+  return { eligible, reasons }
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -132,6 +151,7 @@ function useCountdown(endTs: number) {
 // ── Inner component (needs useSearchParams) ───────────────────────────────────
 function ElegibilidadeInner() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const utmRef = useRef<Record<string, string>>({})
 
   useEffect(() => {
@@ -160,8 +180,11 @@ function ElegibilidadeInner() {
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [result, setResult] = useState<EngineResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [promoEnd] = useState(() => Date.now() + 24 * 60 * 60 * 1000)
+  const [promoEnd] = useState(() => Date.now() + PROMO_WINDOW_MS)
   const countdown = useCountdown(promoEnd)
+  const [planType, setPlanType] = useState<PlanType>('essencial')
+  const [contractAccepted, setContractAccepted] = useState(false)
+  const [contractError, setContractError] = useState('')
 
   const set = (k: keyof FormState, v: unknown) => {
     setForm(f => ({ ...f, [k]: v }))
@@ -280,11 +303,11 @@ function ElegibilidadeInner() {
     setResult(engineResult)
 
     if (engineResult.eligible) {
-      track('eligibility_result_eligible', { plan: engineResult.plan?.label, ...utmRef.current })
+      track('eligibility_result_eligible', { employees: form.employees, ...utmRef.current })
       setStep('eligible')
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('sublime_eligibility', JSON.stringify({
-          ...form, plan: engineResult.plan, promoEnd,
+          ...form, promoEnd,
         }))
       }
     } else {
@@ -309,6 +332,27 @@ function ElegibilidadeInner() {
         declaration: form.declaration,
       }),
     }).catch(() => {})
+  }
+
+  const handleStartRegistration = () => {
+    if (!contractAccepted) {
+      setContractError('Leia e aceite o contrato de prestação de serviços para continuar.')
+      return
+    }
+    const employees = form.employees as '1-5' | '6-10' | '11-20'
+    const selectedPlan = PLAN_TYPES[planType].plans[employees]
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('sublime_eligibility', JSON.stringify({
+        ...form,
+        plan: { ...selectedPlan, planType, planName: PLAN_TYPES[planType].name },
+        planType,
+        promoEnd,
+        contractAccepted: true,
+        contractAcceptedAt: new Date().toISOString(),
+      }))
+    }
+    track('registration_started', { planType, employees, ...utmRef.current })
+    router.push('/cadastro')
   }
 
   const progress = step === 1 ? 50 : 100
@@ -593,74 +637,173 @@ function ElegibilidadeInner() {
             )}
 
             {/* ══ RESULTADO ELEGÍVEL ══ */}
-            {step === 'eligible' && result && (
-              <div>
-                <div className="bg-green-50 border border-green-200 rounded-[12px] p-6 mb-5">
-                  <div className="text-3xl mb-3">✅</div>
-                  <h3 className="text-[18px] font-bold text-green-800 mb-2">
-                    Sua empresa tem características compatíveis com o Sublime Digital.
-                  </h3>
-                  <p className="text-[14px] text-green-700">
-                    Com base nas informações fornecidas, sua empresa pode ser atendida pelo modelo digital da Sublime SST.
-                  </p>
-                </div>
+            {step === 'eligible' && result && (() => {
+              const employees = form.employees as '1-5' | '6-10' | '11-20'
+              const currentPlan = PLAN_TYPES[planType].plans[employees]
+              const implantacaoNormal = maskCurrencyBRL(currentPlan.implantacao)
+              const implantacaoPromo  = maskCurrencyBRL(currentPlan.implantacaoPromo)
+              const economia = maskCurrencyBRL(currentPlan.implantacao - currentPlan.implantacaoPromo)
 
-                {result.plan && (
-                  <>
-                    {/* Timer de oferta */}
-                    <div className="bg-amber-50 border border-amber-300 rounded-[12px] p-4 mb-5 flex items-center gap-3">
-                      <Clock size={20} className="text-amber-600 shrink-0" />
-                      <div>
-                        <p className="text-[13px] font-bold text-amber-800">
-                          🎁 Implantação com desconto: R$ 100 (em vez de R$ 190)
-                        </p>
-                        <p className="text-[12px] text-amber-700 mt-0.5">
-                          Oferta válida por: <span className="font-mono font-bold">{countdown}</span>
-                        </p>
-                      </div>
+              return (
+                <div>
+                  <div className="bg-green-50 border border-green-200 rounded-[12px] p-5 mb-5">
+                    <div className="text-2xl mb-2">✅</div>
+                    <h3 className="text-[17px] font-bold text-green-800 mb-1">
+                      Sua empresa é elegível para o Sublime Digital.
+                    </h3>
+                    <p className="text-[13px] text-green-700">
+                      Escolha o plano abaixo e inicie sua regularização agora.
+                    </p>
+                  </div>
+
+                  {/* Timer promo */}
+                  <div className="bg-amber-50 border border-amber-300 rounded-[12px] p-4 mb-5 flex items-center gap-3">
+                    <Clock size={18} className="text-amber-600 shrink-0" />
+                    <div>
+                      <p className="text-[13px] font-bold text-amber-800">
+                        🎁 Implantação com 50% de desconto — economize {economia}
+                      </p>
+                      <p className="text-[12px] text-amber-700 mt-0.5">
+                        Oferta válida por: <span className="font-mono font-bold">{countdown}</span>
+                      </p>
                     </div>
+                  </div>
 
-                    {/* Plano indicado */}
-                    <div className="border border-gray-200 rounded-[12px] p-5 mb-4">
-                      <h4 className="text-[14px] font-semibold text-gray-700 mb-4">📊 Plano indicado</h4>
-                      {[
-                        { l: 'Faixa de funcionários', v: result.plan.label },
-                        { l: 'Parcela mensal*', v: maskCurrencyBRL(result.plan.monthly), highlight: true },
-                        { l: 'Modelo', v: 'Assinatura anual · cobrado mensalmente' },
-                        { l: 'Implantação padrão', v: 'R$ 190,00' },
-                        { l: '🎁 Implantação promocional (24h)', v: maskCurrencyBRL(result.plan.implantacaoPromo), promo: true },
-                      ].map(row => (
-                        <div key={row.l}
-                          className={`flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0 ${row.promo ? 'bg-green-50 rounded-[8px] px-3 -mx-3' : ''}`}>
-                          <span className={`text-[14px] ${row.promo ? 'text-green-800 font-semibold' : 'text-gray-500'}`}>{row.l}</span>
-                          <span className={`text-[14px] font-semibold ${row.highlight ? 'text-teal text-[18px]' : row.promo ? 'text-green-700' : 'text-gray-900'}`}>{row.v}</span>
+                  {/* Seletor de plano */}
+                  <div className="mb-5">
+                    <p className="text-[13px] font-semibold text-gray-700 mb-3">Escolha seu plano:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {(['essencial', 'premium'] as PlanType[]).map(pt => {
+                        const p = PLAN_TYPES[pt]
+                        const pl = p.plans[employees]
+                        const selected = planType === pt
+                        return (
+                          <button
+                            key={pt}
+                            type="button"
+                            onClick={() => setPlanType(pt)}
+                            className={`text-left p-4 rounded-[12px] border-2 transition-all ${
+                              selected
+                                ? pt === 'premium'
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-teal bg-teal-pale'
+                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                            }`}
+                          >
+                            <div className={`text-[12px] font-bold uppercase tracking-wide mb-1 ${
+                              selected ? (pt === 'premium' ? 'text-blue-600' : 'text-teal') : 'text-gray-500'
+                            }`}>
+                              {pt === 'premium' ? '⭐ ' : ''}{p.name}
+                            </div>
+                            <div className={`text-[20px] font-bold ${selected ? (pt === 'premium' ? 'text-blue-700' : 'text-petrol') : 'text-gray-700'}`}>
+                              {maskCurrencyBRL(pl.monthly)}
+                              <span className="text-[12px] font-normal text-gray-500">/mês</span>
+                            </div>
+                            <div className="text-[11px] text-gray-500 mt-1">{p.tagline}</div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Detalhe do plano selecionado */}
+                  <div className="border border-gray-200 rounded-[12px] p-5 mb-1">
+                    <h4 className="text-[13px] font-semibold text-gray-700 mb-3">
+                      📊 {PLAN_TYPES[planType].name} — {currentPlan.label}
+                    </h4>
+                    {[
+                      { l: 'Mensalidade', v: maskCurrencyBRL(currentPlan.monthly), highlight: true },
+                      { l: 'Implantação normal', v: implantacaoNormal },
+                      { l: '🎁 Implantação promo 24h', v: implantacaoPromo, promo: true },
+                    ].map(r => (
+                      <div key={r.l}
+                        className={`flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0 ${r.promo ? 'bg-green-50 rounded-[8px] px-3 -mx-3 border-0' : ''}`}>
+                        <span className={`text-[13px] ${r.promo ? 'text-green-800 font-semibold' : 'text-gray-500'}`}>{r.l}</span>
+                        <span className={`text-[14px] font-semibold ${r.highlight ? 'text-teal text-[17px]' : r.promo ? 'text-green-700' : 'text-gray-900'}`}>{r.v}</span>
+                      </div>
+                    ))}
+
+                    {/* Inclusos resumidos */}
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <p className="text-[12px] font-semibold text-gray-600 mb-2">Incluso na implantação:</p>
+                      {['PGR + LPP (modelo GR1)', 'PCMSO — documento + médico coordenador', 'Declaração técnica de ausência de insalubridade', 'Ordens de Serviço + Fichas de EPI'].map(item => (
+                        <div key={item} className="flex items-center gap-2 text-[12px] text-gray-600 mb-1">
+                          <CheckCircle size={12} className="text-teal shrink-0" /> {item}
                         </div>
                       ))}
+                      <p className="text-[12px] font-semibold text-gray-600 mb-2 mt-3">Incluso na gestão mensal:</p>
+                      {['Gestão eSocial SST (S-2210, S-2220, S-2240)', 'Monitoramento de exames periódicos', 'Portal do cliente com documentos'].map(item => (
+                        <div key={item} className="flex items-center gap-2 text-[12px] text-gray-600 mb-1">
+                          <CheckCircle size={12} className="text-teal shrink-0" /> {item}
+                        </div>
+                      ))}
+                      {planType === 'premium' && (
+                        <>
+                          <p className="text-[12px] font-semibold text-blue-700 mb-2 mt-3">Exclusivo Premium:</p>
+                          {['PPP de novos funcionários incluso', 'Abertura de CAT (até 1/mês)', 'Relatório analítico semestral', 'Suporte WhatsApp — resposta em 24h'].map(item => (
+                            <div key={item} className="flex items-center gap-2 text-[12px] text-blue-700 mb-1">
+                              <CheckCircle size={12} className="text-blue-500 shrink-0" /> {item}
+                            </div>
+                          ))}
+                        </>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Nota legal */}
-                    <p className="text-[11px] text-gray-400 mb-5 leading-relaxed">
-                      * Assinatura anual com renovação automática, cobrada mensalmente. Cancelamento disponível antes da data de renovação anual.
-                    </p>
-                  </>
-                )}
+                  <p className="text-[11px] text-gray-400 mb-5 mt-1 leading-relaxed">
+                    * Assinatura anual com renovação automática. Cancelamento disponível antes da data de renovação.
+                  </p>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Link href="/cadastro" className="btn btn-primary flex-1 text-center"
-                    onClick={() => track('registration_started', utmRef.current)}>
-                    <ArrowRight size={18} /> Iniciar Minha Regularização
-                  </Link>
-                  <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer"
-                    className="btn btn-outline-dark"
-                    onClick={() => track('whatsapp_click', { origin: 'eligible_result', ...utmRef.current })}>
-                    Falar no WhatsApp
-                  </a>
+                  {/* Aceite de contrato */}
+                  <div className={`p-4 rounded-[10px] border mb-2 ${
+                    contractError ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        id="contractAccepted"
+                        checked={contractAccepted}
+                        onChange={e => {
+                          setContractAccepted(e.target.checked)
+                          if (e.target.checked) setContractError('')
+                        }}
+                        className="w-4 h-4 mt-0.5 accent-teal shrink-0 cursor-pointer"
+                      />
+                      <label htmlFor="contractAccepted" className="text-[13px] text-gray-700 leading-snug cursor-pointer">
+                        <Shield size={13} className="inline mr-1 text-teal" />
+                        Li e aceito o{' '}
+                        <Link href="/termos" target="_blank" className="text-teal underline">
+                          Contrato de Prestação de Serviços
+                        </Link>
+                        {' '}do Sublime Digital — {PLAN_TYPES[planType].name}, {currentPlan.label}.
+                        Compreendo que o contrato entra em vigor após a confirmação do pagamento da implantação.
+                      </label>
+                    </div>
+                  </div>
+                  {contractError && (
+                    <p className="text-[12px] text-red-500 mb-4 ml-1">{contractError}</p>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                    <button
+                      className="btn btn-primary flex-1"
+                      onClick={handleStartRegistration}
+                    >
+                      <ArrowRight size={18} /> Iniciar Minha Regularização
+                    </button>
+                    <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer"
+                      className="btn btn-outline-dark"
+                      onClick={() => track('whatsapp_click', { origin: 'eligible_result', ...utmRef.current })}>
+                      Falar no WhatsApp
+                    </a>
+                  </div>
+                  <p className="text-[11px] text-gray-400 text-center mt-3">
+                    Exclusivo para empresas GR1 com até 20 funcionários.
+                    Sua assinatura fica registrada com data, hora e IP de aceite.
+                  </p>
                 </div>
-                <p className="text-[11px] text-gray-400 text-center mt-4">
-                  Plano válido exclusivamente para empresas GR1 com até 20 funcionários aprovadas no teste.
-                </p>
-              </div>
-            )}
+              )
+            })()}
 
             {/* ══ RESULTADO BACKOFFICE ══ */}
             {step === 'backoffice' && result && (

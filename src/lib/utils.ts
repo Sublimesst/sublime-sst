@@ -70,28 +70,29 @@ export function validatePhone(phone: string): boolean {
 
 // ── PLANS ─────────────────────────────────────────────────────
 import type { EmployeeRange, PlanConfig } from '@/types'
+import { PRICING } from '@/lib/pricing'
 
 export const PLANS: Record<Exclude<EmployeeRange, '21+'>, PlanConfig> = {
   '1-5': {
     range: '1-5',
-    label: '1 a 5 funcionários',
-    monthly: 14200,
-    implantacao: 19000,
-    implantacaoPromo: 10000,
+    label: PRICING.essencial.faixas['1-5'].label,
+    monthly: PRICING.essencial.faixas['1-5'].monthly,
+    implantacao: PRICING.essencial.implantacao.padrao,
+    implantacaoPromo: PRICING.essencial.implantacao.promo,
   },
   '6-10': {
     range: '6-10',
-    label: '6 a 10 funcionários',
-    monthly: 25000,
-    implantacao: 19000,
-    implantacaoPromo: 10000,
+    label: PRICING.essencial.faixas['6-10'].label,
+    monthly: PRICING.essencial.faixas['6-10'].monthly,
+    implantacao: PRICING.essencial.implantacao.padrao,
+    implantacaoPromo: PRICING.essencial.implantacao.promo,
   },
   '11-20': {
     range: '11-20',
-    label: '11 a 20 funcionários',
-    monthly: 43000,
-    implantacao: 19000,
-    implantacaoPromo: 10000,
+    label: PRICING.essencial.faixas['11-20'].label,
+    monthly: PRICING.essencial.faixas['11-20'].monthly,
+    implantacao: PRICING.essencial.implantacao.padrao,
+    implantacaoPromo: PRICING.essencial.implantacao.promo,
   },
 }
 

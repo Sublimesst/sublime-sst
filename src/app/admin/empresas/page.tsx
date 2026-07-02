@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Search, ExternalLink, Download } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -12,6 +12,9 @@ interface Company {
   whatsapp: string
   numFuncionarios: number
   status: string
+  planType?: string | null
+  ltcatAddon: boolean
+  reviewedBy?: string | null
   createdAt: string
   plan?: { label: string; monthlyPrice: number } | null
   payments: { type: string; status: string; checkoutUrl?: string | null }[]
@@ -19,14 +22,24 @@ interface Company {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Pendente', color: 'bg-amber-100 text-amber-700' },
-  active: { label: 'Ativo', color: 'bg-green-100 text-green-700' },
-  inactive: { label: 'Inativo', color: 'bg-gray-100 text-gray-600' },
-  cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-700' },
+  pending:             { label: 'Pendente',           color: 'bg-amber-100 text-amber-700' },
+  onboarding_pending:  { label: 'Onboarding',         color: 'bg-blue-100 text-blue-700' },
+  in_production:       { label: 'Em produção',        color: 'bg-purple-100 text-purple-700' },
+  in_review:           { label: 'Em revisão',         color: 'bg-indigo-100 text-indigo-700' },
+  documents_delivered: { label: 'Docs entregues',     color: 'bg-teal-100 text-teal-700' },
+  active:              { label: 'Ativo',              color: 'bg-green-100 text-green-700' },
+  overdue:             { label: 'Inadimplente',       color: 'bg-red-100 text-red-700' },
+  suspended:           { label: 'Suspenso',           color: 'bg-orange-100 text-orange-700' },
+  migrating:           { label: 'Migrando',           color: 'bg-sky-100 text-sky-700' },
+  cancelled:           { label: 'Cancelado',          color: 'bg-gray-100 text-gray-500' },
 }
 
 function formatBRL(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
+}
+
+function getAdminSecret() {
+  return typeof window !== 'undefined' ? sessionStorage.getItem('admin_secret') ?? '' : ''
 }
 
 export default function EmpresasPage() {
@@ -34,15 +47,37 @@ export default function EmpresasPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const secret = sessionStorage.getItem('admin_secret') ?? ''
-    fetch('/api/admin/empresas', { headers: { 'x-admin-secret': secret } })
+  const fetchCompanies = useCallback(() => {
+    setLoading(true)
+    fetch('/api/admin/empresas', { headers: { 'x-admin-secret': getAdminSecret() } })
       .then(r => r.json())
       .then(data => { if (data.success) setCompanies(data.data) })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => { fetchCompanies() }, [fetchCompanies])
+
+  async function updateStatus(companyId: string, status: string) {
+    setUpdatingId(companyId)
+    try {
+      const res = await fetch(`/api/admin/empresas/${companyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': getAdminSecret() },
+        body: JSON.stringify({ status }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCompanies(cs => cs.map(c => c.id === companyId ? { ...c, status: data.data.status } : c))
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setUpdatingId(null)
+    }
+  }
 
   const filtered = companies.filter(c => {
     const matchSearch = !search ||
@@ -55,14 +90,17 @@ export default function EmpresasPage() {
 
   function exportCSV() {
     const rows = [
-      ['Razão Social', 'CNPJ', 'E-mail', 'WhatsApp', 'Plano', 'Status', 'Onboarding', 'Data'],
+      ['Razão Social', 'CNPJ', 'E-mail', 'WhatsApp', 'Plano', 'Tipo', 'LTCAT', 'Status', 'Revisado por', 'Onboarding', 'Data'],
       ...filtered.map(c => [
         c.razaoSocial,
         c.cnpj,
         c.email,
         c.whatsapp,
         c.plan?.label ?? '—',
-        c.status,
+        c.planType ?? '—',
+        c.ltcatAddon ? 'Sim' : 'Não',
+        STATUS_LABELS[c.status]?.label ?? c.status,
+        c.reviewedBy ?? '—',
         c.onboardingData ? 'Sim' : 'Não',
         formatDate(c.createdAt),
       ]),
@@ -118,30 +156,34 @@ export default function EmpresasPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  {['Empresa', 'Plano', 'Status', 'Onboarding', 'Implantação', 'Cadastro'].map(h => (
+                  {['Empresa', 'Plano', 'Status', 'Onboarding', 'Implantação', 'Cadastro', 'Ações'].map(h => (
                     <th key={h} className="text-left px-5 py-3 font-semibold text-gray-600 text-[11px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">Nenhuma empresa encontrada.</td></tr>
+                  <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">Nenhuma empresa encontrada.</td></tr>
                 ) : filtered.map(c => {
                   const st = STATUS_LABELS[c.status] ?? { label: c.status, color: 'bg-gray-100 text-gray-600' }
                   const implantacao = c.payments.find(p => p.type === 'implantacao')
                   const waLink = `https://wa.me/55${c.whatsapp.replace(/\D/g, '')}`
+                  const isUpdating = updatingId === c.id
                   return (
                     <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3.5">
                         <p className="font-medium text-gray-900">{c.razaoSocial}</p>
                         <a href={waLink} target="_blank" rel="noopener noreferrer" className="text-[11px] text-gray-400 hover:text-teal">{c.whatsapp}</a>
+                        {c.ltcatAddon && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">+LTCAT</span>}
                       </td>
                       <td className="px-5 py-3.5">
                         <p>{c.plan?.label ?? '—'}</p>
                         {c.plan && <p className="text-[11px] text-teal">{formatBRL(c.plan.monthlyPrice)}/mês</p>}
+                        {c.planType && <p className="text-[10px] text-gray-400 capitalize">{c.planType}</p>}
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${st.color}`}>{st.label}</span>
+                        {c.reviewedBy && <p className="text-[10px] text-gray-400 mt-0.5">↳ {c.reviewedBy}</p>}
                       </td>
                       <td className="px-5 py-3.5">
                         {c.onboardingData
@@ -165,6 +207,19 @@ export default function EmpresasPage() {
                         ) : <span className="text-gray-400 text-[11px]">—</span>}
                       </td>
                       <td className="px-5 py-3.5 text-gray-500 whitespace-nowrap text-[11px]">{formatDate(c.createdAt)}</td>
+                      <td className="px-5 py-3.5">
+                        <select
+                          value={c.status}
+                          disabled={isUpdating}
+                          onChange={e => updateStatus(c.id, e.target.value)}
+                          className="text-[11px] border border-gray-200 rounded-[6px] px-2 py-1 bg-white focus:outline-none focus:border-teal disabled:opacity-50 cursor-pointer"
+                        >
+                          {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                            <option key={k} value={k}>{v.label}</option>
+                          ))}
+                        </select>
+                        {isUpdating && <p className="text-[10px] text-gray-400 mt-0.5">Salvando…</p>}
+                      </td>
                     </tr>
                   )
                 })}

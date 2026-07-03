@@ -207,16 +207,25 @@ export async function notifyConsultancyRequest(data: {
 
 export async function sendMagicLink(data: {
   to: string; companyName: string; link: string
+  portal?: 'cliente' | 'parceiro'
 }) {
+  const isParceiro = data.portal === 'parceiro'
+  const portalTitle = isParceiro ? 'Acesso ao Portal do Parceiro' : 'Acesso ao Portal do Cliente'
+  const intro = isParceiro
+    ? `Olá, <strong>${data.companyName}</strong>! Aqui está seu acesso ao Portal do Parceiro,
+       onde você acompanha suas indicações e comissões.`
+    : `Olá! Aqui está seu acesso ao portal da <strong>${data.companyName}</strong>,
+       onde ficam seus documentos e o acompanhamento do seu plano.`
   await sendEmail(data.to, `Seu link de acesso — Sublime SST`,
-    baseHtml('Acesso ao Portal do Cliente',
-      `<p style="font-size:15px;color:#334155;margin:0 0 20px">
-        Olá! Clique no botão abaixo para acessar o portal da <strong>${data.companyName}</strong>.<br>
-        O link expira em <strong>15 minutos</strong> e é de uso único.
+    baseHtml(portalTitle,
+      `<p style="font-size:15px;color:#334155;margin:0 0 8px">${intro}</p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 20px">
+        Por segurança, o link vale por <strong>15 minutos</strong> e só pode ser usado uma vez.
+        Se expirar, é só pedir um novo na página de login.
       </p>` +
       cta(data.link, '🔐 Acessar meu portal') +
       `<p style="font-size:12px;color:#94a3b8;margin:16px 0 0;text-align:center">
-        Se você não solicitou esse acesso, ignore este e-mail.
+        Não foi você que pediu este acesso? Pode ignorar este e-mail com tranquilidade — ninguém entra sem ele.
       </p>`
     )
   ).catch(err => console.error('[MAILER] sendMagicLink:', err))
@@ -235,29 +244,30 @@ export async function sendWelcomeEmail(data: {
     baseHtml('Pagamento confirmado — próximos passos',
       `<p style="font-size:15px;color:#334155;margin:0 0 12px">
         Olá, <strong>${data.responsavel}</strong>!<br><br>
-        O pagamento da implantação da <strong>${data.companyName}</strong> foi confirmado.
-        Sua conta está ativa e pronta para os próximos passos.
+        Recebemos o pagamento da implantação da <strong>${data.companyName}</strong> — obrigado pela confiança!
+        A partir de agora, a regularização da sua empresa em segurança do trabalho está em nossas mãos.
       </p>
       <div style="background:${planBg};border-radius:8px;padding:10px 14px;margin-bottom:16px">
         <span style="font-size:13px;font-weight:700;color:${planColor}">Plano contratado: ${planName}${data.planLabel ? ' · ' + data.planLabel : ''}</span>
       </div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0fdf9;border-radius:10px;margin-bottom:16px">
         <tr><td style="padding:16px 18px">
-          <p style="margin:0 0 10px;font-weight:700;color:#0d4a5c;font-size:14px">📋 O que acontece agora:</p>
+          <p style="margin:0 0 10px;font-weight:700;color:#0d4a5c;font-size:14px">📋 O que acontece agora — só falta 1 passo seu:</p>
           <p style="margin:0;font-size:13px;color:#334155;line-height:2">
-            1. Acesse seu portal e preencha o formulário de onboarding<br>
-            2. Nossa equipe analisa os dados e inicia a elaboração dos documentos<br>
-            3. PGR e PCMSO ficam disponíveis no portal em até 5 dias úteis<br>
-            4. Você recebe notificação por e-mail quando os documentos estiverem prontos
+            1. <strong>Você:</strong> preencha o formulário de dados no portal (leva menos de 5 minutos)<br>
+            2. <strong>Nossa equipe:</strong> elabora os documentos obrigatórios da sua empresa —
+               o PGR (mapa dos riscos do ambiente de trabalho) e o PCMSO (programa de saúde dos funcionários)<br>
+            3. Em até <strong>5 dias úteis</strong> após o preenchimento, tudo fica disponível no seu portal<br>
+            4. Avisamos por e-mail assim que os documentos estiverem prontos
           </p>
         </td></tr>
       </table>
       <p style="font-size:12px;color:#94a3b8;margin:0 0 16px">
-        O contrato de prestação de serviços aceito na contratação fica disponível no portal.
-        Dúvidas? Responda este e-mail ou acesse
-        <a href="https://sublimesst.com/termos" style="color:#1a9e8c">sublimesst.com/termos</a>.
+        Seu contrato assinado está anexo a este e-mail e também fica disponível no portal.
+        Qualquer dúvida, é só responder este e-mail ou chamar no WhatsApp
+        <a href="https://wa.me/5521997248630" style="color:#1a9e8c">(21) 99724-8630</a>.
       </p>` +
-      cta(data.loginUrl, '🏠 Acessar meu portal')
+      cta(data.loginUrl, '📋 Preencher meus dados agora')
     ),
     data.contractPdf
       ? [{ filename: 'Contrato_Sublime_Digital.pdf', content: data.contractPdf }]
@@ -268,15 +278,20 @@ export async function sendWelcomeEmail(data: {
 export async function sendOnboardingReminder(data: {
   to: string; responsavel: string; companyName: string; loginUrl: string
 }) {
-  await sendEmail(data.to, `Lembrete: preencha seus dados para iniciarmos o PGR`,
-    baseHtml('Seus documentos SST aguardam seus dados',
+  await sendEmail(data.to, `Falta pouco: precisamos dos seus dados para começar`,
+    baseHtml('Seus documentos estão aguardando você',
       `<p style="font-size:15px;color:#334155;margin:0 0 16px">
-        Olá, <strong>${data.responsavel}</strong>! Seu pagamento foi confirmado, mas ainda não recebemos
-        os dados necessários para elaborar o PGR e PCMSO da <strong>${data.companyName}</strong>.
+        Olá, <strong>${data.responsavel}</strong>! Seu pagamento já foi confirmado e nossa equipe está
+        pronta para elaborar os documentos da <strong>${data.companyName}</strong> — mas ainda falta
+        um passo seu: o preenchimento dos dados da empresa e dos funcionários.
       </p>
-      <p style="font-size:14px;color:#334155;margin:0 0 20px">
-        Preencha o formulário de onboarding no portal para que nossa equipe possa começar.
-        Leva menos de 5 minutos.
+      <p style="font-size:14px;color:#334155;margin:0 0 8px">
+        Leva menos de 5 minutos, e é o que nos permite começar. O prazo de entrega
+        (até 5 dias úteis) só começa a contar depois desse preenchimento.
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 20px">
+        Ficou com dúvida em algum campo? Chame a gente no WhatsApp
+        <a href="https://wa.me/5521997248630" style="color:#1a9e8c">(21) 99724-8630</a> que ajudamos na hora.
       </p>` +
       cta(data.loginUrl, '📋 Preencher dados agora')
     )
@@ -287,16 +302,22 @@ export async function sendPaymentReminder(data: {
   to: string; responsavel: string; companyName: string; checkoutUrl: string; amount: number
 }) {
   const value = `R$ ${(data.amount / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-  await sendEmail(data.to, `Lembrete: pagamento pendente — Sublime Digital`,
-    baseHtml('Pagamento da implantação ainda não confirmado',
+  await sendEmail(data.to, `Seu cadastro está quase completo — Sublime Digital`,
+    baseHtml('Só falta o pagamento para começarmos',
       `<p style="font-size:15px;color:#334155;margin:0 0 16px">
-        Olá, <strong>${data.responsavel}</strong>! O pagamento de implantação da <strong>${data.companyName}</strong>
-        (${value}) ainda não foi confirmado.
+        Olá, <strong>${data.responsavel}</strong>! O cadastro da <strong>${data.companyName}</strong> está
+        pronto — falta apenas confirmar o pagamento da implantação (${value}) para
+        nossa equipe começar a elaborar seus documentos.
       </p>
-      <p style="font-size:14px;color:#334155;margin:0 0 20px">
-        Assim que confirmado, iniciaremos imediatamente a elaboração dos seus documentos SST.
+      <p style="font-size:14px;color:#334155;margin:0 0 8px">
+        O pagamento é feito em ambiente seguro (Asaas), com opção de PIX, boleto ou cartão.
+        Assim que confirmado, damos início imediato ao trabalho.
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 20px">
+        Teve algum problema no pagamento ou ficou com dúvida sobre o plano?
+        Fale com a gente no WhatsApp <a href="https://wa.me/5521997248630" style="color:#1a9e8c">(21) 99724-8630</a>.
       </p>` +
-      cta(data.checkoutUrl, '💳 Realizar pagamento agora')
+      cta(data.checkoutUrl, '💳 Concluir pagamento agora')
     )
   ).catch(err => console.error('[MAILER] sendPaymentReminder:', err))
 }
@@ -338,11 +359,15 @@ export async function sendDocumentExpiryAlert(data: {
     </tr>`
   }).join('')
 
-  await sendEmail(data.to, `⚠️ Documentos SST a vencer — ${data.companyName}`,
-    baseHtml('Atenção: documentos SST próximos do vencimento',
-      `<p style="font-size:15px;color:#334155;margin:0 0 16px">
-        Olá, <strong>${data.responsavel}</strong>! Os seguintes documentos SST da <strong>${data.companyName}</strong>
-        estão próximos do vencimento e precisam de renovação.
+  await sendEmail(data.to, `⚠️ Documentos a vencer — ${data.companyName}`,
+    baseHtml('Hora de renovar seus documentos',
+      `<p style="font-size:15px;color:#334155;margin:0 0 8px">
+        Olá, <strong>${data.responsavel}</strong>! Alguns documentos da <strong>${data.companyName}</strong>
+        estão chegando perto do vencimento.
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 16px">
+        Documentos vencidos deixam a empresa exposta a multas em caso de fiscalização —
+        por isso avisamos com antecedência para renovar sem correria.
       </p>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px">
         <tr>

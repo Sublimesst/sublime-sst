@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   })
 
   const link = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://sublimesst.com'}/api/partner/auth/verify?token=${token}`
-  await sendMagicLink({ to: email, companyName: partner.name, link }).catch(console.error)
+  await sendMagicLink({ to: email, companyName: partner.name, link, portal: 'parceiro' }).catch(console.error)
 
   return NextResponse.json({ success: true })
 }

@@ -55,6 +55,45 @@ ${refUrl}
 
 Qualquer dúvida, pode me chamar! 😊`
 
+  const whatsappContador = `Olá! Tudo bem?
+
+Uma dica para os seus clientes PME: a *Sublime SST* resolve a parte de segurança do trabalho (PGR, PCMSO, eSocial SST) de forma 100% digital.
+
+Você sabe como é — o eSocial cobra os eventos de SST (S-2210, S-2220, S-2240) e a maioria das pequenas empresas está descoberta. Quando a fiscalização aperta, o problema cai no colo do contador.
+
+A Sublime cuida disso por assinatura mensal, sem visita presencial, para empresas de baixo risco com até 20 funcionários. Seus clientes ficam regularizados e você tira essa dor da sua mesa.
+
+Teste de elegibilidade gratuito (2 minutos):
+${refUrl}
+
+Se quiser, te explico como funciona a parceria. 😊`
+
+  const whatsappAdvogado = `Olá! Tudo bem?
+
+Sabe aquele cliente PME que chega com passivo trabalhista por falta de documentação de SST? A *Sublime SST* resolve a prevenção disso.
+
+Eles emitem PGR, PCMSO, Ordens de Serviço e Fichas de EPI — a documentação que protege a empresa em reclamatórias e fiscalizações — tudo digital, por assinatura mensal, para empresas de baixo risco com até 20 funcionários.
+
+Documentação em dia significa menos risco de condenação por dano moral/material e defesa mais sólida.
+
+Teste de elegibilidade gratuito:
+${refUrl}
+
+Posso te apresentar o modelo de parceria, se tiver interesse.`
+
+  const whatsappConsultorRH = `Olá! Tudo bem?
+
+Para os seus clientes de RH/DP: a *Sublime SST* completa o serviço que você já presta, cuidando da parte de segurança e saúde no trabalho.
+
+Admissão precisa de ASO, o eSocial cobra os eventos de SST, e o PGR/PCMSO são obrigatórios mesmo para escritório pequeno. A Sublime resolve tudo isso de forma 100% digital, por assinatura, para empresas de baixo risco com até 20 funcionários.
+
+Você entrega um serviço mais completo sem virar especialista em SST.
+
+Teste de elegibilidade gratuito (2 minutos):
+${refUrl}
+
+Quer que eu te explique como funciona a parceria? 😊`
+
   const emailSubject = `Conformidade SST simplificada para sua empresa — Sublime Digital`
 
   const emailBody = `Olá,
@@ -88,11 +127,35 @@ Atenciosamente`
     },
     {
       key: 'whatsapp',
-      title: '💬 Texto pronto para WhatsApp',
+      title: '💬 Texto pronto para WhatsApp (geral)',
       icon: MessageCircle,
       description: 'Copie e cole diretamente no WhatsApp para seus contatos.',
       content: whatsappText,
       copyLabel: 'Copiar texto WhatsApp',
+    },
+    {
+      key: 'whatsappContador',
+      title: '🧮 WhatsApp para contadores',
+      icon: MessageCircle,
+      description: 'Argumento focado na dor do contador: eSocial SST e clientes descobertos.',
+      content: whatsappContador,
+      copyLabel: 'Copiar texto',
+    },
+    {
+      key: 'whatsappAdvogado',
+      title: '⚖️ WhatsApp para advogados trabalhistas',
+      icon: MessageCircle,
+      description: 'Argumento focado em prevenção de passivo trabalhista e defesa documental.',
+      content: whatsappAdvogado,
+      copyLabel: 'Copiar texto',
+    },
+    {
+      key: 'whatsappConsultorRH',
+      title: '👥 WhatsApp para consultores de RH/DP',
+      icon: MessageCircle,
+      description: 'Argumento focado em completar o serviço de RH sem virar especialista em SST.',
+      content: whatsappConsultorRH,
+      copyLabel: 'Copiar texto',
     },
     {
       key: 'emailSubject',

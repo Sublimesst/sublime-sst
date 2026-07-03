@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash } from 'crypto'
+import { createHash, timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { sendWelcomeEmail } from '@/lib/mailer'
 import { generateContractPdf } from '@/lib/contractPdf'
 import { CONTRACT_VERSION } from '@/lib/pricing'
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get('asaas-access-token')
-  if (token !== process.env.ASAAS_WEBHOOK_TOKEN) {
+  const token = req.headers.get('asaas-access-token') ?? ''
+  const secret = process.env.ASAAS_WEBHOOK_TOKEN ?? ''
+  const tokenBuf = Buffer.from(token)
+  const secretBuf = Buffer.from(secret)
+  const authorized = secret.length > 0 &&
+    tokenBuf.length === secretBuf.length &&
+    timingSafeEqual(tokenBuf, secretBuf)
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -28,19 +34,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, note: 'payment not found in db' })
     }
 
-    // Idempotência: evento já processado — não reprocessa nem reenvia e-mail
-    if (dbPayment.status === 'confirmed') {
-      return NextResponse.json({ ok: true, note: 'already processed' })
-    }
-
-    await prisma.payment.update({
-      where: { id: dbPayment.id },
+    // Idempotência atômica: só o primeiro webhook consegue fazer a transição
+    // pending → confirmed. Entregas simultâneas (Asaas reenvia) retornam aqui
+    // sem duplicar comissão nem reenviar e-mail.
+    const transition = await prisma.payment.updateMany({
+      where: { id: dbPayment.id, status: { not: 'confirmed' } },
       data: {
         status:      'confirmed',
         paidAt:      new Date(),
         billingType: payment.billingType ?? null,
       },
     })
+    if (transition.count === 0) {
+      return NextResponse.json({ ok: true, note: 'already processed' })
+    }
 
     // Commission engine: create Commission record for mensalidade payments with a partner
     if (dbPayment.type === 'mensalidade' && dbPayment.company.partnerId) {
@@ -124,6 +131,17 @@ export async function POST(req: NextRequest) {
       where: { asaasId: payment.id },
       data: { status: event === 'PAYMENT_OVERDUE' ? 'failed' : 'refunded' },
     })
+
+    // Estorno de pagamento estorna a comissão vinculada (razão de ser da carência de 30d)
+    if (event === 'PAYMENT_REFUNDED') {
+      const refunded = await prisma.payment.findFirst({ where: { asaasId: payment.id } })
+      if (refunded) {
+        await prisma.commission.updateMany({
+          where: { paymentId: refunded.id, status: { in: ['em_carencia', 'liberada'] } },
+          data: { status: 'estornada' },
+        }).catch(err => console.error('[WEBHOOK] Falha ao estornar Commission:', err))
+      }
+    }
   }
 
   return NextResponse.json({ ok: true })

@@ -69,6 +69,8 @@ model Lead {
   company              Company?
   contactRequests      ContactRequest[]
 
+  @@index([partnerId])
+  @@index([email])
   @@map("leads")
 }
 
@@ -230,6 +232,7 @@ model DocumentAccessLog {
 
   company Company @relation(fields: [companyId], references: [id])
 
+  @@index([companyId, accessedAt])
   @@map("document_access_logs")
 }
 
@@ -325,6 +328,8 @@ model Commission {
   company Company  @relation(fields: [companyId], references: [id])
   payment Payment? @relation(fields: [paymentId], references: [id])
 
+  @@index([partnerId])
+  @@index([paymentId])
   @@map("commissions")
 }
 
@@ -348,6 +353,8 @@ model Payment {
   company     Company    @relation(fields: [companyId], references: [id])
   commissions Commission[]
 
+  @@index([asaasId])
+  @@index([companyId, type, status])
   @@map("payments")
 }
 

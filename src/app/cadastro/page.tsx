@@ -27,12 +27,13 @@ export default function CadastroPage() {
   const [asaasUrl, setAsaasUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    track('registration_started')
+    track('registration_page_viewed')
     const stored = typeof window !== 'undefined' ? sessionStorage.getItem('sublime_eligibility') : null
     if (stored) {
       const data = JSON.parse(stored)
       setForm(f => ({
         ...f,
+        razaoSocial: data.companyName || '',
         responsavel: data.name || '',
         email: data.email || '',
         whatsapp: data.whatsapp || '',
@@ -60,7 +61,9 @@ export default function CadastroPage() {
     if (!form.cidade.trim()) e.cidade = 'Informe a cidade.'
     if (!form.estado) e.estado = 'Selecione o estado.'
     if (!form.endereco.trim()) e.endereco = 'Informe o endereço.'
-    if (!form.numFuncionarios || isNaN(Number(form.numFuncionarios))) e.numFuncionarios = 'Informe o número de funcionários.'
+    const numFunc = Number(form.numFuncionarios)
+    if (!form.numFuncionarios || isNaN(numFunc)) e.numFuncionarios = 'Informe o número de funcionários.'
+    else if (numFunc < 1 || numFunc > 20) e.numFuncionarios = 'O modelo digital atende empresas de 1 a 20 funcionários.'
     if (!form.consentDataUsage) e.consentDataUsage = 'Aceite o uso dos dados.'
     if (!form.consentDeclaration) e.consentDeclaration = 'Aceite a declaração.'
     if (!form.consentTerms) e.consentTerms = 'Aceite os termos de uso.'
@@ -99,8 +102,7 @@ export default function CadastroPage() {
       <>
         <Navbar />
         <div className="min-h-screen bg-gray-50 py-16 px-6 flex items-center justify-center">
-          <div className="max-w-md w-full bg-white rounded-[20px] border border-gray-200 p-10 text-center"
-            style={{ boxShadow: 'var(--shadow-md)' }}>
+          <div className="max-w-md w-full bg-white rounded-brand-lg border border-gray-200 p-10 text-center shadow-brand">
             <div className="text-5xl mb-4">🎉</div>
             <h2 className="font-display text-2xl text-gray-900 mb-3">Cadastro enviado!</h2>
             <p className="text-[15px] text-gray-500 mb-6">
@@ -147,12 +149,11 @@ export default function CadastroPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-[20px] border border-gray-200 p-9"
-            style={{ boxShadow: 'var(--shadow-md)' }}>
+          <div className="bg-white rounded-brand-lg border border-gray-200 p-9 shadow-brand">
 
             {/* Dados empresa */}
             <h3 className="text-[16px] font-semibold text-gray-900 mb-5">🏢 Dados da empresa</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div><label className="form-label required">Razão social</label>
                 <input className={`form-input ${errors.razaoSocial ? 'error' : ''}`} placeholder="Nome conforme CNPJ"
                   value={form.razaoSocial} onChange={e => set('razaoSocial', e.target.value)} />
@@ -161,7 +162,7 @@ export default function CadastroPage() {
                 <input className="form-input" placeholder="Nome comercial"
                   value={form.nomeFantasia} onChange={e => set('nomeFantasia', e.target.value)} /></div>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div><label className="form-label required">Responsável</label>
                 <input className={`form-input ${errors.responsavel ? 'error' : ''}`} placeholder="Nome completo"
                   value={form.responsavel} onChange={e => set('responsavel', e.target.value)} />
@@ -178,7 +179,7 @@ export default function CadastroPage() {
 
             <div className="h-px bg-gray-200 my-7" />
             <h3 className="text-[16px] font-semibold text-gray-900 mb-5">📍 Endereço</h3>
-            <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div><label className="form-label required">CEP</label>
                 <input className={`form-input ${errors.cep ? 'error' : ''}`} placeholder="00000-000"
                   value={form.cep} onChange={e => set('cep', maskCEP(e.target.value))} maxLength={9} />
@@ -200,7 +201,7 @@ export default function CadastroPage() {
 
             <div className="h-px bg-gray-200 my-7" />
             <h3 className="text-[16px] font-semibold text-gray-900 mb-5">👥 Funcionários</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div><label className="form-label required">Nº total de funcionários</label>
                 <input className={`form-input ${errors.numFuncionarios ? 'error' : ''}`} type="number" min={1} max={20} placeholder="Ex: 8"
                   value={form.numFuncionarios} onChange={e => set('numFuncionarios', e.target.value)} />

@@ -185,7 +185,17 @@ function ElegibilidadeInner() {
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [result, setResult] = useState<EngineResult | null>(null)
   const [loading, setLoading] = useState(false)
-  const [promoEnd] = useState(() => Date.now() + PROMO_WINDOW_MS)
+  // Persiste o fim da promo entre recarregamentos — o prazo de 24h conta a partir do primeiro resultado
+  const [promoEnd] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('sublime_eligibility')
+        const prev = stored ? JSON.parse(stored)?.promoEnd : null
+        if (typeof prev === 'number' && prev > Date.now()) return prev
+      } catch { /* ignora e cria novo prazo */ }
+    }
+    return Date.now() + PROMO_WINDOW_MS
+  })
   const countdown = useCountdown(promoEnd)
   const [planType, setPlanType] = useState<PlanType>('essencial')
   const [ltcatAddon, setLtcatAddon] = useState(false)
@@ -402,8 +412,7 @@ function ElegibilidadeInner() {
             </div>
           )}
 
-          <div className="bg-white rounded-[20px] border border-gray-200 p-7 sm:p-9"
-            style={{ boxShadow: '0 4px 16px rgba(0,0,0,.08)' }}>
+          <div className="bg-white rounded-brand-lg border border-gray-200 p-7 sm:p-9 shadow-brand">
 
             {/* ══ ETAPA 1 — Empresa + perfil operacional ══ */}
             {step === 1 && (
@@ -516,8 +525,7 @@ function ElegibilidadeInner() {
                   )}
 
                   {showCnae && (
-                    <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-[8px] mt-1 max-h-52 overflow-y-auto"
-                      style={{ boxShadow: '0 4px 16px rgba(0,0,0,.08)' }}>
+                    <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-[8px] mt-1 max-h-52 overflow-y-auto shadow-brand">
                       {cnaeResults.map(c => (
                         <div key={c.code}
                           className="px-4 py-2.5 cursor-pointer hover:bg-teal-pale border-b border-gray-100 last:border-0 transition-colors"

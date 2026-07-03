@@ -85,8 +85,7 @@ function LoginForm() {
 export default function PartnerLoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
-      <div className="bg-white rounded-[20px] border border-gray-200 p-10 w-full max-w-sm"
-        style={{ boxShadow: '0 4px 16px rgba(0,0,0,.08)' }}>
+      <div className="bg-white rounded-brand-lg border border-gray-200 p-10 w-full max-w-sm shadow-brand">
         <Suspense>
           <LoginForm />
         </Suspense>

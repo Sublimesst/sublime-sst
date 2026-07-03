@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
 
   if (!partner) return NextResponse.json({ error: 'Parceiro não encontrado.' }, { status: 404 })
 
-  const totalComissoes = commissions.reduce((sum, c) => sum + c.valorComissao, 0)
+  // Estornadas ficam fora do total previsto — o parceiro não vai receber esses valores
+  const totalComissoes = commissions.filter(c => c.status !== 'estornada').reduce((sum, c) => sum + c.valorComissao, 0)
   const liberadas      = commissions.filter(c => c.status === 'liberada').reduce((sum, c) => sum + c.valorComissao, 0)
   const pagas          = commissions.filter(c => c.status === 'paga').reduce((sum, c) => sum + c.valorComissao, 0)
 

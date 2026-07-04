@@ -216,36 +216,34 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     header(doc)
     doc.moveDown(0.8)
 
-    sectionTitle(doc, 'Cláusula 5ª — Prazo e Vigência')
+    sectionTitle(doc, 'Cláusula 4ª — Remuneração, Mora e Reajuste')
+    bodyText(doc, 'A taxa de implantação é devida no ato da contratação, é condição para início dos serviços e não é reembolsável após o início dos trabalhos de elaboração dos documentos. A mensalidade é cobrada mensalmente via plataforma Asaas.')
+    bodyText(doc, 'Mora: atraso sujeita o CONTRATANTE a multa de 2% e juros de 1% ao mês (pro rata die). Atraso superior a 15 dias autoriza a suspensão do acesso ao portal e dos serviços até regularização; superior a 30 dias, o registro do débito nos serviços de proteção ao crédito e a rescisão por inadimplência.')
+    bodyText(doc, 'Reajuste: os valores serão reajustados anualmente, na data de aniversário do contrato, pela variação acumulada do IPCA/IBGE, ou índice oficial que venha a substituí-lo.')
+
+    sectionTitle(doc, 'Cláusula 5ª — Prazo, Vigência e Rescisão')
     bodyText(doc, 'O contrato entra em vigor na data de confirmação do pagamento da taxa de implantação, com vigência inicial de 12 (doze) meses, renovando-se automaticamente por iguais períodos salvo manifestação contrária com antecedência mínima de 30 dias.')
-    bodyText(doc, 'A mensalidade será devida a partir da liberação do acesso ao portal e do início da análise técnica, independentemente da data de conclusão dos documentos finais, desde que a CONTRATADA esteja apta a iniciar os serviços com base nas informações fornecidas.')
-    bodyText(doc, 'O CONTRATANTE assume compromisso mínimo de 6 (seis) mensalidades, contadas a partir da entrega do primeiro documento técnico (PGR ou PCMSO). Os prazos de entrega somente começam a contar após o envio completo de todas as informações e documentos solicitados no onboarding digital.')
+    bodyText(doc, 'A mensalidade será devida a partir da liberação do acesso ao portal e do início da análise técnica. Os prazos de entrega somente começam a contar após o envio completo das informações solicitadas no onboarding digital.')
+    bodyText(doc, 'Rescisão pelo CONTRATANTE: (i) entre o 1º e o 6º mês da entrega dos documentos: pagamento das mensalidades remanescentes para completar as 6 (seis) mensalidades mínimas; (ii) entre o 7º e o 12º mês: aviso prévio de 60 dias por escrito, pagando as mensalidades do período de aviso, sem multa adicional; (iii) após a primeira renovação: aviso prévio de 30 dias, sem multa.')
+    bodyText(doc, 'A CONTRATADA pode rescindir imediatamente por: (i) inadimplência superior a 30 dias; (ii) informações falsas ou omissão relevante; (iii) perda dos critérios de elegibilidade GR1 sem regularização no prazo acordado.')
 
-    sectionTitle(doc, 'Cláusula 6ª — Pagamento')
-    bodyText(doc, 'A taxa de implantação é devida no ato da contratação, é condição para início dos serviços e não é reembolsável em nenhuma hipótese. A mensalidade é cobrada mensalmente via plataforma Asaas.')
-    bodyText(doc, 'O atraso superior a 15 dias corridos autoriza a suspensão do acesso ao portal até regularização, com multa de 2% e juros de 1% ao mês. Os preços poderão ser reajustados anualmente pelo IPCA.')
-
-    sectionTitle(doc, 'Cláusula 9ª — Rescisão e Multa Contratual')
-    bodyText(doc, 'A taxa de implantação paga não é reembolsável em nenhuma hipótese.')
-    bodyText(doc, '9.1 — Cancelamento nos meses 1 a 6: multa equivalente às mensalidades necessárias para completar 6 meses pagos.')
-    bodyText(doc, '9.2 — Cancelamento nos meses 7 a 12: aviso prévio de 60 dias por escrito; pagamento das mensalidades do período de aviso; sem multa adicional.')
-    bodyText(doc, '9.3 — Cancelamento após renovação: aviso prévio de 30 dias, sem multa.')
-    bodyText(doc, '9.4 — A CONTRATADA pode rescindir imediatamente por: (i) inadimplência superior a 30 dias; (ii) informações falsas ou omissão relevante; (iii) perda dos critérios de elegibilidade GR1 sem regularização no prazo acordado.')
-
-    sectionTitle(doc, 'Cláusula 10ª — Limitação de Responsabilidade')
+    sectionTitle(doc, 'Cláusula 10ª — Da Responsabilidade')
     bodyText(doc, 'A CONTRATADA é responsável pela elaboração técnica dos documentos com base nas informações fornecidas pelo CONTRATANTE. Erros, omissões ou informações desatualizadas prestadas pelo CONTRATANTE eximem a CONTRATADA de responsabilidade por autuações, multas ou passivos trabalhistas.')
     bodyText(doc, 'A declaração técnica de não identificação de agentes insalubres não substitui laudo técnico pericial com vistoria presencial, sendo obrigatória avaliação presencial em caso de exposição identificada, dúvida técnica ou determinação regulatória aplicável.')
-    bodyText(doc, 'A responsabilidade total da CONTRATADA fica limitada ao valor das mensalidades pagas nos últimos 3 (três) meses.')
+    bodyText(doc, 'A responsabilidade da CONTRATADA em caso de falha na prestação dos serviços limita-se ao valor das mensalidades pagas nos últimos 6 (seis) meses.')
 
     sectionTitle(doc, 'Cláusula 11ª — LGPD')
     bodyText(doc, 'O CONTRATANTE atua como Controlador e a CONTRATADA como Operadora dos dados pessoais tratados neste contrato, nos termos da Lei nº 13.709/2018 (LGPD). Os dados podem incluir dados de saúde ocupacional, classificados como dados sensíveis (art. 5º, II da LGPD).')
     bodyText(doc, 'O CONTRATANTE declara possuir base legal adequada para compartilhamento dos dados de seus empregados e responsabiliza-se pela informação aos titulares quando aplicável. A CONTRATADA poderá compartilhar dados estritamente necessários com médico coordenador, clínicas parceiras, o eSocial e órgãos públicos competentes.')
-    bodyText(doc, 'Os dados serão armazenados com medidas de segurança adequadas e eliminados após o encerramento contratual, salvo obrigação legal de retenção. Em caso de incidente de segurança relevante, a CONTRATADA notificará o CONTRATANTE e a ANPD no prazo legal.')
+    bodyText(doc, 'Retenção: dados cadastrais e contratuais são mantidos pela vigência do contrato mais 5 anos e após eliminados ou anonimizados. Registros médicos ocupacionais (prontuários, ASOs e monitoramento vinculado ao PCMSO) são conservados pelo prazo da NR-7 — no mínimo 20 anos após o desligamento de cada trabalhador — sob responsabilidade do médico coordenador. Em caso de incidente de segurança relevante, a CONTRATADA notificará o CONTRATANTE e a ANPD no prazo legal.')
 
     sectionTitle(doc, 'Cláusula 13ª — Ajuste de Faixa e Migração')
     bodyText(doc, 'Caso o CONTRATANTE ultrapasse a faixa de funcionários do plano contratado, a mensalidade será ajustada para a faixa aplicável a partir do ciclo subsequente. Caso ultrapasse 20 funcionários, deverá migrar para Consultoria SST ou proposta personalizada no prazo de 30 dias.')
 
-    sectionTitle(doc, 'Cláusula 14ª — Foro')
+    sectionTitle(doc, 'Cláusula 14ª — Registros Médicos e Encerramento')
+    bodyText(doc, 'Encerrado o contrato, os documentos emitidos deixam de ser atualizados e a CONTRATADA poderá formalizar a revogação da responsabilidade técnica sobre eles. Os registros médicos ocupacionais serão transferidos ao novo médico coordenador indicado pelo CONTRATANTE, mediante solicitação formal, em até 90 dias, em caráter confidencial; na ausência de solicitação, serão conservados pelo prazo legal da NR-7. Resultados de exames são protegidos por sigilo médico e comunicados ao CONTRATANTE apenas nos limites da legislação.')
+
+    sectionTitle(doc, 'Cláusula 16ª — Foro')
     bodyText(doc, 'As partes elegem o foro da Comarca da Capital do Estado do Rio de Janeiro para dirimir quaisquer questões decorrentes deste contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.')
 
     pageFooter(doc, data.contractVersion)

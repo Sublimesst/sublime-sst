@@ -58,13 +58,20 @@ Serviços expressamente excluídos do escopo (todos os planos):
 
 A mensalidade é devida a partir da data de liberação do acesso ao portal do cliente, independentemente do estágio de entrega dos documentos de implantação. Os prazos de entrega estão condicionados ao envio completo e correto dos dados pelo CONTRATANTE no formulário de onboarding.
 
-Condições promocionais (ex.: taxa de implantação reduzida) têm prazo definido e não são renovadas automaticamente na eventual rescisão e nova contratação.`,
+Condições promocionais (ex.: taxa de implantação reduzida) têm prazo definido e não são renovadas automaticamente na eventual rescisão e nova contratação.
+
+Mora: o atraso no pagamento sujeita o CONTRATANTE a multa de 2% (dois por cento) sobre o valor em aberto e juros de mora de 1% (um por cento) ao mês, calculados pro rata die. O atraso superior a 15 (quinze) dias autoriza a suspensão do acesso ao portal e da prestação dos serviços até a regularização, sem prejuízo da exigibilidade dos valores. O atraso superior a 30 (trinta) dias autoriza a CONTRATADA a registrar o débito nos serviços de proteção ao crédito e a rescindir o contrato por inadimplência.
+
+Reajuste: os valores serão reajustados anualmente, na data de aniversário do contrato, pela variação acumulada do IPCA/IBGE nos 12 meses anteriores, ou índice oficial que venha a substituí-lo.`,
   },
   {
     titulo: '5ª — Do Prazo e da Rescisão',
     conteudo: `O contrato tem vigência de 12 meses a partir da data de confirmação do pagamento da implantação, com renovação automática por períodos iguais, salvo aviso de rescisão por qualquer das partes com antecedência mínima de 30 dias.
 
-O CONTRATANTE poderá rescindir o contrato a qualquer momento, mas o compromisso mínimo é de 6 mensalidades contadas da data de entrega dos documentos de implantação. Rescisão antes do cumprimento deste prazo mínimo implicará o pagamento das mensalidades remanescentes.
+O CONTRATANTE poderá rescindir o contrato a qualquer momento, observadas as seguintes condições:
+• Rescisão entre o 1º e o 6º mês (contados da entrega dos documentos de implantação): pagamento das mensalidades remanescentes necessárias para completar as 6 (seis) mensalidades mínimas;
+• Rescisão entre o 7º e o 12º mês: aviso prévio de 60 (sessenta) dias por escrito, com pagamento das mensalidades do período de aviso, sem multa adicional;
+• Rescisão após a primeira renovação: aviso prévio de 30 (trinta) dias, sem multa.
 
 Valores de implantação pagos não são reembolsáveis após o início dos trabalhos de elaboração dos documentos.`,
   },
@@ -122,7 +129,7 @@ Finalidade e base legal: Execução deste contrato (Art. 7º, V da LGPD) e cumpr
 
 Compartilhamento: Os dados serão compartilhados exclusivamente com prestadores de serviços da CONTRATADA (sistemas de TI, médico coordenador do PCMSO) sob acordos de confidencialidade e nos limites da LGPD. Não há venda ou compartilhamento comercial de dados.
 
-Retenção: Os dados são mantidos pelo período de vigência do contrato mais 5 anos, conforme prazo prescricional trabalhista. Após, são anonimizados ou excluídos.
+Retenção: Os dados cadastrais e contratuais são mantidos pelo período de vigência do contrato mais 5 anos, conforme prazo prescricional trabalhista, sendo após anonimizados ou excluídos. Os registros médicos ocupacionais (prontuários, ASOs e dados de monitoramento de saúde vinculados ao PCMSO) são conservados pelo prazo exigido pela NR-7 — no mínimo 20 (vinte) anos após o desligamento de cada trabalhador — sob responsabilidade do médico coordenador, prevalecendo esse prazo legal sobre qualquer disposição em contrário.
 
 Incidentes: A CONTRATADA notificará a AUTORIDADE NACIONAL DE PROTEÇÃO DE DADOS (ANPD) e o CONTRATANTE em até 72 horas em caso de incidente de segurança que afete dados pessoais dos funcionários.
 
@@ -143,7 +150,24 @@ O CONTRATANTE declara ter lido e compreendido integralmente as condições deste
 Empresas que ultrapassem 20 funcionários perdem a elegibilidade ao modelo digital e deverão migrar para o atendimento de Consultoria SST, conforme proposta a ser apresentada pela CONTRATADA. A CONTRATADA poderá suspender a emissão de novos documentos até a regularização.`,
   },
   {
-    titulo: '14ª — Do Foro',
+    titulo: '14ª — Dos Registros Médicos Ocupacionais e do Encerramento',
+    conteudo: `Sigilo médico: os resultados de exames e informações clínicas dos trabalhadores são protegidos por sigilo médico. Serão comunicados individualmente a cada trabalhador e, ao CONTRATANTE, apenas nos limites permitidos pela legislação (aptidão/inaptidão e informações estritamente necessárias à gestão de SST), jamais com detalhamento clínico sem autorização expressa do titular.
+
+Encerrado o contrato, por qualquer motivo:
+• Os documentos de SST emitidos (PGR, PCMSO e correlatos) deixam de ser atualizados pela CONTRATADA a partir da data de encerramento, e a CONTRATADA poderá formalizar a revogação da responsabilidade técnica sobre eles perante os órgãos competentes;
+• Os registros médicos ocupacionais serão transferidos ao novo médico coordenador do PCMSO indicado pelo CONTRATANTE, mediante solicitação formal, no prazo de até 90 (noventa) dias do recebimento da solicitação, em caráter confidencial;
+• Enquanto não houver solicitação de transferência, a CONTRATADA (por meio do médico coordenador) conservará os registros pelo prazo legal da NR-7, sem que isso caracterize continuidade da prestação dos serviços.`,
+  },
+  {
+    titulo: '15ª — Das Disposições Gerais',
+    conteudo: `Ausência de vínculo: os profissionais envolvidos na prestação dos serviços não possuem qualquer vínculo empregatício com o CONTRATANTE, sendo de responsabilidade da CONTRATADA os encargos decorrentes das suas relações de trabalho, na forma da lei.
+
+Comunicações: as comunicações entre as partes serão realizadas por meio do e-mail cadastrado pelo CONTRATANTE e do portal do cliente, produzindo todos os efeitos contratuais. É responsabilidade do CONTRATANTE manter seu e-mail de contato atualizado.
+
+A tolerância de qualquer das partes quanto ao descumprimento de obrigação prevista neste contrato não constitui novação ou renúncia ao direito de exigi-la.`,
+  },
+  {
+    titulo: '16ª — Do Foro',
     conteudo: `As partes elegem o foro da Comarca da Capital do Estado do Rio de Janeiro para dirimir quaisquer controvérsias oriundas do presente contrato, renunciando a qualquer outro, por mais privilegiado que seja.`,
   },
 ]
@@ -156,7 +180,7 @@ export default function TermosPage() {
         <div className="max-w-[760px] mx-auto">
           <h1 className="font-display text-4xl text-gray-900 mb-2">Contrato de Prestação de Serviços</h1>
           <p className="text-[13px] text-gray-500 pb-6 mb-6 border-b border-gray-200">
-            Versão 2026-06-28 · Sublime Digital (Essencial e Premium)
+            Versão 2026-07-04 · Sublime Digital (Essencial e Premium)
           </p>
 
           <div className="bg-amber-50 border border-amber-300 rounded-[10px] px-5 py-4 mb-8 text-[13px] text-amber-800">

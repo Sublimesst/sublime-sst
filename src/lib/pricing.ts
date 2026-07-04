@@ -30,7 +30,7 @@ export const PRICING = {
 } as const
 
 export const LTCAT_ADDON_PRICE_CENTS = 45000 // R$ 450,00
-export const CONTRACT_VERSION = '2026-06-28'
+export const CONTRACT_VERSION = '2026-07-04'
 export const PROMO_WINDOW_MS = 24 * 60 * 60 * 1000 // 24 horas em ms
 
 export type PlanKey = keyof typeof PRICING

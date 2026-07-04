@@ -106,10 +106,10 @@ export async function createImplantacaoCharge(params: {
   isPromo: boolean
   companyId: string
   cnpj: string
+  amount: number   // em reais (não centavos)
+  planLabel: string
 }): Promise<AsaasCharge> {
-  const value = params.isPromo
-    ? Number(process.env.ASAAS_IMPLANTACAO_PROMO ?? 100)
-    : Number(process.env.ASAAS_IMPLANTACAO_PADRAO ?? 190)
+  const value = params.amount
 
   if (IS_MOCK) {
     console.warn('[ASAAS MOCK] createImplantacaoCharge — retornando mock')
@@ -120,16 +120,17 @@ export async function createImplantacaoCharge(params: {
     .toISOString()
     .split('T')[0]
 
+  const descPromo = params.isPromo ? ' Promocional' : ''
+  const valorFmt = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
   return asaasFetch<AsaasCharge>('/payments', {
     method: 'POST',
     body: JSON.stringify({
       customer: params.customerId,
-      billingType: 'UNDEFINED', // usuário escolhe
+      billingType: 'UNDEFINED',
       value,
       dueDate,
-      description: params.isPromo
-        ? `Sublime Digital — Implantação Promocional (R$ 100,00)`
-        : `Sublime Digital — Implantação (R$ 190,00)`,
+      description: `Sublime Digital ${params.planLabel} — Implantação${descPromo} (${valorFmt})`,
       externalReference: params.companyId,
     }),
   })

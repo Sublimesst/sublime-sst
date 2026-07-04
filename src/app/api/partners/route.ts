@@ -100,3 +100,33 @@ export async function GET(req: NextRequest) {
   })
   return NextResponse.json({ success: true, data: partners })
 }
+
+const patchSchema = z.object({
+  id:     z.string().min(1),
+  status: z.enum(['pending', 'active', 'inactive']),
+  tier:   z.enum(['comum', 'recorrente', 'estratégico']).optional(),
+})
+
+// Ativação/inativação de parceiro pelo admin — sem status 'active'
+// o parceiro não consegue logar nem ter indicações rastreadas
+export async function PATCH(req: NextRequest) {
+  const secret = req.headers.get('x-admin-secret')
+  if (secret !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
+  }
+  try {
+    const body = await req.json()
+    const data = patchSchema.parse(body)
+    const partner = await prisma.partner.update({
+      where: { id: data.id },
+      data: { status: data.status, ...(data.tier ? { tier: data.tier } : {}) },
+    })
+    return NextResponse.json({ success: true, data: { id: partner.id, status: partner.status, code: partner.code } })
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ success: false, error: 'Dados inválidos.', details: err.errors }, { status: 400 })
+    }
+    console.error('[API /partners PATCH]', err)
+    return NextResponse.json({ success: false, error: 'Erro ao atualizar parceiro.' }, { status: 500 })
+  }
+}

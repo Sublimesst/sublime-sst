@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/utils'
 
 interface Partner {
   id: string; name: string; office: string; email: string; whatsapp: string
-  city: string; state: string; status: string; createdAt: string
+  city: string; state: string; status: string; code: string; createdAt: string
   clientsEstimate: number | null
   referrals: { id: string; companyName: string; status: string }[]
 }
@@ -15,6 +15,8 @@ export default function AdminPartnersPage() {
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Partner | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [actionError, setActionError] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -26,6 +28,30 @@ export default function AdminPartnersPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  const updateStatus = async (id: string, status: 'active' | 'inactive') => {
+    setSaving(true)
+    setActionError('')
+    const secret = sessionStorage.getItem('admin_secret') ?? ''
+    try {
+      const res = await fetch('/api/partners', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ id, status }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setPartners(ps => ps.map(p => p.id === id ? { ...p, status } : p))
+        setSelected(s => s?.id === id ? { ...s, status } : s)
+      } else {
+        setActionError(data.error ?? 'Erro ao atualizar status.')
+      }
+    } catch {
+      setActionError('Erro de rede ao atualizar status.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const exportCSV = () => {
     const rows = [
@@ -116,8 +142,43 @@ export default function AdminPartnersPage() {
                   </div>
                 </>
               )}
+              <div className="h-px bg-gray-200 my-3" />
+
+              {/* Código/link de indicação */}
+              <div>
+                <span className="text-gray-500 block text-[11px] uppercase tracking-wide mb-1">Link de indicação</span>
+                <code className="block text-[11px] bg-gray-50 border border-gray-200 rounded-[6px] px-2 py-1.5 break-all">
+                  sublimesst.com/elegibilidade?ref={selected.code}
+                </code>
+              </div>
+
+              {/* Ativação */}
+              {selected.status !== 'active' ? (
+                <button
+                  onClick={() => updateStatus(selected.id, 'active')}
+                  disabled={saving}
+                  className="btn btn-primary w-full btn-sm text-[12px]"
+                >
+                  {saving ? 'Salvando…' : '✓ Ativar parceiro'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => updateStatus(selected.id, 'inactive')}
+                  disabled={saving}
+                  className="btn btn-outline-dark w-full btn-sm text-[12px]"
+                >
+                  {saving ? 'Salvando…' : 'Inativar parceiro'}
+                </button>
+              )}
+              {selected.status !== 'active' && (
+                <p className="text-[11px] text-amber-700 bg-amber-50 rounded-[6px] px-2.5 py-1.5">
+                  Sem ativação, o parceiro não consegue acessar o portal e as indicações dele não são rastreadas.
+                </p>
+              )}
+              {actionError && <p className="text-[11px] text-red-600">{actionError}</p>}
+
               <a href={`https://wa.me/${selected.whatsapp.replace(/\D/g,'')}`} target="_blank"
-                className="btn btn-primary w-full btn-sm text-[12px] block text-center mt-3">
+                className="btn btn-outline-dark w-full btn-sm text-[12px] block text-center">
                 Contatar via WhatsApp
               </a>
             </div>

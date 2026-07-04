@@ -8,7 +8,6 @@ import { Menu, X, LogIn, ChevronDown, FolderOpen, Handshake } from 'lucide-react
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
-  { href: '/', label: 'Início' },
   { href: '/consultoria-sst', label: 'Consultoria SST' },
   { href: '/digital', label: 'Sublime Digital' },
   { href: '/parceiros', label: 'Parceiros' },
@@ -40,18 +39,21 @@ export function Navbar() {
       )}
     >
       <div className="max-w-[1120px] mx-auto px-6 h-[88px] flex items-center justify-between gap-6">
-        {/* Logo */}
+        {/* Logo — recorte CSS do símbolo (o jpeg é o lockup completo com muito respiro interno) */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
-          <Image
-            src="/logo.jpeg"
-            alt="Sublime SST"
-            width={72}
-            height={72}
-            className="rounded-lg object-cover"
-            priority
-          />
+          <div className="w-[52px] h-[52px] rounded-xl overflow-hidden relative shrink-0">
+            <Image
+              src="/logo.jpeg"
+              alt="Sublime SST"
+              fill
+              sizes="52px"
+              className="object-cover"
+              style={{ transform: 'scale(2.2)', transformOrigin: '50% 33%' }}
+              priority
+            />
+          </div>
           <div className="leading-tight">
-            <span className="block text-[15px] font-bold text-petrol tracking-tight">SUBLIME</span>
+            <span className="block text-[18px] font-bold text-petrol tracking-tight">SUBLIME</span>
             <span className="block text-[10px] font-medium text-gray-500 tracking-[.06em] uppercase">
               Segurança e Saúde Ocupacional
             </span>
@@ -59,7 +61,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-1">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -108,13 +110,13 @@ export function Navbar() {
             href="/elegibilidade"
             className="ml-2 btn btn-petrol btn-sm"
           >
-            Regularizar Minha Empresa
+            Regularizar Empresa
           </Link>
         </div>
 
         {/* Mobile toggle */}
         <button
-          className="md:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
+          className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
           onClick={() => setOpen(!open)}
           aria-label="Abrir menu"
         >
@@ -124,7 +126,7 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <div className="md:hidden border-t border-gray-200 bg-white px-6 py-4 flex flex-col gap-1">
+        <div className="lg:hidden border-t border-gray-200 bg-white px-6 py-4 flex flex-col gap-1">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}

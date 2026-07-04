@@ -7,14 +7,24 @@ import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import { maskCNPJ, maskPhone } from '@/lib/utils'
 import { track } from '@/lib/analytics'
+import { PRICING } from '@/lib/pricing'
 
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
-const REWARDS = [
-  { range: '1 a 5 funcionários', monthly: 'R$ 142/mês', reward: 'R$ 142' },
-  { range: '6 a 10 funcionários', monthly: 'R$ 250/mês', reward: 'R$ 250' },
-  { range: '11 a 20 funcionários', monthly: 'R$ 430/mês', reward: 'R$ 430' },
-]
+const brl = (cents: number) =>
+  (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+// Comissão: 10% da mensalidade × até 12 meses (fonte única: pricing.ts)
+const COMMISSION_ROWS = (['1-5', '6-10', '11-20'] as const).map(faixa => {
+  const ess = PRICING.essencial.faixas[faixa].monthly
+  const pre = PRICING.premium.faixas[faixa].monthly
+  return {
+    range:    PRICING.essencial.faixas[faixa].label,
+    monthly:  `${brl(ess)} a ${brl(pre)}`,
+    perMonth: `${brl(Math.round(ess * 0.10))} a ${brl(Math.round(pre * 0.10))}`,
+    total12:  `${brl(Math.round(ess * 0.10) * 12)} a ${brl(Math.round(pre * 0.10) * 12)}`,
+  }
+})
 
 export default function ParceirosPage() {
   const [form, setForm] = useState({
@@ -83,7 +93,9 @@ export default function ParceirosPage() {
               Ajude seus clientes a manterem suas obrigações de SST organizadas
             </h1>
             <p className="text-[17px] text-white/70 mb-8 leading-relaxed">
-              Para contadores e escritórios contábeis que atendem pequenas empresas. Receba recompensas por cada cliente que contratar o plano anual.
+              Para contadores, consultores e profissionais que atendem pequenas empresas.
+              Receba <strong className="text-white">comissão recorrente de 10%</strong> sobre cada mensalidade
+              dos clientes que você indicar, por até 12 meses.
             </p>
             <button className="btn btn-primary btn-lg"
               onClick={() => document.getElementById('partner-form')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -109,32 +121,50 @@ export default function ParceirosPage() {
               {/* Reward card */}
               <div className="rounded-[16px] p-6 mb-6 border"
                 style={{ background: 'linear-gradient(135deg, var(--teal-pale), var(--blue-light))', borderColor: 'rgba(26,158,140,.25)' }}>
-                <h4 className="text-[12px] font-bold text-teal uppercase tracking-widest mb-3">💰 Recompensa por indicação</h4>
+                <h4 className="text-[12px] font-bold text-teal uppercase tracking-widest mb-3">💰 Comissão recorrente de 10%</h4>
                 <p className="text-[14px] text-petrol leading-relaxed mb-4">
-                  Parceiros cadastrados podem receber recompensa equivalente a uma parcela mensal do plano contratado por cada novo cliente elegível que aderir à assinatura anual, conforme condições do programa.
+                  Você recebe <strong>10% de cada mensalidade paga</strong> pelos clientes que indicar,
+                  por até <strong>12 meses por cliente</strong>. Os valores variam conforme o plano
+                  (Essencial ou Premium) e a faixa de funcionários:
                 </p>
                 <table className="w-full text-[13px] border-collapse">
                   <thead>
                     <tr>
-                      {['Faixa de funcionários','Parcela mensal','Recompensa potencial'].map(h => (
+                      {['Faixa','Sua comissão mensal','Potencial em 12 meses'].map(h => (
                         <th key={h} className="text-left py-2 px-3 text-[11px] font-bold text-teal uppercase tracking-wider"
                           style={{ background: 'rgba(26,158,140,.1)' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {REWARDS.map(r => (
+                    {COMMISSION_ROWS.map(r => (
                       <tr key={r.range} className="border-b" style={{ borderColor: 'rgba(26,158,140,.1)' }}>
                         <td className="py-2.5 px-3 text-gray-700">{r.range}</td>
-                        <td className="py-2.5 px-3 text-gray-700">{r.monthly}</td>
-                        <td className="py-2.5 px-3 font-bold text-petrol">{r.reward}</td>
+                        <td className="py-2.5 px-3 text-gray-700">{r.perMonth}</td>
+                        <td className="py-2.5 px-3 font-bold text-petrol">{r.total12}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 <p className="text-[12px] text-gray-500 mt-3">
-                  ⚠️ As condições exatas, o evento que libera a recompensa e os detalhes contratuais serão tratados diretamente com a equipe da Sublime SST.
+                  Comissões ficam em carência por 30 dias após cada pagamento (cobertura de estorno) e são
+                  pagas via PIX até o dia 10 do mês seguinte à liberação. Para recebimento recorrente é
+                  necessário CNPJ para emissão de nota fiscal.
                 </p>
+              </div>
+
+              {/* Portal do parceiro */}
+              <div className="card p-6 mb-6">
+                <h4 className="text-[14px] font-bold text-gray-900 mb-3">📊 Acompanhe tudo pelo Portal do Parceiro</h4>
+                <p className="text-[14px] text-gray-600 leading-relaxed mb-3">
+                  Após a ativação do cadastro, você recebe acesso ao portal com seu{' '}
+                  <strong>link de indicação exclusivo</strong> — toda empresa que se cadastrar por ele é
+                  vinculada a você automaticamente. No portal você acompanha suas indicações, o extrato
+                  de comissões e encontra materiais prontos de divulgação (WhatsApp e e-mail).
+                </p>
+                <a href="/parceiro/login" className="text-[13px] text-teal font-semibold hover:underline">
+                  Já é parceiro? Acesse o portal →
+                </a>
               </div>
 
               {/* Who can join */}
@@ -154,8 +184,15 @@ export default function ParceirosPage() {
                 <div className="text-center py-8">
                   <div className="text-5xl mb-4">🤝</div>
                   <h3 className="text-[1.2rem] font-bold text-gray-900 mb-2">Cadastro recebido!</h3>
-                  <p className="text-[14px] text-gray-500">
-                    Nossa equipe entrará em contato em breve para apresentar as condições do programa de parceiros.
+                  <p className="text-[14px] text-gray-500 mb-4">
+                    Nossa equipe vai validar seu cadastro e entrar em contato em breve.
+                    Após a ativação, você acessa o <strong>Portal do Parceiro</strong> com seu
+                    link de indicação exclusivo e o extrato de comissões.
+                  </p>
+                  <p className="text-[13px] text-gray-400">
+                    O acesso é feito em{' '}
+                    <a href="/parceiro/login" className="text-teal hover:underline">sublimesst.com/parceiro/login</a>{' '}
+                    com o e-mail informado no cadastro.
                   </p>
                 </div>
               ) : (
@@ -171,12 +208,12 @@ export default function ParceirosPage() {
                       {errors.name && <p className="text-[12px] text-red-500 mt-1">{errors.name}</p>}
                     </div>
                     <div>
-                      <label className="form-label required">Escritório contábil</label>
-                      <input className={`form-input ${errors.office ? 'error' : ''}`} placeholder="Nome do escritório ou empresa"
+                      <label className="form-label required">Escritório / Empresa</label>
+                      <input className={`form-input ${errors.office ? 'error' : ''}`} placeholder="Nome do escritório, consultoria ou empresa"
                         value={form.office} onChange={e => set('office', e.target.value)} />
                       {errors.office && <p className="text-[12px] text-red-500 mt-1">{errors.office}</p>}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="form-label">CNPJ</label>
                         <input className="form-input" placeholder="00.000.000/0000-00" maxLength={18}
@@ -189,7 +226,7 @@ export default function ParceirosPage() {
                         {errors.email && <p className="text-[12px] text-red-500 mt-1">{errors.email}</p>}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="form-label required">WhatsApp</label>
                         <input className={`form-input ${errors.whatsapp ? 'error' : ''}`} placeholder="(21) 99999-9999" maxLength={15}
@@ -202,7 +239,7 @@ export default function ParceirosPage() {
                           value={form.clientsEstimate} onChange={e => set('clientsEstimate', e.target.value)} />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="form-label required">Cidade</label>
                         <input className={`form-input ${errors.city ? 'error' : ''}`} placeholder="Cidade"
@@ -241,7 +278,7 @@ export default function ParceirosPage() {
                           <input className="form-input" placeholder="Nome da empresa"
                             value={referral.companyName} onChange={e => setRef('companyName', e.target.value)} />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="form-label">CNPJ</label>
                             <input className="form-input" placeholder="00.000.000/0000-00" maxLength={18}
@@ -253,7 +290,7 @@ export default function ParceirosPage() {
                               value={referral.employeesEst} onChange={e => setRef('employeesEst', e.target.value)} />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="form-label">Nome do contato</label>
                             <input className="form-input" placeholder="Responsável"

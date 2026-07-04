@@ -1,5 +1,8 @@
 import Link from 'next/link'
-import { CheckCircle, Star } from 'lucide-react'
+import {
+  CheckCircle, Star, FileText, Landmark, FolderOpen, Bell, FileCheck2, Target,
+  AlertTriangle, Scale, ShieldCheck, Users, BadgeCheck, Wallet, Lock,
+} from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
@@ -13,12 +16,12 @@ export const metadata: Metadata = {
 }
 
 const FEATURES = [
-  { icon: '📋', title: 'PGR + PCMSO na implantação', body: 'Documentos obrigatórios elaborados por especialista, incluindo médico coordenador para o PCMSO.' },
-  { icon: '🏛️', title: 'Gestão eSocial SST', body: 'Envio e monitoramento dos eventos S-2210, S-2220 e S-2240 conforme obrigatoriedade.' },
-  { icon: '🗂️', title: 'Portal do cliente', body: 'Todos os documentos organizados e acessíveis digitalmente, com histórico e alertas de vencimento.' },
-  { icon: '🔔', title: 'Monitoramento de exames', body: 'Notificação antecipada de vencimentos de exames periódicos para nenhum prazo ser perdido.' },
-  { icon: '📄', title: 'Declaração técnica de ausência de insalubridade', body: 'Declaração técnica preliminar de não identificação de agentes insalubres, incluída na implantação para perfis GR1.' },
-  { icon: '🎯', title: 'Teste de elegibilidade', body: 'Análise gratuita do CNAE e perfil operacional antes da contratação — sem surpresas.' },
+  { icon: FileText, title: 'PGR + PCMSO na implantação', body: 'Documentos obrigatórios elaborados por especialista, incluindo médico coordenador para o PCMSO.' },
+  { icon: Landmark, title: 'Gestão eSocial SST', body: 'Envio e monitoramento dos eventos S-2210, S-2220 e S-2240 conforme obrigatoriedade.' },
+  { icon: FolderOpen, title: 'Portal do cliente', body: 'Todos os documentos organizados e acessíveis digitalmente, com histórico e alertas de vencimento.' },
+  { icon: Bell, title: 'Monitoramento de exames', body: 'Notificação antecipada de vencimentos de exames periódicos para nenhum prazo ser perdido.' },
+  { icon: FileCheck2, title: 'Declaração técnica de ausência de insalubridade', body: 'Declaração técnica preliminar de não identificação de agentes insalubres, incluída na implantação para perfis GR1.' },
+  { icon: Target, title: 'Teste de elegibilidade', body: 'Análise gratuita do CNAE e perfil operacional antes da contratação — sem surpresas.' },
 ]
 
 const COMPARISON = [
@@ -26,7 +29,7 @@ const COMPARISON = [
   { feat: 'Preço previsível', trad: 'Variável por projeto', digital: true, digitalText: 'Valor fixo mensal' },
   { feat: 'PGR + PCMSO', trad: 'Cobrado separado (R$600–2.000+)', digital: true, digitalText: 'Incluso na implantação' },
   { feat: 'Gestão eSocial SST', trad: 'Cobrado à parte', digital: true, digitalText: 'Incluso na mensalidade' },
-  { feat: 'Para todos os perfis', trad: true, tradText: 'Sim', digital: false, digitalText: 'GR1 · até 20 func.' },
+  { feat: 'Perfil de atendimento', trad: 'Generalista — qualquer perfil', digital: true, digitalText: 'Especializado em GR1 até 20 func.' },
   { feat: 'Atendimento especializado', trad: true, tradText: 'Sim', digital: true, digitalText: 'Para perfis enquadrados' },
 ]
 
@@ -74,31 +77,139 @@ export default function DigitalPage() {
       <main>
 
         {/* ── Hero ─────────────────────────────────────────── */}
-        <section className="py-20 px-6 text-center relative overflow-hidden"
+        <section className="py-20 px-6 relative overflow-hidden"
           style={{ background: 'linear-gradient(160deg, #051e26 0%, #0d4a5c 60%, #0a7a78 100%)' }}>
           <div className="absolute inset-0 opacity-[.03]"
             style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30' cy='30' r='4' fill='%23fff'/%3E%3C/svg%3E\")" }} />
-          <div className="max-w-[720px] mx-auto relative z-10">
-            <span className="section-tag-dark mb-5 inline-block">Produto</span>
-            <h1 className="font-display text-4xl md:text-5xl text-white mb-5 leading-tight">
-              Sublime Digital
-            </h1>
-            <p className="text-[17px] text-white/70 leading-relaxed mb-3 max-w-lg mx-auto">
-              Conformidade em SST 100% online para pequenas empresas de baixo risco. PGR, PCMSO e
-              gestão eSocial — sem visita presencial, sem burocracia.
-            </p>
-            <p className="text-[14px] text-white/50 mb-8">
-              A partir de <span className="text-white font-bold text-[18px]">R$ 199/mês</span> · Implantação a partir de R$ 149
-            </p>
-            <div className="flex flex-wrap gap-3 justify-center">
-              <Link href="/elegibilidade" className="btn btn-primary btn-lg">
-                <CheckCircle size={18} />
-                Verificar Elegibilidade Grátis
+          <div className="max-w-[1120px] mx-auto relative z-10 grid md:grid-cols-2 gap-12 items-center">
+            <div className="text-center md:text-left">
+              <span className="section-tag-dark mb-5 inline-block">Produto</span>
+              <h1 className="font-display text-4xl md:text-5xl text-white mb-5 leading-tight">
+                Sublime Digital
+              </h1>
+              <p className="text-[17px] text-white/70 leading-relaxed mb-3">
+                Conformidade em SST 100% online para pequenas empresas de baixo risco. PGR, PCMSO e
+                gestão eSocial — sem visita presencial, sem burocracia.
+              </p>
+              <p className="text-[14px] text-white/50 mb-8">
+                A partir de <span className="text-white font-bold text-[18px]">R$ 199/mês</span> · Implantação a partir de R$ 149
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                <Link href="/elegibilidade" className="btn btn-primary btn-lg">
+                  <CheckCircle size={18} />
+                  Verificar Elegibilidade Grátis
+                </Link>
+                <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer"
+                  className="btn btn-outline btn-lg">
+                  Falar com a Equipe
+                </a>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center justify-center md:justify-start gap-x-5 gap-y-2 text-[12px] text-white/50">
+                <span className="flex items-center gap-1.5"><Lock size={12} /> Pagamento seguro via Asaas — PIX, boleto ou cartão</span>
+                <span className="flex items-center gap-1.5"><ShieldCheck size={12} /> Contrato com aceite eletrônico e registro criptográfico</span>
+              </div>
+            </div>
+
+            {/* Mockup do portal do cliente */}
+            <div className="hidden md:block" aria-hidden="true">
+              <div className="rounded-brand overflow-hidden border border-white/10 shadow-brand-lg bg-white">
+                {/* Barra do navegador */}
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 border-b border-gray-200">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                  <div className="ml-2 flex-1 bg-white rounded-[6px] px-3 py-1 text-[11px] text-gray-400 border border-gray-200 flex items-center gap-1.5">
+                    <Lock size={10} className="text-teal" /> sublimesst.com/cliente/dashboard
+                  </div>
+                </div>
+                {/* Prévia do dashboard */}
+                <div className="p-5 bg-gray-50">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-[13px] font-bold text-gray-900">Olá, Empresa Exemplo LTDA</p>
+                      <p className="text-[10px] text-gray-400">Plano Digital Essencial · 8 funcionários</p>
+                    </div>
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-green-100 text-green-700">
+                      ✓ Em conformidade
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[
+                      { label: 'Documentos', value: '4/4' },
+                      { label: 'eSocial SST', value: 'Em dia' },
+                      { label: 'Próx. exame', value: '12 out' },
+                    ].map(s => (
+                      <div key={s.label} className="bg-white rounded-[8px] border border-gray-200 px-3 py-2.5">
+                        <p className="text-[9px] text-gray-400 uppercase tracking-wide">{s.label}</p>
+                        <p className="text-[13px] font-bold text-petrol">{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-white rounded-[8px] border border-gray-200 divide-y divide-gray-100">
+                    {[
+                      { doc: 'PGR — Programa de Gerenciamento de Riscos', status: 'Disponível' },
+                      { doc: 'PCMSO — Controle Médico', status: 'Disponível' },
+                      { doc: 'Ordens de Serviço + Fichas de EPI', status: 'Disponível' },
+                    ].map(d => (
+                      <div key={d.doc} className="flex items-center justify-between px-3.5 py-2.5">
+                        <span className="text-[11px] text-gray-700 flex items-center gap-2">
+                          <FileText size={12} className="text-teal shrink-0" /> {d.doc}
+                        </span>
+                        <span className="text-[9px] font-bold text-teal bg-teal-pale px-2 py-0.5 rounded-full shrink-0">{d.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <p className="text-center text-[11px] text-white/40 mt-3">Portal do cliente — todos os documentos em um só lugar</p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── O custo de ficar irregular ─────────────────────── */}
+        <section className="py-16 px-6 bg-white">
+          <div className="max-w-[1120px] mx-auto">
+            <div className="text-center max-w-xl mx-auto mb-12">
+              <span className="section-tag">Por que agora</span>
+              <h2 className="font-display text-3xl md:text-4xl text-gray-900">
+                O custo de ficar irregular é maior que o da conformidade
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {[
+                {
+                  icon: AlertTriangle,
+                  title: 'Multa em fiscalização',
+                  body: 'PGR e PCMSO são obrigatórios para toda empresa com funcionário CLT — mesmo com um único empregado. A ausência sujeita a empresa a autuação e multa em fiscalização do trabalho.',
+                },
+                {
+                  icon: Landmark,
+                  title: 'Exposição no eSocial',
+                  body: 'Os eventos de SST (S-2210, S-2220, S-2240) são obrigatórios e a omissão fica registrada no sistema do governo — a irregularidade é visível mesmo sem fiscalização presencial.',
+                },
+                {
+                  icon: Scale,
+                  title: 'Passivo trabalhista',
+                  body: 'Em ação trabalhista ou acidente, a documentação de SST é a defesa da empresa. Sem ela, fica difícil comprovar que os deveres legais foram cumpridos.',
+                },
+              ].map((c) => (
+                <div key={c.title} className="card p-7">
+                  <div className="w-11 h-11 rounded-[10px] bg-amber-50 border border-amber-200 flex items-center justify-center mb-4">
+                    <c.icon size={20} className="text-amber-600" />
+                  </div>
+                  <h3 className="text-[15px] font-bold text-gray-900 mb-2">{c.title}</h3>
+                  <p className="text-[13px] text-gray-500 leading-relaxed">{c.body}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-teal-pale border border-teal/30 rounded-brand p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-[14px] text-petrol">
+                🎁 <strong>Regularize hoje:</strong> faça o teste gratuito e garanta a implantação promocional
+                por <strong>R$ {IMPL_ESSENCIAL.promo}</strong> — condição válida por 24h após o resultado.
+              </p>
+              <Link href="/elegibilidade" className="btn btn-primary btn-sm shrink-0">
+                Fazer o teste grátis
               </Link>
-              <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer"
-                className="btn btn-outline btn-lg">
-                Falar com a Equipe
-              </a>
             </div>
           </div>
         </section>
@@ -115,7 +226,9 @@ export default function DigitalPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
                 <div key={f.title} className="card card-hover p-7 text-center">
-                  <div className="text-4xl mb-4">{f.icon}</div>
+                  <div className="w-12 h-12 rounded-[12px] bg-teal-pale flex items-center justify-center mx-auto mb-4">
+                    <f.icon size={22} className="text-teal" />
+                  </div>
                   <h3 className="text-[15px] font-bold text-gray-900 mb-2">{f.title}</h3>
                   <p className="text-[13px] text-gray-500 leading-relaxed">{f.body}</p>
                 </div>
@@ -253,13 +366,15 @@ export default function DigitalPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {[
-                { icon: '✅', title: 'Têm até 20 funcionários', body: 'O modelo digital foi desenhado para pequenas empresas com operação enxuta.' },
-                { icon: '✅', title: 'Possuem CNAE de Grau de Risco 1', body: 'Atividades classificadas como GR1 na NR-4, sem riscos operacionais elevados.' },
-                { icon: '✅', title: 'Não operam com riscos críticos', body: 'Sem máquinas industriais, químicos perigosos, trabalho em altura ou atividades externas de alto risco.' },
-                { icon: '✅', title: 'Buscam previsibilidade financeira', body: 'Valor fixo mensal, sem surpresas — você sabe exatamente o custo da conformidade.' },
+                { icon: Users, title: 'Têm até 20 funcionários', body: 'O modelo digital foi desenhado para pequenas empresas com operação enxuta.' },
+                { icon: BadgeCheck, title: 'Possuem CNAE de Grau de Risco 1', body: 'Atividades classificadas como GR1 na NR-4, sem riscos operacionais elevados.' },
+                { icon: ShieldCheck, title: 'Não operam com riscos críticos', body: 'Sem máquinas industriais, químicos perigosos, trabalho em altura ou atividades externas de alto risco.' },
+                { icon: Wallet, title: 'Buscam previsibilidade financeira', body: 'Valor fixo mensal, sem surpresas — você sabe exatamente o custo da conformidade.' },
               ].map((c) => (
                 <div key={c.title} className="card p-6 flex gap-4 items-start">
-                  <span className="text-2xl shrink-0">{c.icon}</span>
+                  <div className="w-10 h-10 rounded-[10px] bg-teal-pale flex items-center justify-center shrink-0">
+                    <c.icon size={18} className="text-teal" />
+                  </div>
                   <div>
                     <h4 className="text-[15px] font-semibold text-gray-900 mb-1">{c.title}</h4>
                     <p className="text-[13px] text-gray-500 leading-snug">{c.body}</p>

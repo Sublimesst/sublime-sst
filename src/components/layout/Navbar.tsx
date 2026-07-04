@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, LogIn, ChevronDown, FolderOpen, Handshake } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
@@ -15,9 +15,15 @@ const NAV_LINKS = [
   { href: '/sobre', label: 'Sobre' },
 ]
 
+const LOGIN_LINKS = [
+  { href: '/cliente/login', label: 'Portal do Cliente', desc: 'Documentos e acompanhamento', icon: FolderOpen },
+  { href: '/parceiro/login', label: 'Portal do Parceiro', desc: 'Indicações e comissões', icon: Handshake },
+]
+
 export function Navbar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -68,6 +74,36 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          {/* Entrar (dropdown) */}
+          <div className="relative">
+            <button
+              onClick={() => setLoginOpen(v => !v)}
+              onBlur={() => setTimeout(() => setLoginOpen(false), 150)}
+              className={cn(
+                'flex items-center gap-1.5 text-[14px] font-medium px-3.5 py-2 rounded-md transition-colors duration-150',
+                loginOpen ? 'text-petrol bg-gray-100' : 'text-gray-600 hover:text-petrol hover:bg-gray-100'
+              )}
+            >
+              <LogIn size={15} /> Entrar <ChevronDown size={13} className={cn('transition-transform', loginOpen && 'rotate-180')} />
+            </button>
+            {loginOpen && (
+              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-brand shadow-brand overflow-hidden">
+                {LOGIN_LINKS.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0"
+                  >
+                    <l.icon size={16} className="text-teal shrink-0 mt-0.5" />
+                    <span>
+                      <span className="block text-[13px] font-semibold text-gray-800">{l.label}</span>
+                      <span className="block text-[11px] text-gray-400">{l.desc}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
           <Link
             href="/elegibilidade"
             className="ml-2 btn btn-petrol btn-sm"
@@ -102,6 +138,19 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
+          <div className="border-t border-gray-100 mt-2 pt-2">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide px-3 pt-1 pb-2">Acesso</p>
+            {LOGIN_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 text-[15px] font-medium px-3 py-2.5 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+              >
+                <l.icon size={16} className="text-teal" /> {l.label}
+              </Link>
+            ))}
+          </div>
           <Link
             href="/elegibilidade"
             onClick={() => setOpen(false)}

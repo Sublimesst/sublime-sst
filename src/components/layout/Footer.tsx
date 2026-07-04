@@ -17,6 +17,10 @@ const LEGAL_LINKS = [
   { href: '/privacidade', label: 'Política de Privacidade' },
   { href: '/termos', label: 'Termos de Uso' },
 ]
+const ACCESS_LINKS = [
+  { href: '/cliente/login', label: 'Portal do Cliente' },
+  { href: '/parceiro/login', label: 'Portal do Parceiro' },
+]
 
 export function Footer() {
   return (
@@ -59,6 +63,18 @@ export function Footer() {
             </h5>
             <ul className="flex flex-col gap-2.5">
               {PRODUCT_LINKS.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className="text-[14px] text-white/55 hover:text-teal-light transition-colors">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <h5 className="text-[11px] font-semibold text-white/40 uppercase tracking-widest mt-6 mb-4">
+              Acesso
+            </h5>
+            <ul className="flex flex-col gap-2.5">
+              {ACCESS_LINKS.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="text-[14px] text-white/55 hover:text-teal-light transition-colors">
                     {l.label}

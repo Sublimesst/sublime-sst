@@ -24,7 +24,7 @@ export default function ArtPgrPcmso() {
       category="Documentos"
       cta={{
         title: 'Precisa de PGR e PCMSO para sua empresa?',
-        body: 'A Sublime SST elabora os documentos para qualquer porte e risco. Solicite um orçamento ou verifique se sua empresa se enquadra no modelo digital.',
+        body: 'A Sublime SST elabora os documentos para empresas de todos os portes, do GR1 ao GR4. Solicite um orçamento ou verifique se sua empresa se enquadra no modelo digital.',
         href: '/elegibilidade',
         label: 'Verificar Elegibilidade',
       }}

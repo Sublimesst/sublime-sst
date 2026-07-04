@@ -36,8 +36,8 @@ export default function HomePage() {
               <em className="text-teal-light not-italic">adequadas ao perfil da sua operação.</em>
             </h1>
             <p className="text-[17px] text-white/70 leading-relaxed mb-10 max-w-2xl mx-auto">
-              A Sublime SST atende empresas de qualquer porte e grau de risco com consultoria
-              especializada, e oferece um modelo digital simplificado para perfis de baixo risco operacional.
+              A Sublime SST atende do GR1 mais simples ao GR4 mais complexo — consultoria especializada
+              para operações de todos os portes, e um modelo digital simplificado para perfis de baixo risco.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link href="/consultoria-sst" className="btn btn-white btn-lg">
@@ -75,13 +75,13 @@ export default function HomePage() {
                 </div>
                 <h3 className="font-display text-2xl text-gray-900 mb-3">Consultoria SST Personalizada</h3>
                 <p className="text-[15px] text-gray-500 leading-relaxed mb-5">
-                  Atendimento especializado para empresas de qualquer porte e grau de risco. PGR, PCMSO,
+                  Atendimento especializado do GR1 mais simples ao GR4 mais complexo. PGR, PCMSO,
                   LTCAT, laudos técnicos, treinamentos e avaliação de riscos psicossociais.
                 </p>
                 <ul className="flex flex-col gap-2 mb-7">
                   {[
-                    'Empresas de qualquer porte e atividade',
-                    'Qualquer Grau de Risco (GR1 a GR4)',
+                    'De pequenas empresas a operações de grande porte',
+                    'Do GR1 mais simples ao GR4 mais complexo',
                     'Atendimento por equipe técnica especializada',
                     'Orçamento sob medida para seu perfil',
                   ].map((item) => (
@@ -157,9 +157,9 @@ export default function HomePage() {
                 </h3>
                 <div className="flex flex-col gap-3">
                   {[
-                    { label: 'Porte', value: 'Qualquer número de funcionários' },
-                    { label: 'Grau de Risco', value: 'GR1, GR2, GR3 ou GR4' },
-                    { label: 'Atividade', value: 'Qualquer CNAE, incluindo indústria, construção, serviços de saúde' },
+                    { label: 'Porte', value: 'Sem limite de funcionários' },
+                    { label: 'Grau de Risco', value: 'Do GR1 ao GR4 — inclusive os mais complexos' },
+                    { label: 'Atividade', value: 'Todos os CNAEs, incluindo indústria, construção e serviços de saúde' },
                     { label: 'Necessidade', value: 'LTCAT, laudos de insalubridade, treinamentos presenciais, riscos psicossociais' },
                     { label: 'Preferência', value: 'Atendimento técnico personalizado e relação direta com especialistas' },
                   ].map((row) => (
@@ -250,37 +250,40 @@ export default function HomePage() {
           <div className="max-w-[1120px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-12">
               <span className="section-tag-dark">Planos</span>
-              <h2 className="font-display text-3xl md:text-4xl text-white mt-2">Planos do Sublime Digital</h2>
-              <p className="text-white/50 mt-3">Valores exclusivos para empresas aprovadas no teste de elegibilidade.</p>
+              <h2 className="font-display text-3xl md:text-4xl text-white mt-2">
+                O preço acompanha o tamanho da sua equipe
+              </h2>
+              <p className="text-white/50 mt-3">
+                O serviço é o mesmo em todas as faixas — o valor varia apenas com o número de
+                funcionários CLT. Encontre a faixa da sua empresa:
+              </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {Object.values(PLANS).map((plan, i) => (
+              {Object.values(PLANS).map((plan) => (
                 <div
                   key={plan.range}
-                  className={`relative rounded-[20px] p-8 border transition-all duration-200 ${i === 1 ? 'border-teal' : 'border-white/10'}`}
-                  style={{ background: i === 1 ? 'rgba(26,158,140,.15)' : 'rgba(255,255,255,.06)' }}
+                  className="relative rounded-[20px] p-8 border border-white/10 transition-all duration-200 hover:border-teal/60"
+                  style={{ background: 'rgba(255,255,255,.06)' }}
                 >
-                  {i === 1 && (
-                    <div className="absolute top-5 right-5 bg-teal text-white text-[11px] font-bold px-2.5 py-1 rounded-full tracking-wider">
-                      Mais contratado
-                    </div>
-                  )}
-                  <div className="text-[13px] font-medium text-white/50 mb-3">{plan.label}</div>
+                  {/* A faixa de funcionários é o que define o preço — é ela que merece o destaque */}
+                  <div className="inline-flex items-center gap-2 bg-teal/20 border border-teal/40 rounded-full px-3.5 py-1.5 mb-4">
+                    <span className="text-[13px] font-bold text-teal-light">{plan.label}</span>
+                  </div>
                   <div className="font-display text-4xl text-white mb-1">
                     R$ {(plan.monthly / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                     <span className="font-sans text-[14px] font-normal text-white/40">/mês</span>
                   </div>
-                  <div className="text-[12px] text-white/40 mb-6">Assinatura anual · cobrado mensalmente</div>
+                  <div className="text-[12px] text-white/40 mb-6">Plano Essencial · assinatura anual, cobrada mensalmente</div>
                   <div className="h-px bg-white/10 mb-6" />
                   <ul className="space-y-2.5 mb-7">
-                    {['Gestão de obrigações SST', 'Documentação estruturada', 'Acompanhamento remoto', i === 1 ? 'Suporte prioritário' : i === 2 ? 'Suporte completo e reuniões' : 'Suporte por e-mail e WhatsApp'].map((f) => (
+                    {['PGR + PCMSO na implantação', 'Gestão eSocial SST (S-2210/2220/2240)', 'Portal do cliente com documentos', 'Monitoramento de exames periódicos'].map((f) => (
                       <li key={f} className="flex items-center gap-2.5 text-[13px] text-white/75">
                         <CheckCircle size={15} className="text-teal-light shrink-0" />
                         {f}
                       </li>
                     ))}
                   </ul>
-                  <Link href="/elegibilidade" className={`btn w-full text-center ${i === 1 ? 'btn-primary' : 'btn-outline'}`}>
+                  <Link href="/elegibilidade" className="btn btn-primary w-full text-center">
                     Verificar Elegibilidade
                   </Link>
                   <p className="text-[11px] text-white/30 text-center mt-3">
@@ -290,9 +293,14 @@ export default function HomePage() {
               ))}
             </div>
             <div className="mt-8 text-center">
+              <p className="text-[13px] text-white/40 max-w-lg mx-auto mb-2">
+                Precisa de PPP, abertura de CAT e suporte via WhatsApp? Conheça o{' '}
+                <Link href="/digital" className="text-teal-light hover:underline">Digital Premium</Link>{' '}
+                — a partir de R$ 299/mês.
+              </p>
               <p className="text-[13px] text-white/30 max-w-lg mx-auto">
-                Condições válidas para empresas enquadradas no modelo digital. Para empresas de maior porte ou
-                risco, consulte nosso atendimento de{' '}
+                Condições válidas para empresas enquadradas no modelo digital. Para operações de maior
+                porte ou complexidade, consulte nossa{' '}
                 <Link href="/consultoria-sst" className="text-teal-light hover:underline">consultoria personalizada</Link>.
               </p>
             </div>

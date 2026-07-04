@@ -149,11 +149,11 @@ export default function SobrePage() {
                 <div className="text-3xl mb-4">🏢</div>
                 <h3 className="font-display text-xl text-gray-900 mb-3">Consultoria SST Personalizada</h3>
                 <p className="text-[14px] text-gray-500 leading-relaxed mb-5">
-                  Atendimento técnico para empresas de qualquer porte e grau de risco. PGR, PCMSO, LTCAT,
+                  Atendimento técnico do GR1 mais simples ao GR4 mais complexo. PGR, PCMSO, LTCAT,
                   laudos, treinamentos e gestão de riscos psicossociais.
                 </p>
                 <ul className="flex flex-col gap-2 mb-6">
-                  {['Qualquer CNAE e Grau de Risco', 'Solução sob medida', 'Orçamento personalizado'].map((i) => (
+                  {['Todos os CNAEs, do GR1 ao GR4', 'Solução sob medida', 'Orçamento personalizado'].map((i) => (
                     <li key={i} className="flex items-center gap-2 text-[13px] text-gray-600">
                       <CheckCircle size={14} className="text-teal shrink-0" />
                       {i}

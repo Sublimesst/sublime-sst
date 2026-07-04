@@ -106,7 +106,7 @@ export default function SstParaContadoresPage() {
                 {[
                   'Avaliação gratuita para os clientes indicados',
                   'PGR, PCMSO, LTCAT e outros documentos obrigatórios',
-                  'Atendimento para qualquer porte e Grau de Risco',
+                  'Atendimento do GR1 ao GR4 — todos os portes de cliente',
                   'Você mantém o controle — recebe retorno sobre cada indicação',
                   'Sem custo para o escritório parceiro',
                 ].map((b) => (

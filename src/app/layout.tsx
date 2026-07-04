@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: '%s | Sublime SST',
   },
   description:
-    'Conformidade em SST com soluções adequadas ao perfil da sua empresa. Consultoria personalizada para qualquer porte e risco, ou modelo digital para empresas GR1 com até 20 funcionários.',
+    'Conformidade em SST com soluções adequadas ao perfil da sua empresa. Consultoria personalizada do GR1 ao GR4, ou modelo digital para empresas GR1 com até 20 funcionários.',
   keywords: [
     'SST', 'segurança do trabalho', 'saúde ocupacional', 'PCMSO', 'PGR',
     'NR-4', 'NR-1', 'conformidade', 'regularização', 'eSocial SST',
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Sublime SST — Conformidade em SST adequada ao perfil da sua empresa',
-    description: 'Consultoria personalizada para qualquer porte e risco, ou modelo digital para empresas GR1 com até 20 funcionários.',
+    description: 'Consultoria personalizada do GR1 ao GR4, ou modelo digital para empresas GR1 com até 20 funcionários.',
     url: BASE_URL,
     siteName: 'Sublime SST',
     locale: 'pt_BR',
@@ -110,7 +110,7 @@ const serviceSchema = {
         itemOffered: {
           '@type': 'Service',
           name: 'Consultoria SST Personalizada',
-          description: 'PGR, PCMSO, LTCAT, laudos técnicos, treinamentos e avaliação de riscos psicossociais para empresas de qualquer porte e risco.',
+          description: 'PGR, PCMSO, LTCAT, laudos técnicos, treinamentos e avaliação de riscos psicossociais para empresas de todos os portes — do GR1 mais simples ao GR4 mais complexo.',
         },
       },
       {

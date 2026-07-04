@@ -12,7 +12,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Consultoria SST Personalizada | Sublime SST',
-  description: 'Atendimento especializado em SST para empresas de qualquer porte e risco. PGR, PCMSO, LTCAT, laudos técnicos, treinamentos e avaliação de riscos psicossociais.',
+  description: 'Consultoria SST do GR1 ao GR4: PGR, PCMSO, LTCAT, laudos técnicos, treinamentos e avaliação de riscos psicossociais para empresas de todos os portes e níveis de complexidade.',
   alternates: { canonical: 'https://sublimesst.com/consultoria-sst' },
 }
 
@@ -27,8 +27,8 @@ const faqSchema = {
     },
     {
       '@type': 'Question',
-      name: 'A consultoria SST atende empresas de qualquer tamanho?',
-      acceptedAnswer: { '@type': 'Answer', text: 'Sim. A consultoria personalizada atende empresas de qualquer porte e Grau de Risco (GR1 a GR4), incluindo indústria, construção, saúde e serviços.' },
+      name: 'A consultoria SST atende empresas de qual porte?',
+      acceptedAnswer: { '@type': 'Answer', text: 'A consultoria personalizada atende empresas de todos os portes e níveis de complexidade — do Grau de Risco 1 mais simples ao GR4 mais complexo, incluindo indústria, construção, saúde e serviços.' },
     },
     {
       '@type': 'Question',
@@ -71,8 +71,9 @@ export default function ConsultoriaPage() {
               Consultoria SST Personalizada
             </h1>
             <p className="text-[17px] text-white/70 leading-relaxed mb-8 max-w-lg mx-auto">
-              Atendimento especializado para empresas de qualquer porte e grau de risco operacional.
-              Documentação elaborada e assinada por profissionais legalmente habilitados.
+              Do GR1 mais simples ao GR4 mais complexo: atendimento especializado para empresas de
+              todos os portes e níveis de complexidade operacional. Documentação elaborada e assinada
+              por profissionais legalmente habilitados.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <a href="#formulario" className="btn btn-primary btn-lg">
@@ -83,7 +84,7 @@ export default function ConsultoriaPage() {
               </a>
             </div>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] text-white/45">
-              <span className="flex items-center gap-1.5"><Building2 size={13} /> Todos os portes e graus de risco (GR1 a GR4)</span>
+              <span className="flex items-center gap-1.5"><Building2 size={13} /> Do GR1 ao GR4 — todos os portes e complexidades</span>
               <span className="flex items-center gap-1.5"><ShieldCheck size={13} /> Resposta em até 1 dia útil</span>
             </div>
           </div>
@@ -112,7 +113,8 @@ export default function ConsultoriaPage() {
               <span className="section-tag">Serviços</span>
               <h2 className="font-display text-3xl md:text-4xl text-gray-900">O que a consultoria abrange</h2>
               <p className="text-[15px] text-gray-500 mt-3 leading-relaxed">
-                Atendemos empresas de qualquer atividade, porte e Grau de Risco com soluções técnicas completas.
+                Soluções técnicas completas para todos os CNAEs, portes e Graus de Risco — do escritório
+                administrativo à operação industrial.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">

@@ -8,7 +8,6 @@ import { Menu, X, LogIn, ChevronDown, FolderOpen, Handshake } from 'lucide-react
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
-  { href: '/', label: 'Início' },
   { href: '/consultoria-sst', label: 'Consultoria SST' },
   { href: '/digital', label: 'Sublime Digital' },
   { href: '/parceiros', label: 'Parceiros' },

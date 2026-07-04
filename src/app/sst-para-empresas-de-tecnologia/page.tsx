@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const config: NichoConfig = {
   badge: 'Para empresas de tecnologia',
   headline: 'SST digital para empresas de tecnologia.',
-  subtitle: 'Sua empresa de TI tem funcionários? Organize suas obrigações de Segurança e Saúde Ocupacional de forma simples, rápida e sem precisar sair do escritório.',
+  subtitle: 'Sua empresa de TI tem funcionários? Organize suas obrigações de Segurança e Saúde Ocupacional de forma simples, rápida e sem sair do escritório — planos a partir de R$ 199/mês.',
   pains: [
     { icon: '❓', title: 'Não sabe se é obrigatório', body: 'Empresa de tecnologia também precisa de PGR e PCMSO? A resposta é sim — e o desconhecimento não exime de responsabilidade.' },
     { icon: '📋', title: 'eSocial exige envio de dados de SST', body: 'O módulo de SST do eSocial é obrigatório e exige documentação. Sem o PGR, o envio não está completo.' },
@@ -52,7 +52,7 @@ const config: NichoConfig = {
     { q: 'Empresa de tecnologia precisa de PGR?', a: 'Sim. O PGR é obrigatório para todas as empresas com funcionários CLT, independentemente do setor ou nível de risco. A atualização da NR-1 tornou o programa obrigatório a partir de 2021.' },
     { q: 'O modelo digital funciona para times em home office?', a: 'Sim. O PGR e o PCMSO cobrem os trabalhadores independentemente do local de trabalho — incluindo home office. Elaboramos a documentação considerando o perfil real da sua operação.' },
     { q: 'Minha empresa tem CNAE de TI — está dentro do GR1?', a: 'A maioria dos CNAEs de tecnologia é GR1 pela NR-4. Faça o teste de elegibilidade para confirmar se sua empresa se enquadra no modelo digital.' },
-    { q: 'Em quanto tempo fico regularizado?', a: 'Após a contratação e coleta das informações da empresa, elaboramos os documentos em até 15 dias úteis.' },
+    { q: 'Em quanto tempo fico regularizado?', a: 'Após a contratação e o preenchimento dos dados da empresa no portal, os documentos ficam prontos em até 5 dias úteis.' },
   ],
   ctas: [
     { label: 'Verificar Elegibilidade', href: '/elegibilidade?utm_source=lp-tecnologia&utm_campaign=nicho', variant: 'primary' },

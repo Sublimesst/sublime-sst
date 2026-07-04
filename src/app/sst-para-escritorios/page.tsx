@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const config: NichoConfig = {
   badge: 'Para escritórios e empresas administrativas',
   headline: 'SST digital para escritórios, consultorias e empresas administrativas.',
-  subtitle: 'Regularize as obrigações de Segurança e Saúde Ocupacional da sua empresa de forma simples e com custo previsível — sem complicação, sem burocracia excessiva.',
+  subtitle: 'Regularize as obrigações de Segurança e Saúde Ocupacional da sua empresa de forma simples e com custo previsível — sem complicação e com planos a partir de R$ 199/mês.',
   pains: [
     { icon: '😰', title: 'SST parece complexa demais para um escritório pequeno', body: 'PGR, PCMSO, GR1, eSocial... Parece muito para uma empresa que só tem mesa, cadeira e computador.' },
     { icon: '⚠️', title: 'Medo de multa sem saber o que é obrigatório', body: 'A fiscalização do Ministério do Trabalho pode acontecer a qualquer momento. Não saber o que é exigido é um risco real.' },

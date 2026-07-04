@@ -4,6 +4,7 @@ import { CheckCircle, ArrowRight, Users } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
+import { JsonLd } from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'SST para Contadores e Escritórios Contábeis | Sublime SST',
@@ -20,15 +21,27 @@ const PAINS = [
 ]
 
 const FAQ = [
-  { q: 'Como funciona a parceria?', a: 'Você indica seus clientes que precisam de SST. A Sublime SST cuida de todo o processo — avaliação, documentação, conformidade e acompanhamento. Você não precisa se envolver na execução.' },
+  { q: 'Como funciona a parceria?', a: 'Você indica seus clientes que precisam de SST usando seu link exclusivo. A Sublime SST cuida de todo o processo — avaliação, documentação, conformidade e acompanhamento. Você não precisa se envolver na execução.' },
+  { q: 'Quanto o escritório recebe por indicação?', a: 'Comissão recorrente de 10% sobre cada mensalidade paga pelos clientes que você indicar, por até 12 meses por cliente. Uma carteira com poucas indicações convertidas já gera uma receita recorrente relevante para o escritório.' },
   { q: 'O contador precisa entender de SST para ser parceiro?', a: 'Não. Basta identificar que o cliente tem funcionários CLT e pode precisar de SST. A nossa equipe faz a avaliação técnica e orienta o cliente.' },
-  { q: 'Existe algum custo para se tornar parceiro?', a: 'Não. O cadastro de parceiro é gratuito. Você indica, a Sublime cuida do resto.' },
-  { q: 'Como funciona o acompanhamento das indicações?', a: 'Você recebe retorno sobre o andamento das indicações que realizar. Trabalhamos com transparência para que você possa informar seus clientes com segurança.' },
+  { q: 'Existe algum custo para se tornar parceiro?', a: 'Não. O cadastro de parceiro é gratuito. Você indica, a Sublime cuida do resto — e paga comissão pelas conversões.' },
+  { q: 'Como funciona o acompanhamento das indicações?', a: 'Pelo Portal do Parceiro você acompanha cada indicação, o status de conversão e o extrato de comissões — com transparência total para informar seus clientes com segurança.' },
 ]
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+}
 
 export default function SstParaContadoresPage() {
   return (
     <>
+      <JsonLd data={faqSchema} />
       <Navbar />
       <main>
         {/* Hero */}
@@ -54,7 +67,8 @@ export default function SstParaContadoresPage() {
             </h1>
             <p className="text-[17px] text-white/70 leading-relaxed mb-10 max-w-2xl mx-auto">
               A Sublime SST atua como extensão especializada do seu escritório. Você indica,
-              a gente cuida de tudo — documentação, conformidade e acompanhamento técnico.
+              a gente cuida de tudo — e você recebe <strong className="text-white">comissão
+              recorrente de 10%</strong> sobre cada mensalidade dos clientes convertidos, por até 12 meses.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho" className="btn btn-primary btn-lg">
@@ -104,10 +118,11 @@ export default function SstParaContadoresPage() {
               </p>
               <ul className="flex flex-col gap-3 mb-7">
                 {[
+                  'Comissão recorrente: 10% de cada mensalidade, por até 12 meses por cliente',
                   'Avaliação gratuita para os clientes indicados',
                   'PGR, PCMSO, LTCAT e outros documentos obrigatórios',
                   'Atendimento do GR1 ao GR4 — todos os portes de cliente',
-                  'Você mantém o controle — recebe retorno sobre cada indicação',
+                  'Portal do Parceiro: link exclusivo, indicações e extrato de comissões',
                   'Sem custo para o escritório parceiro',
                 ].map((b) => (
                   <li key={b} className="flex items-start gap-3">

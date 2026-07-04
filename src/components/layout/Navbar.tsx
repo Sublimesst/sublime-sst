@@ -8,6 +8,7 @@ import { Menu, X, LogIn, ChevronDown, FolderOpen, Handshake } from 'lucide-react
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
+  { href: '/', label: 'Início' },
   { href: '/consultoria-sst', label: 'Consultoria SST' },
   { href: '/digital', label: 'Sublime Digital' },
   { href: '/parceiros', label: 'Parceiros' },
@@ -39,19 +40,16 @@ export function Navbar() {
       )}
     >
       <div className="max-w-[1120px] mx-auto px-6 h-[88px] flex items-center justify-between gap-6">
-        {/* Logo — recorte CSS do símbolo (o jpeg é o lockup completo com muito respiro interno) */}
+        {/* Logo — símbolo recortado do lockup em alta resolução (public/logo-mark.png) */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
-          <div className="w-[52px] h-[52px] rounded-xl overflow-hidden relative shrink-0">
-            <Image
-              src="/logo.jpeg"
-              alt="Sublime SST"
-              fill
-              sizes="52px"
-              className="object-cover"
-              style={{ transform: 'scale(2.2)', transformOrigin: '50% 33%' }}
-              priority
-            />
-          </div>
+          <Image
+            src="/logo-mark.png"
+            alt="Sublime SST"
+            width={46}
+            height={46}
+            className="shrink-0"
+            priority
+          />
           <div className="leading-tight">
             <span className="block text-[18px] font-bold text-petrol tracking-tight">SUBLIME</span>
             <span className="block text-[10px] font-medium text-gray-500 tracking-[.06em] uppercase">

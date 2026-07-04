@@ -45,10 +45,7 @@ function LoginForm() {
   return (
     <>
       <div className="flex flex-col items-center mb-6">
-        <div className="w-14 h-14 rounded-xl overflow-hidden relative mb-3">
-          <Image src="/logo.jpeg" alt="Sublime SST" fill sizes="56px" className="object-cover"
-            style={{ transform: 'scale(2.2)', transformOrigin: '50% 33%' }} />
-        </div>
+        <Image src="/logo-mark.png" alt="Sublime SST" width={56} height={56} className="mb-3" />
         <h1 className="font-display text-2xl text-gray-900">Portal do Parceiro</h1>
         <p className="text-[13px] text-gray-500 mt-1">Sublime SST — Acesso restrito</p>
       </div>

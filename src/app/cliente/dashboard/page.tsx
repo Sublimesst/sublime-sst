@@ -103,7 +103,7 @@ export default async function DashboardPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-[800px] mx-auto px-6 h-[72px] flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.jpeg" alt="Sublime SST" width={36} height={36} className="rounded-lg" />
+            <Image src="/logo-mark.png" alt="Sublime SST" width={36} height={36} />
             <span className="font-display text-[15px] text-gray-900">Portal do Cliente</span>
           </Link>
           <form action="/api/cliente/logout" method="POST">

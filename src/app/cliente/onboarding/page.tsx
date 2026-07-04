@@ -65,7 +65,7 @@ export default function OnboardingPage() {
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-[720px] mx-auto px-6 h-[72px] flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.jpeg" alt="Sublime SST" width={36} height={36} className="rounded-lg" />
+            <Image src="/logo-mark.png" alt="Sublime SST" width={36} height={36} />
             <span className="font-display text-[15px] text-gray-900">Onboarding</span>
           </Link>
           <Link href="/cliente/dashboard" className="text-[13px] text-gray-500 hover:text-gray-800 flex items-center gap-1">

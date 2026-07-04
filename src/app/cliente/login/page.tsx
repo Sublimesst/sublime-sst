@@ -51,7 +51,7 @@ function LoginForm() {
       <div className="w-full max-w-[420px]">
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center justify-center mb-6">
-            <Image src="/logo.jpeg" alt="Sublime SST" width={56} height={56} className="rounded-xl" />
+            <Image src="/logo-mark.png" alt="Sublime SST" width={56} height={56} />
           </Link>
           <h1 className="font-display text-2xl text-gray-900 mb-2">Portal do Cliente</h1>
           <p className="text-[14px] text-gray-500">

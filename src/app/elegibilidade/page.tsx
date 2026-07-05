@@ -298,12 +298,18 @@ function ElegibilidadeInner() {
     if (!validateStep2()) return
     setLoading(true)
 
+    // Vínculo com o parceiro indicador desde a captura (?ref=CODE → sessionStorage)
+    const partnerRef = typeof window !== 'undefined'
+      ? sessionStorage.getItem('sublime_partner_ref') ?? undefined
+      : undefined
+
     fetch('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cnpj: form.cnpj, companyName: form.companyName,
         name: form.name, email: form.email, whatsapp: form.whatsapp,
+        partnerRef,
       }),
     }).catch(() => {})
     track('lead_captured', utmRef.current)
@@ -346,6 +352,7 @@ function ElegibilidadeInner() {
         usesMachines: form.usesMachines, usesChemicals: form.usesChemicals,
         worksAtHeight: form.worksAtHeight, hasExternalWork: form.hasExternalWork,
         declaration: form.declaration,
+        partnerRef,
       }),
     }).catch(() => {})
   }
@@ -844,57 +851,70 @@ function ElegibilidadeInner() {
               )
             })()}
 
-            {/* ══ RESULTADO BACKOFFICE ══ */}
+            {/* ══ RESULTADO BACKOFFICE — encaminhamento para Consultoria ══ */}
             {step === 'backoffice' && result && (
               <div>
                 <div className="bg-blue-50 border border-blue-200 rounded-[12px] p-6 mb-5">
-                  <div className="text-3xl mb-3">🔍</div>
+                  <div className="text-3xl mb-3">🎯</div>
                   <h3 className="text-[18px] font-bold text-petrol mb-2">
-                    Sua empresa pode se beneficiar de uma solução personalizada.
+                    Para o perfil da sua empresa, o modelo ideal é a Consultoria SST.
                   </h3>
                   <p className="text-[14px] text-blue-700">
-                    Nossa equipe entrará em contato para entender melhor sua operação e apresentar a proposta adequada ao seu perfil.
+                    Pelo CNAE, atividade ou características operacionais informadas, sua empresa precisa
+                    de um atendimento técnico além do modelo digital — com laudos, avaliações e
+                    acompanhamento de especialista dedicado.
                   </p>
                 </div>
 
                 {result.reasons.length > 0 && (
                   <div className="bg-gray-50 rounded-[12px] p-4 mb-5 border border-gray-200">
                     <p className="text-[12px] font-semibold text-gray-600 uppercase tracking-wide mb-3">
-                      Fatores identificados:
+                      O que identificamos no seu perfil:
                     </p>
                     {result.reasons.map(r => (
                       <div key={r} className="flex items-center gap-2 text-[13px] text-amber-800 bg-amber-50 rounded-[6px] px-3 py-2 mb-1.5 last:mb-0">
-                        <span>⚠️</span> {REASON_LABELS[r] ?? r}
+                        <span>📌</span> {REASON_LABELS[r] ?? r}
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div className="border border-gray-200 rounded-[12px] p-5 mb-6">
-                  <p className="text-[14px] font-semibold text-gray-900 mb-4">O que acontece agora?</p>
+                {/* Vantagens do consultivo */}
+                <div className="bg-teal-pale border border-teal/20 rounded-[12px] p-5 mb-5">
+                  <p className="text-[13px] font-semibold text-petrol mb-3">Por que o atendimento consultivo é melhor para você:</p>
                   {[
-                    'Seus dados foram registrados e nossa equipe recebeu as informações da sua empresa.',
-                    'Um especialista entrará em contato por WhatsApp ou e-mail em até 1 dia útil.',
-                    'Apresentaremos a solução mais adequada ao perfil operacional da sua empresa.',
-                  ].map((t, i) => (
-                    <div key={i} className="flex gap-3 text-[14px] text-gray-600 mb-3 last:mb-0">
-                      <span className="text-teal font-bold shrink-0">{i + 1}.</span>
-                      <span>{t}</span>
+                    'Documentação completa para o seu grau de risco — PGR, PCMSO, laudos e treinamentos',
+                    'Avaliação técnica presencial quando o perfil exigir',
+                    'Especialista dedicado que conhece a sua operação',
+                  ].map(t => (
+                    <div key={t} className="flex items-start gap-2 text-[13px] text-gray-700 mb-1.5 last:mb-0">
+                      <CheckCircle size={14} className="text-teal shrink-0 mt-0.5" /> {t}
                     </div>
                   ))}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <a href="https://wa.me/5521997248630" target="_blank" rel="noopener noreferrer"
-                    className="btn btn-primary flex-1 text-center"
-                    onClick={() => track('whatsapp_click', { origin: 'backoffice_result', ...utmRef.current })}>
-                    💬 Falar com a Equipe
-                  </a>
-                  <Link href="/consultoria-sst" className="btn btn-outline-dark"
-                    onClick={() => track('cta_custom_quote_click', utmRef.current)}>
-                    Solicitar Orçamento
-                  </Link>
+                {/* Dados já recebidos — nada de preencher de novo */}
+                <div className="border border-green-200 bg-green-50 rounded-[12px] p-4 mb-6 flex items-start gap-3">
+                  <CheckCircle size={16} className="text-green-600 shrink-0 mt-0.5" />
+                  <p className="text-[13px] text-green-800">
+                    <strong>Seus dados já foram recebidos pela nossa equipe</strong> — não precisa
+                    preencher mais nada. Um especialista entra em contato por WhatsApp ou e-mail
+                    em até 1 dia útil com a proposta adequada ao seu perfil.
+                  </p>
                 </div>
+
+                <a href="https://wa.me/5521997248630?text=Ol%C3%A1!%20Fiz%20o%20teste%20de%20elegibilidade%20e%20fui%20direcionado%20para%20a%20Consultoria%20SST.%20Gostaria%20de%20atendimento."
+                  target="_blank" rel="noopener noreferrer"
+                  className="btn btn-primary w-full text-center"
+                  onClick={() => track('whatsapp_click', { origin: 'backoffice_result', ...utmRef.current })}>
+                  💬 Quero atendimento agora pelo WhatsApp
+                </a>
+                <p className="text-center mt-3">
+                  <Link href="/consultoria-sst" className="text-[13px] text-teal hover:underline"
+                    onClick={() => track('cta_custom_quote_click', utmRef.current)}>
+                    Conhecer a Consultoria SST em detalhes →
+                  </Link>
+                </p>
                 <div className="mt-4 text-center text-[12px] text-gray-400">
                   📞 (21) 99724-8630 · ✉️ contato@sublimesst.com
                 </div>

@@ -12,7 +12,7 @@ const leadSchema = z.object({
   email: z.string().email(),
   whatsapp: z.string().min(10),
   source: z.string().optional(),
-  partnerId: z.string().optional(),
+  partnerRef: z.string().optional(), // código do parceiro (?ref=CODE)
 })
 
 export async function POST(req: NextRequest) {
@@ -24,9 +24,20 @@ export async function POST(req: NextRequest) {
     const data = leadSchema.parse(body)
     const id = `cnpj_${data.cnpj.replace(/\D/g,'')}`
 
+    // Vincula o parceiro já na captura — antes o vínculo só nascia no cadastro
+    // completo, e leads que paravam no teste ficavam sem indicador
+    const partner = data.partnerRef
+      ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
+      : null
+
+    const existing = await prisma.lead.findUnique({ where: { id } })
     const lead = await prisma.lead.upsert({
       where: { id },
-      update: { name: data.name, email: data.email, whatsapp: data.whatsapp },
+      update: {
+        name: data.name, email: data.email, whatsapp: data.whatsapp,
+        // atribuição first-touch: não sobrescreve parceiro já vinculado
+        ...(partner && !existing?.partnerId ? { partnerId: partner.id, source: 'partner' } : {}),
+      },
       create: {
         id,
         cnpj: data.cnpj,
@@ -34,8 +45,8 @@ export async function POST(req: NextRequest) {
         name: data.name,
         email: data.email,
         whatsapp: data.whatsapp,
-        source: data.source ?? 'site',
-        partnerId: data.partnerId,
+        source: partner ? 'partner' : (data.source ?? 'site'),
+        partnerId: partner?.id,
         status: 'captured',
       },
     })

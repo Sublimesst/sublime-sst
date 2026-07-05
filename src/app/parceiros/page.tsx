@@ -123,14 +123,14 @@ export default function ParceirosPage() {
                 style={{ background: 'linear-gradient(135deg, var(--teal-pale), var(--blue-light))', borderColor: 'rgba(26,158,140,.25)' }}>
                 <h4 className="text-[12px] font-bold text-teal uppercase tracking-widest mb-3">💰 Comissão recorrente de 10%</h4>
                 <p className="text-[14px] text-petrol leading-relaxed mb-4">
-                  Você recebe <strong>10% de cada mensalidade paga</strong> pelos clientes que indicar,
-                  por até <strong>12 meses por cliente</strong>. Os valores variam conforme o plano
-                  (Essencial ou Premium) e a faixa de funcionários:
+                  Cada cliente que você indicar pode render até <strong>12 meses de comissão</strong> —
+                  10% de cada mensalidade paga, repassados mensalmente. Veja o potencial
+                  <strong> por cliente indicado</strong>:
                 </p>
                 <table className="w-full text-[13px] border-collapse">
                   <thead>
                     <tr>
-                      {['Faixa','Sua comissão mensal','Potencial em 12 meses'].map(h => (
+                      {['Porte do cliente indicado','Potencial em 12 meses'].map(h => (
                         <th key={h} className="text-left py-2 px-3 text-[11px] font-bold text-teal uppercase tracking-wider"
                           style={{ background: 'rgba(26,158,140,.1)' }}>{h}</th>
                       ))}
@@ -140,16 +140,20 @@ export default function ParceirosPage() {
                     {COMMISSION_ROWS.map(r => (
                       <tr key={r.range} className="border-b" style={{ borderColor: 'rgba(26,158,140,.1)' }}>
                         <td className="py-2.5 px-3 text-gray-700">{r.range}</td>
-                        <td className="py-2.5 px-3 text-gray-700">{r.perMonth}</td>
-                        <td className="py-2.5 px-3 font-bold text-petrol">{r.total12}</td>
+                        <td className="py-2.5 px-3 font-bold text-petrol text-[15px]">{r.total12}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                <p className="text-[12px] text-gray-500 mt-3">
-                  Comissões ficam em carência por 30 dias após cada pagamento (cobertura de estorno) e são
-                  pagas via PIX até o dia 10 do mês seguinte à liberação. Para recebimento recorrente é
-                  necessário CNPJ para emissão de nota fiscal.
+                <p className="text-[13px] text-petrol font-semibold mt-3">
+                  Exemplo: 10 clientes indicados na faixa 6–10 funcionários (plano Essencial) =
+                  R$ 3.840 em comissões ao longo de 12 meses.
+                </p>
+                <p className="text-[12px] text-gray-500 mt-2">
+                  O repasse é mensal e condicionado à adimplência do cliente (comissão incide sobre
+                  mensalidade efetivamente paga, com carência de 30 dias para cobertura de estorno).
+                  Pagamento via PIX até o dia 10 do mês seguinte à liberação. Para recebimento
+                  recorrente é necessário CNPJ para emissão de nota fiscal.
                 </p>
               </div>
 

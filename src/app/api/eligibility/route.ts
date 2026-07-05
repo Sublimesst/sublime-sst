@@ -19,6 +19,7 @@ const schema = z.object({
   worksAtHeight: z.boolean(),
   hasExternalWork: z.boolean(),
   declaration: z.boolean(),
+  partnerRef: z.string().optional(), // código do parceiro (?ref=CODE)
 })
 
 export async function POST(req: NextRequest) {
@@ -29,18 +30,31 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = schema.parse(body)
 
+    // Resolve o parceiro indicador (vínculo preservado mesmo se o lead
+    // parar no teste — inclusive no resultado não-elegível/backoffice)
+    const leadId = `cnpj_${data.cnpj.replace(/\D/g,'')}`
+    const partner = data.partnerRef
+      ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
+      : null
+    const existing = await prisma.lead.findUnique({ where: { id: leadId } })
+
     // Upsert lead
     const lead = await prisma.lead.upsert({
-      where: { id: `cnpj_${data.cnpj.replace(/\D/g,'')}` },
-      update: { status: 'assessed', name: data.name, email: data.email, whatsapp: data.whatsapp },
+      where: { id: leadId },
+      update: {
+        status: 'assessed', name: data.name, email: data.email, whatsapp: data.whatsapp,
+        // atribuição first-touch: não sobrescreve parceiro já vinculado
+        ...(partner && !existing?.partnerId ? { partnerId: partner.id, source: 'partner' } : {}),
+      },
       create: {
-        id: `cnpj_${data.cnpj.replace(/\D/g,'')}`,
+        id: leadId,
         cnpj: data.cnpj,
         companyName: data.companyName,
         name: data.name,
         email: data.email,
         whatsapp: data.whatsapp,
-        source: 'site',
+        source: partner ? 'partner' : 'site',
+        partnerId: partner?.id,
         status: 'assessed',
       },
     })

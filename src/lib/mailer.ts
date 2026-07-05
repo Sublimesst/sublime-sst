@@ -343,6 +343,41 @@ export async function notifyNewPartner(data: {
   ).catch(err => console.error('[MAILER] notifyNewPartner:', err))
 }
 
+export async function sendPartnerActivated(data: {
+  to: string; name: string; code: string
+}) {
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://sublimesst.com'
+  const refUrl = `${base}/elegibilidade?ref=${data.code}`
+  const loginUrl = `${base}/parceiro/login`
+  await sendEmail(data.to, `Sua parceria com a Sublime SST está ativa! 🤝`,
+    baseHtml('Cadastro de parceiro aprovado',
+      `<p style="font-size:15px;color:#334155;margin:0 0 16px">
+        Olá, <strong>${data.name}</strong>! Seu cadastro no programa de parceiros foi aprovado
+        e seu acesso já está liberado. A partir de agora, toda empresa que se cadastrar pelo seu
+        link é vinculada a você automaticamente.
+      </p>
+      <div style="background:#f0fdf9;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#0d4a5c;text-transform:uppercase;letter-spacing:.5px">Seu link de indicação</p>
+        <p style="margin:0;font-size:13px;font-family:monospace;color:#1a9e8c;word-break:break-all">${refUrl}</p>
+      </div>
+      <p style="font-size:14px;color:#334155;margin:0 0 6px">No Portal do Parceiro você encontra:</p>
+      <p style="font-size:13px;color:#334155;margin:0 0 16px;line-height:1.9">
+        • Suas indicações e o status de cada uma<br>
+        • O extrato de comissões (10% de cada mensalidade, por até 12 meses por cliente)<br>
+        • Textos prontos de divulgação para WhatsApp e e-mail
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 16px">
+        O acesso é feito com este e-mail (<strong>${data.to}</strong>) — sem senha: você recebe
+        um link de entrada por e-mail a cada acesso.
+      </p>` +
+      cta(loginUrl, '🔑 Acessar o Portal do Parceiro') +
+      `<p style="font-size:12px;color:#94a3b8;margin:16px 0 0;text-align:center">
+        Dúvidas? Chame a gente no WhatsApp: (21) 99724-8630
+      </p>`
+    )
+  ).catch(err => console.error('[MAILER] sendPartnerActivated:', err))
+}
+
 export async function sendDocumentExpiryAlert(data: {
   to: string; responsavel: string; companyName: string
   documents: { nome: string; vencimento: Date; diasRestantes: number }[]

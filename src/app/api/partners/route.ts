@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { notifyNewPartner } from '@/lib/mailer'
+import { notifyNewPartner, notifyNewLead, sendPartnerActivated } from '@/lib/mailer'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
 
+// .nullish() (não .optional()): o frontend envia referral: null quando o
+// checkbox de indicação está desmarcado, e .optional() rejeita null com
+// "Dados inválidos" — bloqueava todo cadastro sem indicação imediata.
 const referralSchema = z.object({
   companyName: z.string().optional(),
   cnpj: z.string().optional(),
@@ -12,7 +15,7 @@ const referralSchema = z.object({
   email: z.string().optional(),
   employeesEst: z.coerce.number().optional(),
   observations: z.string().optional(),
-}).optional()
+}).nullish()
 
 const schema = z.object({
   name: z.string().min(1),
@@ -36,6 +39,17 @@ export async function POST(req: NextRequest) {
 
     if (!data.consentContact) {
       return NextResponse.json({ success: false, error: 'Autorização de contato é obrigatória.' }, { status: 400 })
+    }
+
+    // Evita parceiros duplicados por e-mail (cada submit criava um registro novo)
+    const existing = await prisma.partner.findFirst({
+      where: { email: { equals: data.email, mode: 'insensitive' } },
+    })
+    if (existing) {
+      return NextResponse.json({
+        success: false,
+        error: 'Este e-mail já possui cadastro de parceiro. Se já foi ativado, acesse o portal em /parceiro/login. Dúvidas: (21) 99724-8630.',
+      }, { status: 409 })
     }
 
     const partner = await prisma.partner.create({
@@ -67,6 +81,36 @@ export async function POST(req: NextRequest) {
           status: 'pending',
         },
       })
+
+      // A indicação também entra no pipeline de leads (antes ficava só em
+      // partner_referrals e não aparecia em /admin/leads nem notificava a equipe)
+      const refCnpjDigits = (data.referral.cnpj ?? '').replace(/\D/g, '')
+      if (refCnpjDigits.length === 14) {
+        const leadId = `cnpj_${refCnpjDigits}`
+        await prisma.lead.upsert({
+          where: { id: leadId },
+          update: {}, // lead já existente não é sobrescrito por indicação manual
+          create: {
+            id: leadId,
+            cnpj: data.referral.cnpj ?? '',
+            companyName: data.referral.companyName,
+            name: data.referral.contactName ?? 'Contato não informado',
+            email: data.referral.email ?? data.email, // fallback: e-mail do parceiro
+            whatsapp: data.referral.phone ?? data.whatsapp,
+            source: 'partner',
+            partnerId: partner.id,
+            status: 'captured',
+            notes: `Indicação manual no cadastro do parceiro ${data.name} (${data.office}).${data.referral.observations ? ' Obs: ' + data.referral.observations : ''}`,
+          },
+        }).catch(err => console.error('[API /partners] lead da indicação:', err))
+        notifyNewLead({
+          cnpj: data.referral.cnpj ?? '',
+          companyName: data.referral.companyName,
+          name: data.referral.contactName ?? 'Contato não informado',
+          email: data.referral.email ?? data.email,
+          whatsapp: data.referral.phone ?? data.whatsapp,
+        }).catch(() => {})
+      }
     }
 
     // Notify team (non-blocking)
@@ -117,10 +161,26 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
     const data = patchSchema.parse(body)
+
+    const before = await prisma.partner.findUnique({ where: { id: data.id } })
+    if (!before) {
+      return NextResponse.json({ success: false, error: 'Parceiro não encontrado.' }, { status: 404 })
+    }
+
     const partner = await prisma.partner.update({
       where: { id: data.id },
       data: { status: data.status, ...(data.tier ? { tier: data.tier } : {}) },
     })
+
+    // Primeira ativação: envia boas-vindas com acesso ao portal e link de indicação
+    if (data.status === 'active' && before.status !== 'active') {
+      sendPartnerActivated({
+        to: partner.email,
+        name: partner.name,
+        code: partner.code,
+      }).catch(err => console.error('[API /partners] sendPartnerActivated:', err))
+    }
+
     return NextResponse.json({ success: true, data: { id: partner.id, status: partner.status, code: partner.code } })
   } catch (err) {
     if (err instanceof z.ZodError) {

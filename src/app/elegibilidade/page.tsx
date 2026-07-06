@@ -32,13 +32,9 @@ function formatCNAECode(raw: number | string): string {
 import { PRICING, PROMO_WINDOW_MS } from '@/lib/pricing'
 
 // ── Motor client-side ─────────────────────────────────────────────────────────
-const WHITELIST = new Set([
-  '69.11-7','69.12-5','69.20-6','70.10-7','70.20-4',
-  '71.11-1','71.12-0','71.19-7','73.11-4','73.12-2',
-  '73.19-0','73.20-3','74.10-2','74.90-1','77.33-1',
-  '78.10-8','82.11-3','66.21-5','66.22-3','68.21-8','68.22-6',
-])
-
+// Decisão de negócio (2026-07-05): todos os 122 CNAEs GR1 do catálogo são
+// aprovados por padrão. Basta o CNAE estar no catálogo GR1 para ser elegível
+// (sem whitelist restritiva) — alinhado com o motor do backend (runEligibilityEngine).
 type PlanType = 'essencial' | 'premium'
 
 interface PlanDetails { label: string; monthly: number; implantacao: number; implantacaoPromo: number }
@@ -85,10 +81,9 @@ function runEngine(params: {
 }): EngineResult {
   const reasons: EligibilityReason[] = []
   if (params.employees === '21+') reasons.push('MAIS_DE_20_FUNCIONARIOS' as EligibilityReason)
+  // CNAE no catálogo GR1 = aprovado. Fora do catálogo = não é GR1.
   if (!params.cnaeInCatalog) {
     reasons.push('CNAE_NAO_GR1' as EligibilityReason)
-  } else if (!WHITELIST.has(params.cnaeCode)) {
-    reasons.push('CNAE_PENDENTE_VALIDACAO_RT' as EligibilityReason)
   }
   if (params.usesMachines)    reasons.push('USA_MAQUINAS_INDUSTRIAIS' as EligibilityReason)
   if (params.usesChemicals)   reasons.push('MANIPULA_QUIMICOS' as EligibilityReason)

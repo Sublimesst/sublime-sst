@@ -8,7 +8,7 @@
       "description": "Incorporação de empreendimentos imobiliários",
       "grau_risco_nr4": 1,
       "source_page_pdf": 17,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -16,7 +16,7 @@
       "description": "Comércio varejista de material elétrico",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -24,7 +24,7 @@
       "description": "Comércio varejista especializado de equipamentos e suprimentos de informática",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -32,7 +32,7 @@
       "description": "Comércio varejista especializado de equipamentos de telefonia e comunicação",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -40,7 +40,7 @@
       "description": "Comércio varejista especializado de eletrodomésticos e equipamentos de áudio e vídeo",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -48,7 +48,7 @@
       "description": "Comércio varejista especializado de móveis, colchoaria e artigos de iluminação",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -56,7 +56,7 @@
       "description": "Comércio varejista especializado de tecidos e artigos de cama, mesa e banho",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -64,7 +64,7 @@
       "description": "Comércio varejista especializado de instrumentos musicais e acessórios",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -72,7 +72,7 @@
       "description": "Comércio varejista especializado de peças e acessórios para aparelhos eletroeletrônicos para uso doméstico, exceto informática e comunicação",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -80,7 +80,7 @@
       "description": "Comércio varejista de artigos de uso doméstico não especificados anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -88,7 +88,7 @@
       "description": "Comércio varejista de livros, jornais, revistas e papelaria",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -96,7 +96,7 @@
       "description": "Comércio varejista de discos, CDs, DVDs e fitas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -104,7 +104,7 @@
       "description": "Comércio varejista de artigos recreativos e esportivos",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -112,7 +112,7 @@
       "description": "Comércio varejista de cosméticos, produtos de perfumaria e de higiene pessoal",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -120,7 +120,7 @@
       "description": "Comércio varejista de artigos médicos e ortopédicos",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -128,7 +128,7 @@
       "description": "Comércio varejista de artigos de óptica",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -136,7 +136,7 @@
       "description": "Comércio varejista de artigos do vestuário e acessórios",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -144,7 +144,7 @@
       "description": "Comércio varejista de calçados e artigos de viagem",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -152,7 +152,7 @@
       "description": "Comércio varejista de jóias e relógios",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -160,7 +160,7 @@
       "description": "Comércio varejista de outros produtos novos não especificados anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 21,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -168,7 +168,7 @@
       "description": "Banco Central",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -176,7 +176,7 @@
       "description": "Bancos comerciais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -184,7 +184,7 @@
       "description": "Bancos múltiplos, com carteira comercial",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -192,7 +192,7 @@
       "description": "Caixas econômicas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -200,7 +200,7 @@
       "description": "Crédito cooperativo",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -208,7 +208,7 @@
       "description": "Bancos múltiplos, sem carteira comercial",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -216,7 +216,7 @@
       "description": "Bancos de investimento",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -224,7 +224,7 @@
       "description": "Bancos de desenvolvimento",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -232,7 +232,7 @@
       "description": "Agências de fomento",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -240,7 +240,7 @@
       "description": "Crédito imobiliário",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -248,7 +248,7 @@
       "description": "Sociedades de crédito, financiamento e investimento - financeiras",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -256,7 +256,7 @@
       "description": "Sociedades de crédito ao microempreendedor",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -264,7 +264,7 @@
       "description": "Bancos de câmbio e outras instituições de intermediação não-monetária",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -272,7 +272,7 @@
       "description": "Arrendamento mercantil",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -280,7 +280,7 @@
       "description": "Sociedades de capitalização",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -288,7 +288,7 @@
       "description": "Holdings de instituições financeiras",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -296,7 +296,7 @@
       "description": "Holdings de instituições não-financeiras",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -304,7 +304,7 @@
       "description": "Outras sociedades de participação, exceto holdings",
       "grau_risco_nr4": 1,
       "source_page_pdf": 24,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -312,7 +312,7 @@
       "description": "Fundos de investimento",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -320,7 +320,7 @@
       "description": "Sociedades de fomento mercantil - factoring",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -328,7 +328,7 @@
       "description": "Securitização de créditos",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -336,7 +336,7 @@
       "description": "Administração de consórcios para aquisição de bens e direitos",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -344,7 +344,7 @@
       "description": "Outras atividades de serviços financeiros não especificadas anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -352,7 +352,7 @@
       "description": "Seguros de vida",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -360,7 +360,7 @@
       "description": "Seguros não-vida",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -368,7 +368,7 @@
       "description": "Seguros-saúde",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -376,7 +376,7 @@
       "description": "Resseguros",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -384,7 +384,7 @@
       "description": "Previdência complementar fechada",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -392,7 +392,7 @@
       "description": "Previdência complementar aberta",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -400,7 +400,7 @@
       "description": "Planos de saúde",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -408,7 +408,7 @@
       "description": "Administração de bolsas e mercados de balcão organizados",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -416,7 +416,7 @@
       "description": "Atividades de intermediários em transações de títulos, valores mobiliários e mercadorias",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -424,7 +424,7 @@
       "description": "Administração de cartões de crédito",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -432,7 +432,7 @@
       "description": "Atividades auxiliares dos serviços financeiros não especificadas anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -440,7 +440,7 @@
       "description": "Avaliação de riscos e perdas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -448,7 +448,7 @@
       "description": "Corretores e agentes de seguros, de planos de previdência complementar e de saúde",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -456,7 +456,7 @@
       "description": "Atividades auxiliares dos seguros, da previdência complementar e dos planos de saúde não especificadas anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -464,7 +464,7 @@
       "description": "Atividades de administração de fundos por contrato ou comissão",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -472,7 +472,7 @@
       "description": "Atividades imobiliárias de imóveis próprios",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -480,7 +480,7 @@
       "description": "Intermediação na compra, venda e aluguel de imóveis",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -488,7 +488,7 @@
       "description": "Gestão e administração da propriedade imobiliária",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -496,7 +496,7 @@
       "description": "Atividades jurídicas, exceto cartórios",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -504,7 +504,7 @@
       "description": "Cartórios",
       "grau_risco_nr4": 1,
       "source_page_pdf": 25,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -512,7 +512,7 @@
       "description": "Atividades de contabilidade, consultoria e auditoria contábil e tributária",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -520,7 +520,7 @@
       "description": "Sedes de empresas e unidades administrativas locais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -528,7 +528,7 @@
       "description": "Atividades de consultoria em gestão empresarial",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -536,7 +536,7 @@
       "description": "Serviços de arquitetura",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -544,7 +544,7 @@
       "description": "Serviços de engenharia",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -552,7 +552,7 @@
       "description": "Atividades técnicas relacionadas à arquitetura e engenharia",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -560,7 +560,7 @@
       "description": "Agências de publicidade",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -568,7 +568,7 @@
       "description": "Agenciamento de espaços para publicidade, exceto em veículos de comunicação",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -576,7 +576,7 @@
       "description": "Atividades de publicidade não especificadas anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -584,7 +584,7 @@
       "description": "Pesquisas de mercado e de opinião pública",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -592,7 +592,7 @@
       "description": "Design e decoração de interiores",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -600,7 +600,7 @@
       "description": "Atividades profissionais, científicas e técnicas não especificadas anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -608,7 +608,7 @@
       "description": "Locação de automóveis sem condutor",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -616,7 +616,7 @@
       "description": "Locação de meios de transporte, exceto automóveis, sem condutor",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -624,7 +624,7 @@
       "description": "Aluguel de equipamentos recreativos e esportivos",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -632,7 +632,7 @@
       "description": "Aluguel de fitas de vídeo, DVDs e similares",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -640,7 +640,7 @@
       "description": "Aluguel de objetos do vestuário, jóias e acessórios",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -648,7 +648,7 @@
       "description": "Aluguel de objetos pessoais e domésticos não especificados anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -656,7 +656,7 @@
       "description": "Aluguel de máquinas e equipamentos agrícolas sem operador",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -664,7 +664,7 @@
       "description": "Aluguel de máquinas e equipamentos para construção sem operador",
       "grau_risco_nr4": 1,
       "source_page_pdf": 26,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -672,7 +672,7 @@
       "description": "Aluguel de máquinas e equipamentos para escritório",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -680,7 +680,7 @@
       "description": "Aluguel de máquinas e equipamentos não especificados anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -688,7 +688,7 @@
       "description": "Gestão de ativos intangíveis não-financeiros",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -696,7 +696,7 @@
       "description": "Seleção e agenciamento de mão-de-obra",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -704,7 +704,7 @@
       "description": "Locação de mão-de-obra temporária",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -712,7 +712,7 @@
       "description": "Fornecimento e gestão de recursos humanos para terceiros",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -720,7 +720,7 @@
       "description": "Agências de viagens",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -728,7 +728,7 @@
       "description": "Operadores turísticos",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -736,7 +736,7 @@
       "description": "Serviços de reservas e outros serviços de turismo não especificados anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -744,7 +744,7 @@
       "description": "Atividades paisagísticas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -752,7 +752,7 @@
       "description": "Serviços combinados de escritório e apoio administrativo",
       "grau_risco_nr4": 1,
       "source_page_pdf": 27,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -760,7 +760,7 @@
       "description": "Administração pública em geral",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -768,7 +768,7 @@
       "description": "Regulação das atividades de saúde, educação, serviços culturais e outros serviços sociais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -776,7 +776,7 @@
       "description": "Regulação das atividades econômicas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -784,7 +784,7 @@
       "description": "Relações exteriores",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -792,7 +792,7 @@
       "description": "Defesa",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -800,7 +800,7 @@
       "description": "Justiça",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -808,7 +808,7 @@
       "description": "Segurança e ordem pública",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -816,7 +816,7 @@
       "description": "Defesa Civil",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -824,7 +824,7 @@
       "description": "Seguridade social obrigatória",
       "grau_risco_nr4": 1,
       "source_page_pdf": 28,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -832,7 +832,7 @@
       "description": "Atividades de apoio à gestão de saúde",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -840,7 +840,7 @@
       "description": "Atividades de atenção à saúde humana não especificadas anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -848,7 +848,7 @@
       "description": "Atividades de assistência a idosos, deficientes físicos, imunodeprimidos e convalescentes prestadas em residências coletivas e particulares",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -856,7 +856,7 @@
       "description": "Atividades de fornecimento de infra-estrutura de apoio e assistência a paciente no domicílio",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -864,7 +864,7 @@
       "description": "Atividades de assistência psicossocial e à saúde a portadores de distúrbios psíquicos, deficiência mental e dependência química",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -872,7 +872,7 @@
       "description": "Atividades de assistência social prestadas em residências coletivas e particulares",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -880,7 +880,7 @@
       "description": "Serviços de assistência social sem alojamento",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -888,7 +888,7 @@
       "description": "Gestão de espaços para artes cênicas, espetáculos e outras atividades artísticas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -896,7 +896,7 @@
       "description": "Atividades de exploração de jogos de azar e apostas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -904,7 +904,7 @@
       "description": "Gestão de instalações de esportes",
       "grau_risco_nr4": 1,
       "source_page_pdf": 29,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -912,7 +912,7 @@
       "description": "Atividades de organizações associativas patronais e empresariais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -920,7 +920,7 @@
       "description": "Atividades de organizações associativas profissionais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -928,7 +928,7 @@
       "description": "Atividades de organizações sindicais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -936,7 +936,7 @@
       "description": "Atividades de associações de defesa de direitos sociais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -944,7 +944,7 @@
       "description": "Atividades de organizações religiosas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -952,7 +952,7 @@
       "description": "Atividades de organizações políticas",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -960,7 +960,7 @@
       "description": "Atividades de organizações associativas ligadas à cultura e à arte",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -968,7 +968,7 @@
       "description": "Atividades associativas não especificadas anteriormente",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     },
     {
@@ -976,7 +976,7 @@
       "description": "Organismos internacionais e outras instituições extraterritoriais",
       "grau_risco_nr4": 1,
       "source_page_pdf": 30,
-      "online_catalog_status": "PENDING_RT_VALIDATION",
+      "online_catalog_status": "APPROVED",
       "notes": "GR 1 pela NR-4. Nao aprovar automaticamente no fluxo online sem validacao da lista branca curada e do questionario rigido."
     }
   ]

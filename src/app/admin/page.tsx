@@ -5,13 +5,14 @@ import { Users, CheckCircle, Clock, Building2, TrendingUp, Download } from 'luci
 import { formatDate } from '@/lib/utils'
 
 interface Stats {
-  totalLeads: number
-  eligibleLeads: number
-  backofficeLeads: number
-  registrations: number
-  partners: number
-  referrals: number
+  leads: { total: number; novos7d: number; indicados: number; eligible: number; backoffice: number; registered: number; converted: number }
+  companies: Record<string, number>
+  pagamentosImplantacaoPendentes: number
+  partners: { pending: number; active: number; referrals: number }
+  commissions: Record<string, { count: number; totalCentavos: number }>
 }
+
+const brl = (c: number) => (c / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 interface RecentLead {
   id: string
@@ -53,21 +54,11 @@ export default function AdminDashboard() {
     const headers = { 'x-admin-secret': secret }
 
     Promise.all([
-      fetch('/api/leads?limit=10', { headers }).then(r => r.json()),
-      fetch('/api/partners', { headers }).then(r => r.json()),
-    ]).then(([leadsRes, partnersRes]) => {
-      if (leadsRes.success) {
-        const leads: RecentLead[] = leadsRes.data.leads
-        setRecentLeads(leads)
-        setStats({
-          totalLeads: leadsRes.data.total,
-          eligibleLeads: leads.filter(l => l.status === 'eligible' || l.status === 'registered' || l.status === 'converted').length,
-          backofficeLeads: leads.filter(l => l.status === 'backoffice').length,
-          registrations: leads.filter(l => l.status === 'registered' || l.status === 'converted').length,
-          partners: partnersRes.success ? partnersRes.data.length : 0,
-          referrals: partnersRes.success ? partnersRes.data.flatMap((p: { referrals: unknown[] }) => p.referrals).length : 0,
-        })
-      }
+      fetch('/api/admin/stats', { headers }).then(r => r.json()),
+      fetch('/api/leads', { headers }).then(r => r.json()),
+    ]).then(([statsRes, leadsRes]) => {
+      if (statsRes.success) setStats(statsRes.data)
+      if (leadsRes.success) setRecentLeads(leadsRes.data.leads.slice(0, 8))
     }).catch(console.error).finally(() => setLoading(false))
   }, [])
 
@@ -108,14 +99,37 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Funil */}
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Funil</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <StatCard icon={Users} label="Total de leads" value={stats?.leads.total ?? 0} color="bg-petrol" />
+        <StatCard icon={Users} label="Novos (7 dias)" value={stats?.leads.novos7d ?? 0} color="bg-blue-500" />
+        <StatCard icon={TrendingUp} label="Indicados por parceiros" value={stats?.leads.indicados ?? 0} color="bg-purple-500" />
+        <StatCard icon={CheckCircle} label="Elegíveis" value={stats?.leads.eligible ?? 0} color="bg-teal" />
+        <StatCard icon={Clock} label="P/ Consultoria" value={stats?.leads.backoffice ?? 0} color="bg-amber-500" />
+        <StatCard icon={Building2} label="Convertidos" value={stats?.leads.converted ?? 0} color="bg-green-600" />
+      </div>
+
+      {/* Operação */}
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Operação</p>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <StatCard icon={Clock} label="Pagamento pendente" value={stats?.pagamentosImplantacaoPendentes ?? 0} color="bg-amber-500" />
+        <StatCard icon={Clock} label="Aguardando onboarding" value={stats?.companies['onboarding_pending'] ?? 0} color="bg-blue-500" />
+        <StatCard icon={Building2} label="Em produção" value={(stats?.companies['in_production'] ?? 0) + (stats?.companies['in_review'] ?? 0)} color="bg-petrol" />
+        <StatCard icon={CheckCircle} label="Ativos" value={(stats?.companies['active'] ?? 0) + (stats?.companies['documents_delivered'] ?? 0)} color="bg-green-600" />
+        <StatCard icon={Clock} label="Inadimplentes" value={stats?.companies['overdue'] ?? 0} color="bg-red-500" />
+        <StatCard icon={TrendingUp} label="Migração p/ Consultoria" value={stats?.companies['migrating'] ?? 0} color="bg-purple-500" />
+      </div>
+
+      {/* Parceiros e comissões */}
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Parceiros e comissões</p>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <StatCard icon={Users} label="Total de leads" value={stats?.totalLeads ?? 0} color="bg-petrol" />
-        <StatCard icon={CheckCircle} label="Elegíveis" value={stats?.eligibleLeads ?? 0} color="bg-teal" />
-        <StatCard icon={Clock} label="Backoffice" value={stats?.backofficeLeads ?? 0} color="bg-amber-500" />
-        <StatCard icon={Building2} label="Cadastros" value={stats?.registrations ?? 0} color="bg-green-600" />
-        <StatCard icon={TrendingUp} label="Parceiros" value={stats?.partners ?? 0} color="bg-blue-500" />
-        <StatCard icon={TrendingUp} label="Indicações" value={stats?.referrals ?? 0} color="bg-purple-500" />
+        <StatCard icon={Users} label="Parceiros ativos" value={stats?.partners.active ?? 0} color="bg-teal" />
+        <StatCard icon={Clock} label="Parceiros pendentes" value={stats?.partners.pending ?? 0} color="bg-amber-500" />
+        <StatCard icon={TrendingUp} label="Indicações manuais" value={stats?.partners.referrals ?? 0} color="bg-blue-500" />
+        <StatCard icon={Clock} label="Comissões em carência" value={brl(stats?.commissions['em_carencia']?.totalCentavos ?? 0)} color="bg-amber-500" />
+        <StatCard icon={CheckCircle} label="Comissões liberadas" value={brl(stats?.commissions['liberada']?.totalCentavos ?? 0)} color="bg-green-600" />
+        <StatCard icon={CheckCircle} label="Comissões pagas" value={brl(stats?.commissions['paga']?.totalCentavos ?? 0)} color="bg-petrol" />
       </div>
 
       {/* Recent leads */}

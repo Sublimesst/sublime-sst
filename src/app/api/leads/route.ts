@@ -96,7 +96,10 @@ export async function GET(req: NextRequest) {
     const [leads, total] = await Promise.all([
       prisma.lead.findMany({
         where,
-        include: { eligibilityAssessments: { orderBy: { createdAt: 'desc' }, take: 1 } },
+        include: {
+          eligibilityAssessments: { orderBy: { createdAt: 'desc' }, take: 1 },
+          partner: { select: { id: true, name: true, office: true, code: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
@@ -107,6 +110,52 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: { leads, total, page, pages: Math.ceil(total / limit) } })
   } catch (err) {
     console.error('[API /leads GET]', err)
+    return NextResponse.json({ success: false, error: 'Erro interno.' }, { status: 500 })
+  }
+}
+
+// PATCH /api/leads — ações operacionais do admin sobre um lead
+const patchSchema = z.object({
+  id:     z.string().min(1),
+  action: z.enum(['discard', 'backoffice', 'contact']),
+  note:   z.string().optional(),
+})
+
+export async function PATCH(req: NextRequest) {
+  const secret = req.headers.get('x-admin-secret')
+  if (secret !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
+  }
+  try {
+    const body = await req.json()
+    const data = patchSchema.parse(body)
+
+    const lead = await prisma.lead.findUnique({ where: { id: data.id } })
+    if (!lead) return NextResponse.json({ success: false, error: 'Lead não encontrado.' }, { status: 404 })
+
+    const stamp = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    const noteLine = data.action === 'discard'
+      ? `[${stamp}] Descartado${data.note ? ': ' + data.note : ''}`
+      : data.action === 'backoffice'
+        ? `[${stamp}] Encaminhado para Consultoria${data.note ? ': ' + data.note : ''}`
+        : `[${stamp}] Contato realizado${data.note ? ': ' + data.note : ''}`
+    const notes = lead.notes ? `${lead.notes}\n${noteLine}` : noteLine
+
+    const updated = await prisma.lead.update({
+      where: { id: data.id },
+      data: {
+        notes,
+        ...(data.action === 'discard' ? { status: 'discarded' } : {}),
+        ...(data.action === 'backoffice' ? { status: 'backoffice' } : {}),
+      },
+    })
+
+    return NextResponse.json({ success: true, data: { id: updated.id, status: updated.status, notes: updated.notes } })
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ success: false, error: 'Dados inválidos.' }, { status: 400 })
+    }
+    console.error('[API /leads PATCH]', err)
     return NextResponse.json({ success: false, error: 'Erro interno.' }, { status: 500 })
   }
 }

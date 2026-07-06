@@ -6,19 +6,22 @@ import { formatDate } from '@/lib/utils'
 import { REASON_LABELS } from '@/lib/eligibility'
 import type { EligibilityReason } from '@/types'
 
-const STATUS_OPTS = ['Todos','captured','assessed','eligible','backoffice','registered','converted']
+const STATUS_OPTS = ['Todos','captured','assessed','eligible','backoffice','registered','converted','discarded']
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   captured:   { label: 'Capturado',  color: 'bg-gray-100 text-gray-700' },
   assessed:   { label: 'Avaliado',   color: 'bg-blue-100 text-blue-700' },
   eligible:   { label: 'Elegível',   color: 'bg-green-100 text-green-700' },
-  backoffice: { label: 'Backoffice', color: 'bg-amber-100 text-amber-700' },
+  backoffice: { label: 'Consultoria', color: 'bg-amber-100 text-amber-700' },
   registered: { label: 'Cadastrado', color: 'bg-teal-100 text-teal-700' },
   converted:  { label: 'Convertido', color: 'bg-purple-100 text-purple-700' },
+  discarded:  { label: 'Descartado', color: 'bg-red-100 text-red-700' },
 }
 
 interface Lead {
   id: string; cnpj: string; companyName: string; name: string
   email: string; whatsapp: string; status: string; source: string; createdAt: string
+  notes: string | null
+  partner: { id: string; name: string; office: string; code: string } | null
   eligibilityAssessments: { eligible: boolean; reasons: string[]; employees: string; cnae: string; createdAt: string }[]
 }
 
@@ -29,6 +32,33 @@ export default function AdminLeadsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('Todos')
   const [selected, setSelected] = useState<Lead | null>(null)
+  const [acting, setActing] = useState(false)
+
+  const leadAction = async (id: string, action: 'discard' | 'backoffice' | 'contact') => {
+    const note = window.prompt(
+      action === 'discard' ? 'Motivo do descarte:' :
+      action === 'backoffice' ? 'Observação do encaminhamento (opcional):' :
+      'Resumo do contato (opcional):'
+    )
+    if (action === 'discard' && note === null) return // cancelou
+    setActing(true)
+    try {
+      const secret = sessionStorage.getItem('admin_secret') ?? ''
+      const res = await fetch('/api/leads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-secret': secret },
+        body: JSON.stringify({ id, action, note: note || undefined }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setLeads(ls => ls.map(l => l.id === id ? { ...l, status: data.data.status, notes: data.data.notes } : l))
+        setSelected(s => s?.id === id ? { ...s, status: data.data.status, notes: data.data.notes } : s)
+      } else {
+        alert(data.error ?? 'Erro ao executar ação.')
+      }
+    } catch { alert('Erro de rede.') }
+    finally { setActing(false) }
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -117,6 +147,9 @@ export default function AdminLeadsPage() {
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{lead.companyName}</div>
                         <div className="text-[11px] text-gray-400">{lead.cnpj}</div>
+                        {lead.partner && (
+                          <div className="text-[11px] text-teal font-medium mt-0.5">🤝 via {lead.partner.name}</div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div>{lead.name}</div>
@@ -155,6 +188,19 @@ export default function AdminLeadsPage() {
               <div><span className="text-gray-500 block text-[11px] uppercase tracking-wide">E-mail</span><a href={`mailto:${selected.email}`} className="text-teal">{selected.email}</a></div>
               <div><span className="text-gray-500 block text-[11px] uppercase tracking-wide">WhatsApp</span><a href={`https://wa.me/${selected.whatsapp.replace(/\D/g,'')}`} target="_blank" className="text-teal">{selected.whatsapp}</a></div>
               <div><span className="text-gray-500 block text-[11px] uppercase tracking-wide">Origem</span>{selected.source}</div>
+              {selected.partner && (
+                <div>
+                  <span className="text-gray-500 block text-[11px] uppercase tracking-wide">Parceiro indicador</span>
+                  <span className="font-medium text-teal">{selected.partner.name}</span>
+                  <span className="block text-[11px] text-gray-400">{selected.partner.office} · código {selected.partner.code}</span>
+                </div>
+              )}
+              {selected.notes && (
+                <div>
+                  <span className="text-gray-500 block text-[11px] uppercase tracking-wide">Observações</span>
+                  <pre className="text-[11px] text-gray-600 whitespace-pre-wrap font-sans bg-gray-50 rounded-[6px] p-2 max-h-32 overflow-y-auto">{selected.notes}</pre>
+                </div>
+              )}
 
               {selected.eligibilityAssessments[0] && (
                 <>
@@ -174,11 +220,27 @@ export default function AdminLeadsPage() {
                 </>
               )}
 
-              <div className="pt-2">
+              <div className="pt-2 space-y-2">
                 <a href={`https://wa.me/${selected.whatsapp.replace(/\D/g,'')}`} target="_blank"
                   className="btn btn-primary w-full btn-sm text-[12px]">
                   Contatar via WhatsApp
                 </a>
+                <button onClick={() => leadAction(selected.id, 'contact')} disabled={acting}
+                  className="btn btn-outline-dark w-full btn-sm text-[12px]">
+                  📝 Registrar contato
+                </button>
+                {selected.status !== 'backoffice' && selected.status !== 'converted' && (
+                  <button onClick={() => leadAction(selected.id, 'backoffice')} disabled={acting}
+                    className="btn btn-outline-dark w-full btn-sm text-[12px]">
+                    → Encaminhar p/ Consultoria
+                  </button>
+                )}
+                {selected.status !== 'discarded' && selected.status !== 'converted' && (
+                  <button onClick={() => leadAction(selected.id, 'discard')} disabled={acting}
+                    className="btn btn-outline-dark w-full btn-sm text-[12px] !text-red-600 !border-red-200 hover:!bg-red-50">
+                    ✕ Descartar lead
+                  </button>
+                )}
               </div>
             </div>
           </div>

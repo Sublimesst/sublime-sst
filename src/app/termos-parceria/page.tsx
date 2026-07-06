@@ -24,11 +24,11 @@ O vínculo é atribuído ao primeiro parceiro que registrar a indicação da emp
   },
   {
     titulo: '3ª — Da Comissão',
-    conteudo: `Pela indicação convertida em contratação do produto Sublime Digital, o(a) PARCEIRO(A) fará jus a comissão de 10% (dez por cento) sobre o valor de cada mensalidade efetivamente paga pelo cliente indicado, limitada às 12 (doze) primeiras mensalidades de cada cliente.
+    conteudo: `Pela indicação convertida em contratação, o(a) PARCEIRO(A) fará jus a comissão de 10% (dez por cento) sobre o valor efetivamente pago pelo cliente indicado, limitada aos 12 (doze) primeiros pagamentos recorrentes de cada cliente. Esta regra se aplica tanto às contratações do produto Sublime Digital (mensalidade) quanto às contratações via Consultoria SST (valor recorrente ajustado com o cliente).
 
-A comissão não incide sobre a taxa de implantação, sobre serviços avulsos/adicionais, nem sobre mensalidades inadimplidas, canceladas ou estornadas.
+A comissão não incide sobre a taxa de implantação, sobre serviços avulsos/adicionais, nem sobre valores inadimplidos, cancelados ou estornados.
 
-Conversões para a modalidade de Consultoria SST (clientes indicados não enquadrados no modelo digital) serão remuneradas conforme proposta específica, tratada caso a caso com a equipe da SUBLIME.`,
+A SUBLIME poderá alterar, a seu critério, os percentuais de comissão, o número de pagamentos elegíveis e as demais condições financeiras deste programa a qualquer momento e sem aviso prévio, aplicando-se as novas condições às comissões futuras a partir da alteração — sem efeito retroativo sobre comissões já geradas.`,
   },
   {
     titulo: '4ª — Da Liberação e do Pagamento',
@@ -72,7 +72,7 @@ O(A) PARCEIRO(A) declara ter base adequada para compartilhar os dados de contato
   },
   {
     titulo: '10ª — Das Alterações do Programa',
-    conteudo: `A SUBLIME poderá atualizar as condições do programa (percentuais, prazos e regras) mediante comunicação ao e-mail cadastrado com antecedência mínima de 30 (trinta) dias. As alterações não afetam comissões já geradas. A continuidade das indicações após a vigência das novas condições implica concordância.`,
+    conteudo: `A SUBLIME poderá atualizar as condições do programa (percentuais de comissão, prazos, regras de elegibilidade e demais termos) a qualquer momento e sem aviso prévio, conforme previsto na Cláusula 3ª. As alterações não têm efeito retroativo sobre comissões já geradas e passam a valer para as indicações e pagamentos futuros a partir da publicação da nova versão neste Termo. A continuidade das indicações após a alteração implica concordância com as novas condições.`,
   },
   {
     titulo: '11ª — Da Aceitação Eletrônica e do Foro',

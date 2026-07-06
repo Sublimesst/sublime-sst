@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Notify team (non-blocking)
-    notifyNewLead({
+    await notifyNewLead({
       cnpj: data.cnpj, companyName: data.companyName,
       name: data.name, email: data.email, whatsapp: data.whatsapp,
     }).catch(() => {})

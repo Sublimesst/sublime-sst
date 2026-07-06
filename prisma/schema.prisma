@@ -251,6 +251,11 @@ model Partner {
   tier            String   @default("comum") // comum | recorrente | estratégico
   status          String   @default("pending") // pending | active | inactive
   notes           String?
+
+  // Aceite eletrônico do Termo de Parceria
+  termsAcceptedAt   DateTime?
+  termsAcceptanceIp String?
+  termsVersion      String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

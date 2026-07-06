@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     // Notify team (non-blocking)
     if (result.eligible && result.plan) {
-      notifyEligibleResult({
+      await notifyEligibleResult({
         name: data.name,
         email: data.email,
         whatsapp: data.whatsapp,
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         planMonthly: result.plan.monthly,
       }).catch(() => {})
     } else {
-      notifyBackofficeResult({
+      await notifyBackofficeResult({
         name: data.name,
         email: data.email,
         whatsapp: data.whatsapp,

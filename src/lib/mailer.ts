@@ -343,39 +343,47 @@ export async function notifyNewPartner(data: {
   ).catch(err => console.error('[MAILER] notifyNewPartner:', err))
 }
 
+// ATENÇÃO: esta função PROPAGA erros (sem catch interno) — o chamador precisa
+// de try/catch. Assim a rota de ativação sabe se o e-mail realmente saiu.
 export async function sendPartnerActivated(data: {
   to: string; name: string; code: string
 }) {
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://sublimesst.com'
   const refUrl = `${base}/elegibilidade?ref=${data.code}`
   const loginUrl = `${base}/parceiro/login`
+  const termsUrl = `${base}/termos-parceria`
   await sendEmail(data.to, `Sua parceria com a Sublime SST está ativa! 🤝`,
-    baseHtml('Cadastro de parceiro aprovado',
-      `<p style="font-size:15px;color:#334155;margin:0 0 16px">
-        Olá, <strong>${data.name}</strong>! Seu cadastro no programa de parceiros foi aprovado
-        e seu acesso já está liberado. A partir de agora, toda empresa que se cadastrar pelo seu
-        link é vinculada a você automaticamente.
+    baseHtml('Bem-vindo(a) ao programa de parceiros',
+      `<p style="font-size:15px;color:#334155;margin:0 0 12px">
+        Olá, <strong>${data.name}</strong>! Seu cadastro no programa de parceiros da Sublime SST
+        foi aprovado — seja muito bem-vindo(a)! 🎉
+      </p>
+      <p style="font-size:14px;color:#334155;margin:0 0 16px">
+        Sua parceria é importante para nós: juntos, ajudamos pequenas empresas a se regularizarem
+        em segurança do trabalho — e você é remunerado de forma recorrente por cada cliente que indicar.
       </p>
       <div style="background:#f0fdf9;border-radius:10px;padding:14px 16px;margin-bottom:16px">
-        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#0d4a5c;text-transform:uppercase;letter-spacing:.5px">Seu link de indicação</p>
-        <p style="margin:0;font-size:13px;font-family:monospace;color:#1a9e8c;word-break:break-all">${refUrl}</p>
+        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#0d4a5c;text-transform:uppercase;letter-spacing:.5px">Seu link de indicação exclusivo</p>
+        <p style="margin:0 0 8px;font-size:13px;font-family:monospace;color:#1a9e8c;word-break:break-all">${refUrl}</p>
+        <p style="margin:0;font-size:12px;color:#64748b">
+          <strong>Use sempre este link</strong> ao indicar clientes: é ele que garante o vínculo
+          da indicação a você — e, portanto, suas comissões. Toda empresa que acessar o teste por
+          ele fica registrada como indicação sua, mesmo que só contrate depois.
+        </p>
       </div>
-      <p style="font-size:14px;color:#334155;margin:0 0 6px">No Portal do Parceiro você encontra:</p>
+      <p style="font-size:14px;color:#334155;margin:0 0 6px"><strong>Seu primeiro acesso, em 3 passos:</strong></p>
       <p style="font-size:13px;color:#334155;margin:0 0 16px;line-height:1.9">
-        • Suas indicações e o status de cada uma<br>
-        • O extrato de comissões (10% de cada mensalidade, por até 12 meses por cliente)<br>
-        • Textos prontos de divulgação para WhatsApp e e-mail
-      </p>
-      <p style="font-size:13px;color:#64748b;margin:0 0 16px">
-        O acesso é feito com este e-mail (<strong>${data.to}</strong>) — sem senha: você recebe
-        um link de entrada por e-mail a cada acesso.
+        1. Acesse o Portal do Parceiro pelo botão abaixo<br>
+        2. Informe este e-mail (<strong>${data.to}</strong>) — sem senha: você recebe um link de entrada por e-mail a cada acesso<br>
+        3. No portal: suas indicações, o extrato de comissões (10% de cada mensalidade, por até 12 meses por cliente) e textos prontos de divulgação
       </p>` +
       cta(loginUrl, '🔑 Acessar o Portal do Parceiro') +
       `<p style="font-size:12px;color:#94a3b8;margin:16px 0 0;text-align:center">
+        As condições do programa estão no <a href="${termsUrl}" style="color:#1a9e8c">Termo de Parceria</a> aceito no seu cadastro.<br>
         Dúvidas? Chame a gente no WhatsApp: (21) 99724-8630
       </p>`
     )
-  ).catch(err => console.error('[MAILER] sendPartnerActivated:', err))
+  )
 }
 
 export async function sendDocumentExpiryAlert(data: {

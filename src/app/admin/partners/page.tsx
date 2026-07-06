@@ -17,6 +17,7 @@ export default function AdminPartnersPage() {
   const [selected, setSelected] = useState<Partner | null>(null)
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [actionInfo, setActionInfo] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -32,6 +33,7 @@ export default function AdminPartnersPage() {
   const updateStatus = async (id: string, status: 'active' | 'inactive') => {
     setSaving(true)
     setActionError('')
+    setActionInfo('')
     const secret = sessionStorage.getItem('admin_secret') ?? ''
     try {
       const res = await fetch('/api/partners', {
@@ -43,6 +45,13 @@ export default function AdminPartnersPage() {
       if (data.success) {
         setPartners(ps => ps.map(p => p.id === id ? { ...p, status } : p))
         setSelected(s => s?.id === id ? { ...s, status } : s)
+        if (status === 'active') {
+          setActionInfo(data.data.emailSent
+            ? '✓ Parceiro ativado — e-mail de boas-vindas enviado.'
+            : data.data.emailSent === false
+              ? '⚠️ Parceiro ativado, mas o e-mail de boas-vindas FALHOU. Verifique RESEND_API_KEY/logs e avise o parceiro manualmente.'
+              : '✓ Status atualizado.')
+        }
       } else {
         setActionError(data.error ?? 'Erro ao atualizar status.')
       }
@@ -176,6 +185,7 @@ export default function AdminPartnersPage() {
                 </p>
               )}
               {actionError && <p className="text-[11px] text-red-600">{actionError}</p>}
+              {actionInfo && <p className="text-[11px] text-teal-700 bg-teal-pale rounded-[6px] px-2.5 py-1.5">{actionInfo}</p>}
 
               <a href={`https://wa.me/${selected.whatsapp.replace(/\D/g,'')}`} target="_blank"
                 className="btn btn-outline-dark w-full btn-sm text-[12px] block text-center">

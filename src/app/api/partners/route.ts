@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { notifyNewPartner, notifyNewLead, sendPartnerActivated } from '@/lib/mailer'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
+import { PARTNER_TERMS_VERSION } from '@/lib/pricing'
 
 // .nullish() (não .optional()): o frontend envia referral: null quando o
 // checkbox de indicação está desmarcado, e .optional() rejeita null com
@@ -27,6 +28,7 @@ const schema = z.object({
   city: z.string().min(1),
   state: z.string().length(2),
   consentContact: z.boolean(),
+  consentTerms: z.boolean().optional().default(false),
   referral: referralSchema,
 })
 
@@ -40,6 +42,9 @@ export async function POST(req: NextRequest) {
     if (!data.consentContact) {
       return NextResponse.json({ success: false, error: 'Autorização de contato é obrigatória.' }, { status: 400 })
     }
+    if (!data.consentTerms) {
+      return NextResponse.json({ success: false, error: 'É necessário aceitar o Termo de Parceria.' }, { status: 400 })
+    }
 
     // Evita parceiros duplicados por e-mail (cada submit criava um registro novo)
     const existing = await prisma.partner.findFirst({
@@ -52,6 +57,10 @@ export async function POST(req: NextRequest) {
       }, { status: 409 })
     }
 
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      ?? req.headers.get('x-real-ip')
+      ?? 'unknown'
+
     const partner = await prisma.partner.create({
       data: {
         name: data.name,
@@ -63,6 +72,10 @@ export async function POST(req: NextRequest) {
         city: data.city,
         state: data.state,
         status: 'pending',
+        // Aceite eletrônico do Termo de Parceria (data, IP e versão)
+        termsAcceptedAt:   new Date(),
+        termsAcceptanceIp: clientIp,
+        termsVersion:      PARTNER_TERMS_VERSION,
       },
     })
 
@@ -103,7 +116,7 @@ export async function POST(req: NextRequest) {
             notes: `Indicação manual no cadastro do parceiro ${data.name} (${data.office}).${data.referral.observations ? ' Obs: ' + data.referral.observations : ''}`,
           },
         }).catch(err => console.error('[API /partners] lead da indicação:', err))
-        notifyNewLead({
+        await notifyNewLead({
           cnpj: data.referral.cnpj ?? '',
           companyName: data.referral.companyName,
           name: data.referral.contactName ?? 'Contato não informado',
@@ -114,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Notify team (non-blocking)
-    notifyNewPartner({
+    await notifyNewPartner({
       name: data.name, office: data.office,
       email: data.email, whatsapp: data.whatsapp,
       city: data.city, state: data.state,
@@ -172,16 +185,20 @@ export async function PATCH(req: NextRequest) {
       data: { status: data.status, ...(data.tier ? { tier: data.tier } : {}) },
     })
 
-    // Primeira ativação: envia boas-vindas com acesso ao portal e link de indicação
+    // Primeira ativação: envia boas-vindas com acesso ao portal e link de indicação.
+    // IMPORTANTE: com await — envio fire-and-forget morre quando a função
+    // serverless retorna (a Vercel congela a instância antes da promise completar).
+    let emailSent = false
     if (data.status === 'active' && before.status !== 'active') {
-      sendPartnerActivated({
-        to: partner.email,
-        name: partner.name,
-        code: partner.code,
-      }).catch(err => console.error('[API /partners] sendPartnerActivated:', err))
+      try {
+        await sendPartnerActivated({ to: partner.email, name: partner.name, code: partner.code })
+        emailSent = true
+      } catch (err) {
+        console.error('[API /partners] sendPartnerActivated:', err)
+      }
     }
 
-    return NextResponse.json({ success: true, data: { id: partner.id, status: partner.status, code: partner.code } })
+    return NextResponse.json({ success: true, data: { id: partner.id, status: partner.status, code: partner.code, emailSent } })
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Dados inválidos.', details: err.errors }, { status: 400 })

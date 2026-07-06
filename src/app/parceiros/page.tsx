@@ -29,7 +29,7 @@ const COMMISSION_ROWS = (['1-5', '6-10', '11-20'] as const).map(faixa => {
 export default function ParceirosPage() {
   const [form, setForm] = useState({
     name: '', office: '', cnpj: '', email: '', whatsapp: '',
-    clientsEstimate: '', city: '', state: 'RJ', consentContact: false,
+    clientsEstimate: '', city: '', state: 'RJ', consentContact: false, consentTerms: false,
   })
   const [referral, setReferral] = useState({
     companyName: '', cnpj: '', contactName: '', phone: '', email: '', employeesEst: '', observations: '',
@@ -51,6 +51,7 @@ export default function ParceirosPage() {
     if (!form.city.trim()) e.city = 'Informe a cidade.'
     if (!form.state) e.state = 'Selecione o estado.'
     if (!form.consentContact) e.consentContact = 'Autorize o contato para continuar.'
+    if (!form.consentTerms) e.consentTerms = 'Leia e aceite o Termo de Parceria para continuar.'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -265,6 +266,21 @@ export default function ParceirosPage() {
                       </label>
                     </div>
                     {errors.consentContact && <p className="text-[12px] text-red-500">{errors.consentContact}</p>}
+
+                    {/* Aceite do Termo de Parceria */}
+                    <div className={`flex items-start gap-3 p-3.5 rounded-[8px] border ${errors.consentTerms ? 'border-red-300 bg-red-50' : 'bg-gray-50 border-gray-200'}`}>
+                      <input type="checkbox" id="consentTerms" checked={form.consentTerms}
+                        onChange={e => set('consentTerms', e.target.checked)} className="w-4 h-4 mt-0.5 accent-teal shrink-0 cursor-pointer" />
+                      <label htmlFor="consentTerms" className="text-[13px] text-gray-700 leading-snug cursor-pointer">
+                        Li e aceito o{' '}
+                        <a href="/termos-parceria" target="_blank" rel="noopener noreferrer" className="text-teal underline">
+                          Termo de Parceria
+                        </a>{' '}
+                        do programa de parceiros da Sublime SST (comissão de 10% por até 12 mensalidades,
+                        carência de 30 dias e demais condições).
+                      </label>
+                    </div>
+                    {errors.consentTerms && <p className="text-[12px] text-red-500">{errors.consentTerms}</p>}
 
                     {/* Referral toggle */}
                     <div className="flex items-center gap-2.5 cursor-pointer pt-2 border-t border-gray-200"

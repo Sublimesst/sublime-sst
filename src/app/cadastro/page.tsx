@@ -18,6 +18,7 @@ export default function CadastroPage() {
   })
   const [plan, setPlan] = useState<{ monthly: number; implantacaoPromo: number; label: string; planType?: string; planName?: string } | null>(null)
   const [planType, setPlanType] = useState<'essencial' | 'premium'>('essencial')
+  const [faixa, setFaixa] = useState<'1-5' | '6-10' | '11-20' | null>(null)
   const [ltcatAddon, setLtcatAddon] = useState(false)
   const [partnerRef, setPartnerRef] = useState<string | undefined>()
   const [contractAccepted, setContractAccepted] = useState(false)
@@ -40,6 +41,7 @@ export default function CadastroPage() {
       }))
       if (data.plan) setPlan(data.plan)
       if (data.planType) setPlanType(data.planType)
+      if (data.employees === '1-5' || data.employees === '6-10' || data.employees === '11-20') setFaixa(data.employees)
       if (data.ltcatAddon) setLtcatAddon(true)
       if (data.partnerRef) setPartnerRef(data.partnerRef)
       if (data.contractAccepted) setContractAccepted(true)
@@ -50,6 +52,31 @@ export default function CadastroPage() {
     setForm(f => ({ ...f, [k]: v }))
     setErrors(e => ({ ...e, [k]: '' }))
   }
+
+  // Preenche cidade/estado/endereço automaticamente a partir do CEP (ViaCEP)
+  const lookupCEP = async (cep: string) => {
+    const digits = cep.replace(/\D/g, '')
+    if (digits.length !== 8) return
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setForm(f => ({
+          ...f,
+          cidade: data.localidade || f.cidade,
+          estado: data.uf || f.estado,
+          // não sobrescreve endereço já digitado; usuário completa o número
+          endereco: f.endereco || [data.logradouro, data.bairro].filter(Boolean).join(', '),
+        }))
+        setErrors(e => ({ ...e, cidade: '', estado: '', endereco: '' }))
+      }
+    } catch { /* offline/erro do ViaCEP — usuário preenche manualmente */ }
+  }
+
+  // Opções de nº de funcionários limitadas à faixa escolhida na elegibilidade
+  const FAIXA_RANGE: Record<string, [number, number]> = { '1-5': [1, 5], '6-10': [6, 10], '11-20': [11, 20] }
+  const [minFunc, maxFunc] = faixa ? FAIXA_RANGE[faixa] : [1, 20]
+  const funcOptions = Array.from({ length: maxFunc - minFunc + 1 }, (_, i) => minFunc + i)
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -83,11 +110,14 @@ export default function CadastroPage() {
       const data = await res.json()
       if (data.success) {
         track('registration_completed')
-        setAsaasUrl(data.data?.checkoutUrl || null)
+        // Em modo mock (ASAAS_API_KEY não configurada) a URL de cobrança é falsa —
+        // redirecionar levava a "cobrança não existe" no Asaas real. Não redireciona.
+        const checkoutUrl = data.data?.isMock ? null : (data.data?.checkoutUrl || null)
+        setAsaasUrl(checkoutUrl)
         setSubmitted(true)
-        if (data.data?.checkoutUrl) {
+        if (checkoutUrl) {
           track('asaas_checkout_clicked')
-          setTimeout(() => { window.location.href = data.data.checkoutUrl }, 1500)
+          setTimeout(() => { window.location.href = checkoutUrl }, 1500)
         }
       }
     } catch {
@@ -115,8 +145,9 @@ export default function CadastroPage() {
               📱 (21) 99724-8630
             </div>
             {!asaasUrl && (
-              <p className="text-[12px] text-amber-600 bg-amber-50 p-3 rounded-[8px]">
-                ⚠️ Mock ativo — Em produção, você seria redirecionado ao checkout Asaas para pagamento da implantação.
+              <p className="text-[12px] text-amber-700 bg-amber-50 p-3 rounded-[8px]">
+                O link de pagamento não está disponível neste momento. Seu cadastro foi registrado
+                e nossa equipe entrará em contato pelo WhatsApp para concluir o pagamento da implantação.
               </p>
             )}
           </div>
@@ -182,7 +213,8 @@ export default function CadastroPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div><label className="form-label required">CEP</label>
                 <input className={`form-input ${errors.cep ? 'error' : ''}`} placeholder="00000-000"
-                  value={form.cep} onChange={e => set('cep', maskCEP(e.target.value))} maxLength={9} />
+                  value={form.cep} onChange={e => set('cep', maskCEP(e.target.value))}
+                  onBlur={e => lookupCEP(e.target.value)} maxLength={9} />
                 {errors.cep && <p className="text-[12px] text-red-500 mt-1">{errors.cep}</p>}</div>
               <div><label className="form-label required">Cidade</label>
                 <input className={`form-input ${errors.cidade ? 'error' : ''}`} placeholder="Cidade"
@@ -203,8 +235,12 @@ export default function CadastroPage() {
             <h3 className="text-[16px] font-semibold text-gray-900 mb-5">👥 Funcionários</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div><label className="form-label required">Nº total de funcionários</label>
-                <input className={`form-input ${errors.numFuncionarios ? 'error' : ''}`} type="number" min={1} max={20} placeholder="Ex: 8"
-                  value={form.numFuncionarios} onChange={e => set('numFuncionarios', e.target.value)} />
+                <select className={`form-input ${errors.numFuncionarios ? 'error' : ''}`}
+                  value={form.numFuncionarios} onChange={e => set('numFuncionarios', e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {funcOptions.map(n => <option key={n} value={n}>{n} funcionário{n > 1 ? 's' : ''}</option>)}
+                </select>
+                {faixa && <p className="text-[11px] text-gray-400 mt-1">Faixa {faixa} selecionada no teste de elegibilidade.</p>}
                 {errors.numFuncionarios && <p className="text-[12px] text-red-500 mt-1">{errors.numFuncionarios}</p>}</div>
               <div><label className="form-label">Cargos existentes</label>
                 <input className="form-input" placeholder="Ex: Analista, Assistente"

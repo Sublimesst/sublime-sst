@@ -10,7 +10,7 @@ interface CnaeRow {
   nr4_class_code: string
   description: string
   grau_risco_nr4: number
-  online_catalog_status: CnaeStatus
+  online_catalog_status: string // rótulo bruto do JSON (ex.: PENDING_RT_VALIDATION)
 }
 
 const entries = (cnaeCatalog as { entries: CnaeRow[] }).entries
@@ -19,6 +19,16 @@ const STATUS_CONFIG: Record<CnaeStatus, { icon: React.ElementType; label: string
   approved: { icon: CheckCircle, label: 'Aprovado',  color: 'text-green-700', bg: 'bg-green-100' },
   pending:  { icon: Clock,       label: 'Pendente',  color: 'text-amber-700', bg: 'bg-amber-100' },
   blocked:  { icon: XCircle,     label: 'Bloqueado', color: 'text-red-700',   bg: 'bg-red-100' },
+}
+
+// O JSON usa rótulos brutos (ex.: PENDING_RT_VALIDATION) que não batem com as
+// chaves acima. Normaliza para uma das 3 conhecidas, com fallback 'pending' —
+// sem isso, STATUS_CONFIG[status] fica undefined e a página quebra (tela branca).
+function normalizeStatus(raw: string | undefined): CnaeStatus {
+  const s = (raw ?? '').toUpperCase()
+  if (s === 'APPROVED' || s === 'APROVADO') return 'approved'
+  if (s === 'BLOCKED' || s === 'BLOQUEADO') return 'blocked'
+  return 'pending' // inclui PENDING, PENDING_RT_VALIDATION e qualquer desconhecido
 }
 
 export default function AdminCnaePage() {
@@ -37,7 +47,7 @@ export default function AdminCnaePage() {
     localStorage.setItem('sublime_cnae_overrides', JSON.stringify(updated))
   }
 
-  const getStatus = (row: CnaeRow): CnaeStatus => overrides[row.nr4_class_code] ?? row.online_catalog_status
+  const getStatus = (row: CnaeRow): CnaeStatus => overrides[row.nr4_class_code] ?? normalizeStatus(row.online_catalog_status)
 
   const filtered = entries.filter(e => {
     const q = search.toLowerCase()

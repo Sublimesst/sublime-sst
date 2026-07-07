@@ -365,6 +365,26 @@ export async function notifyPaymentConfirmed(data: {
   ).catch(err => console.error('[MAILER] notifyPaymentConfirmed:', err))
 }
 
+export async function notifyPaymentOverdue(data: {
+  companyName: string; cnpj: string; tipo: string; valorCentavos: number
+}) {
+  const valor = `R$ ${(data.valorCentavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  await sendEmail(NOTIFY, `🔴 Inadimplência: ${data.companyName} (${valor})`,
+    baseHtml('Pagamento vencido sem confirmação',
+      `<div style="margin-bottom:14px">` + badge('🔴 INADIMPLENTE', '#fee2e2', '#b91c1c') + `</div>` +
+      row('Empresa', data.companyName) +
+      row('CNPJ', data.cnpj) +
+      row('Tipo', data.tipo === 'implantacao' ? 'Implantação' : 'Mensalidade') +
+      row('Valor', `<span style="color:#b91c1c;font-weight:700">${valor}</span>`) +
+      `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
+        ${data.tipo === 'mensalidade'
+          ? 'A empresa foi marcada como inadimplente no pipeline. Comissões de parceiro não são geradas para valores não pagos.'
+          : 'Implantação vencida — o cliente ainda não iniciou. O cron de lembrete de pagamento segue ativo.'}
+      </p>`
+    )
+  ).catch(err => console.error('[MAILER] notifyPaymentOverdue:', err))
+}
+
 export async function notifyOnboardingSubmitted(data: {
   companyName: string; cnpj: string; numFuncionarios: number; cargos?: string | null
 }) {

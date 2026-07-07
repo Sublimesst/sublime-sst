@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash, timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { sendWelcomeEmail, notifyPaymentConfirmed } from '@/lib/mailer'
+import { sendWelcomeEmail, notifyPaymentConfirmed, notifyPaymentOverdue } from '@/lib/mailer'
 import { generateContractPdf } from '@/lib/contractPdf'
 import { CONTRACT_VERSION } from '@/lib/pricing'
 
@@ -84,10 +84,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (dbPayment.type === 'implantacao' && dbPayment.company.status === 'pending') {
+    // Mensalidade paga de empresa inadimplente: regulariza (volta a active)
+    if (dbPayment.type === 'mensalidade' && dbPayment.company.status === 'overdue') {
       await prisma.company.update({
         where: { id: dbPayment.companyId },
         data: { status: 'active' },
+      })
+    }
+
+    // D2 (2026-07-07): pagamento da implantação inicia o ONBOARDING — não pula
+    // direto para active. 'active' = documentos entregues + gestão mensal.
+    if (dbPayment.type === 'implantacao' && dbPayment.company.status === 'pending') {
+      await prisma.company.update({
+        where: { id: dbPayment.companyId },
+        data: { status: 'onboarding_pending' },
       })
 
       const co = dbPayment.company
@@ -138,8 +148,30 @@ export async function POST(req: NextRequest) {
   if (event === 'PAYMENT_OVERDUE' || event === 'PAYMENT_REFUNDED') {
     await prisma.payment.updateMany({
       where: { asaasId: payment.id },
-      data: { status: event === 'PAYMENT_OVERDUE' ? 'failed' : 'refunded' },
+      data: { status: event === 'PAYMENT_OVERDUE' ? 'overdue' : 'refunded' },
     })
+
+    // Inadimplência de MENSALIDADE reflete no pipeline da empresa + avisa a equipe
+    if (event === 'PAYMENT_OVERDUE') {
+      const overduePay = await prisma.payment.findFirst({
+        where: { asaasId: payment.id },
+        include: { company: true },
+      })
+      if (overduePay?.type === 'mensalidade') {
+        await prisma.company.updateMany({
+          where: { id: overduePay.companyId, status: { in: ['active', 'documents_delivered'] } },
+          data: { status: 'overdue' },
+        })
+      }
+      if (overduePay) {
+        await notifyPaymentOverdue({
+          companyName:   overduePay.company.razaoSocial,
+          cnpj:          overduePay.company.cnpj,
+          tipo:          overduePay.type,
+          valorCentavos: overduePay.amount,
+        })
+      }
+    }
 
     // Estorno de pagamento estorna a comissão vinculada (razão de ser da carência de 30d)
     if (event === 'PAYMENT_REFUNDED') {

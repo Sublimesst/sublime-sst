@@ -33,11 +33,14 @@ export async function POST(req: NextRequest) {
     create: { companyId: session.companyId, ...data },
   })
 
-  // Mark company as onboarding complete
-  const company = await prisma.company.update({
-    where: { id: session.companyId },
-    data: { status: 'active' },
+  // D2: onboarding preenchido inicia a PRODUÇÃO dos documentos.
+  // Transição condicional: só onboarding_pending avança (resubmissão de uma
+  // empresa já em produção/ativa não regride o pipeline).
+  await prisma.company.updateMany({
+    where: { id: session.companyId, status: { in: ['pending', 'onboarding_pending'] } },
+    data: { status: 'in_production' },
   })
+  const company = await prisma.company.findUniqueOrThrow({ where: { id: session.companyId } })
 
   // Equipe precisa saber que a produção pode começar (await: serverless)
   await notifyOnboardingSubmitted({

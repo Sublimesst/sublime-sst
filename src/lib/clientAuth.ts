@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { verifySessionCookie } from './sessionCookie'
 
 export interface ClientSessionPayload {
   companyId: string
@@ -8,13 +9,7 @@ export interface ClientSessionPayload {
 
 export function getClientSession(req: NextRequest): ClientSessionPayload | null {
   const raw = req.cookies.get('sublime_client')?.value
-  if (!raw) return null
-  try {
-    const decoded = Buffer.from(raw, 'base64').toString('utf-8')
-    const payload = JSON.parse(decoded) as ClientSessionPayload
-    if (!payload.companyId || !payload.email) return null
-    return payload
-  } catch {
-    return null
-  }
+  const payload = verifySessionCookie<ClientSessionPayload>(raw)
+  if (!payload?.companyId || !payload.email) return null
+  return payload
 }

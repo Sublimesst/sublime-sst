@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { signSessionCookie } from '@/lib/sessionCookie'
+
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 30 // 30 dias
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
@@ -17,17 +20,18 @@ export async function GET(req: NextRequest) {
 
   await prisma.clientSession.update({ where: { token }, data: { usedAt: new Date() } })
 
-  // Issue a long-lived session cookie (company ID)
-  const cookieValue = Buffer.from(
-    JSON.stringify({ companyId: session.companyId, email: session.email, issuedAt: Date.now() })
-  ).toString('base64')
+  // Cookie de sessão assinado com HMAC (ver src/lib/sessionCookie.ts)
+  const cookieValue = signSessionCookie(
+    { companyId: session.companyId, email: session.email, issuedAt: Date.now() },
+    MAX_AGE_SECONDS
+  )
 
   const response = NextResponse.redirect(`${base}/cliente/dashboard`)
   response.cookies.set('sublime_client', cookieValue, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: MAX_AGE_SECONDS,
     path: '/',
   })
   return response

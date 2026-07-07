@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { signSessionCookie } from '@/lib/sessionCookie'
+
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 30 // 30 dias
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
@@ -17,16 +20,17 @@ export async function GET(req: NextRequest) {
 
   await prisma.partnerSession.update({ where: { token }, data: { usedAt: new Date() } })
 
-  const cookieValue = Buffer.from(
-    JSON.stringify({ partnerId: session.partnerId, email: session.email, issuedAt: Date.now() })
-  ).toString('base64')
+  const cookieValue = signSessionCookie(
+    { partnerId: session.partnerId, email: session.email, issuedAt: Date.now() },
+    MAX_AGE_SECONDS
+  )
 
   const response = NextResponse.redirect(`${base}/parceiro/dashboard`)
   response.cookies.set('sublime_partner', cookieValue, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: MAX_AGE_SECONDS,
     path: '/',
   })
   return response

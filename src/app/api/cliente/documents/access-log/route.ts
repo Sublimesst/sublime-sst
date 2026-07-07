@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getClientSession } from '@/lib/clientAuth'
 
 const schema = z.object({
   tipoDocumento: z.enum(['pgr', 'pcmso', 'declaracao', 'os_epi', 'ltcat', 'contrato']),
   nomeDocumento: z.string().optional(),
   acao:          z.enum(['view', 'download']).default('download'),
 })
-
-function getClientSession(req: NextRequest) {
-  const raw = req.cookies.get('sublime_client')?.value
-  if (!raw) return null
-  try {
-    return JSON.parse(Buffer.from(raw, 'base64').toString('utf-8')) as { companyId?: string }
-  } catch {
-    return null
-  }
-}
 
 export async function POST(req: NextRequest) {
   const session = getClientSession(req)

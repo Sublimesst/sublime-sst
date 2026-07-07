@@ -4,6 +4,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { CheckCircle2, Clock, FileText, CreditCard, LogOut, AlertCircle, ChevronRight } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
+import { verifySessionCookie } from '@/lib/sessionCookie'
+import type { ClientSessionPayload } from '@/lib/clientAuth'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -14,23 +16,17 @@ export const metadata: Metadata = {
 async function getCompany() {
   const cookieStore = await cookies()
   const raw = cookieStore.get('sublime_client')?.value
-  if (!raw) return null
+  const payload = verifySessionCookie<ClientSessionPayload>(raw)
+  if (!payload?.companyId) return null
 
-  try {
-    const payload = JSON.parse(Buffer.from(raw, 'base64').toString('utf-8'))
-    if (!payload.companyId) return null
-
-    return await prisma.company.findUnique({
-      where: { id: payload.companyId },
-      include: {
-        plan: true,
-        payments: { orderBy: { createdAt: 'desc' } },
-        onboardingData: true,
-      },
-    })
-  } catch {
-    return null
-  }
+  return await prisma.company.findUnique({
+    where: { id: payload.companyId },
+    include: {
+      plan: true,
+      payments: { orderBy: { createdAt: 'desc' } },
+      onboardingData: true,
+    },
+  })
 }
 
 type Step = { label: string; description: string; done: boolean; pending: boolean }

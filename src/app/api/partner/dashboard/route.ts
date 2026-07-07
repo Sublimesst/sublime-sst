@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-function getPartnerSession(req: NextRequest) {
-  const raw = req.cookies.get('sublime_partner')?.value
-  if (!raw) return null
-  try {
-    return JSON.parse(Buffer.from(raw, 'base64').toString('utf-8')) as { partnerId?: string }
-  } catch {
-    return null
-  }
-}
+import { getPartnerSession } from '@/lib/partnerAuth'
 
 export async function GET(req: NextRequest) {
   const session = getPartnerSession(req)

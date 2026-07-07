@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getClientSession } from '@/lib/clientAuth'
+import { notifyOnboardingSubmitted } from '@/lib/mailer'
 
 const schema = z.object({
   numFuncionarios: z.coerce.number().min(1).max(20),
@@ -33,9 +34,17 @@ export async function POST(req: NextRequest) {
   })
 
   // Mark company as onboarding complete
-  await prisma.company.update({
+  const company = await prisma.company.update({
     where: { id: session.companyId },
     data: { status: 'active' },
+  })
+
+  // Equipe precisa saber que a produção pode começar (await: serverless)
+  await notifyOnboardingSubmitted({
+    companyName:     company.razaoSocial,
+    cnpj:            company.cnpj,
+    numFuncionarios: data.numFuncionarios,
+    cargos:          data.cargos,
   })
 
   return NextResponse.json({ success: true })

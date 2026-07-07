@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash, timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { sendWelcomeEmail } from '@/lib/mailer'
+import { sendWelcomeEmail, notifyPaymentConfirmed } from '@/lib/mailer'
 import { generateContractPdf } from '@/lib/contractPdf'
 import { CONTRACT_VERSION } from '@/lib/pricing'
 
@@ -48,6 +48,15 @@ export async function POST(req: NextRequest) {
     if (transition.count === 0) {
       return NextResponse.json({ ok: true, note: 'already processed' })
     }
+
+    // Notifica a equipe (com await — fire-and-forget morre em serverless)
+    await notifyPaymentConfirmed({
+      companyName:   dbPayment.company.razaoSocial,
+      cnpj:          dbPayment.company.cnpj,
+      tipo:          dbPayment.type,
+      valorCentavos: dbPayment.amount,
+      planType:      dbPayment.company.planType,
+    })
 
     // Commission engine: create Commission record for mensalidade payments with a partner
     if (dbPayment.type === 'mensalidade' && dbPayment.company.partnerId) {

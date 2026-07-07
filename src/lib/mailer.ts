@@ -343,6 +343,46 @@ export async function notifyNewPartner(data: {
   ).catch(err => console.error('[MAILER] notifyNewPartner:', err))
 }
 
+export async function notifyPaymentConfirmed(data: {
+  companyName: string; cnpj: string; tipo: string; valorCentavos: number; planType?: string | null
+}) {
+  const valor = `R$ ${(data.valorCentavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  const tipoLabel = data.tipo === 'implantacao' ? 'Implantação' : 'Mensalidade'
+  await sendEmail(NOTIFY, `💰 Pagamento confirmado: ${data.companyName} (${tipoLabel} ${valor})`,
+    baseHtml('Pagamento confirmado',
+      `<div style="margin-bottom:14px">` + badge('💰 PAGAMENTO CONFIRMADO', '#dcfce7', '#15803d') + `</div>` +
+      row('Empresa', data.companyName) +
+      row('CNPJ', data.cnpj) +
+      row('Tipo', tipoLabel) +
+      row('Valor', `<span style="color:#15803d;font-weight:700">${valor}</span>`) +
+      (data.planType ? row('Plano', data.planType) : '') +
+      `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
+        ${data.tipo === 'implantacao'
+          ? 'Cliente entra em onboarding — acompanhe o preenchimento e o início da produção no admin.'
+          : 'Mensalidade recorrente registrada.'}
+      </p>`
+    )
+  ).catch(err => console.error('[MAILER] notifyPaymentConfirmed:', err))
+}
+
+export async function notifyOnboardingSubmitted(data: {
+  companyName: string; cnpj: string; numFuncionarios: number; cargos?: string | null
+}) {
+  await sendEmail(NOTIFY, `📋 Onboarding preenchido: ${data.companyName}`,
+    baseHtml('Cliente preencheu o onboarding — produção pode começar',
+      `<div style="margin-bottom:14px">` + badge('📋 ONBOARDING COMPLETO', '#dbeafe', '#1e40af') + `</div>` +
+      row('Empresa', data.companyName) +
+      row('CNPJ', data.cnpj) +
+      row('Funcionários', String(data.numFuncionarios)) +
+      (data.cargos ? row('Cargos', data.cargos) : '') +
+      `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
+        Os dados para elaboração do PGR/PCMSO estão disponíveis. Inicie a produção dos documentos
+        e atualize o checklist no admin.
+      </p>`
+    )
+  ).catch(err => console.error('[MAILER] notifyOnboardingSubmitted:', err))
+}
+
 // ATENÇÃO: esta função PROPAGA erros (sem catch interno) — o chamador precisa
 // de try/catch. Assim a rota de ativação sabe se o e-mail realmente saiu.
 export async function sendPartnerActivated(data: {

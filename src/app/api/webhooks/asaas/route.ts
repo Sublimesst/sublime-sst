@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
     })
 
     // Commission engine: create Commission record for mensalidade payments with a partner
-    if (dbPayment.type === 'mensalidade' && dbPayment.company.partnerId) {
+    // (empresa cancelada não gera comissão nova — P0 cancelamento)
+    if (dbPayment.type === 'mensalidade' && dbPayment.company.partnerId && dbPayment.company.status !== 'cancelled') {
       const mensalidadeCount = await prisma.payment.count({
         where: { companyId: dbPayment.companyId, type: 'mensalidade', status: 'confirmed' },
       })

@@ -134,25 +134,27 @@ model Company {
 
   // Pipeline de implantação
   // pending | onboarding_pending | in_production | in_review | documents_delivered | active | overdue | suspended | migrating | cancelled
-  status       String   @default("pending")
-  reviewedBy   String?  // técnico responsável pela revisão antes de liberar documentos
-  reviewedAt   DateTime?
+  status               String    @default("pending")
+  reviewedBy           String?   // técnico responsável pela revisão antes de liberar documentos
+  reviewedAt           DateTime?
+  documentsDeliveredAt DateTime? // preparação P1: setado quando status vira documents_delivered pela 1ª vez
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  lead               Lead                @relation(fields: [leadId], references: [id])
-  plan               Plan?               @relation(fields: [planId], references: [id])
-  cnae               CnaeCatalog?        @relation(fields: [cnaeId], references: [id])
-  partner            Partner?            @relation(fields: [partnerId], references: [id])
-  payments           Payment[]
-  clientSessions     ClientSession[]
-  onboardingData     OnboardingData?
-  checklist          ImplantacaoChecklist?
-  esocialLogs        EsocialLog[]
-  documentAccessLogs DocumentAccessLog[]
-  commissions        Commission[]
-  documents          Document[]
+  lead                 Lead                  @relation(fields: [leadId], references: [id])
+  plan                 Plan?                 @relation(fields: [planId], references: [id])
+  cnae                 CnaeCatalog?          @relation(fields: [cnaeId], references: [id])
+  partner              Partner?              @relation(fields: [partnerId], references: [id])
+  payments             Payment[]
+  clientSessions       ClientSession[]
+  onboardingData       OnboardingData?
+  checklist            ImplantacaoChecklist?
+  esocialLogs          EsocialLog[]
+  documentAccessLogs   DocumentAccessLog[]
+  commissions          Commission[]
+  documents            Document[]
+  cancellationRequests CancellationRequest[]
 
   @@map("companies")
 }
@@ -271,6 +273,28 @@ model DbStorageObject {
   createdAt   DateTime @default(now())
 
   @@map("storage_objects_db")
+}
+
+// ── CANCELAMENTO ANTECIPADO (P0) ───────────────────────────────
+// Trilha mínima do pedido de cancelamento. Valores (feeCents/pendingCents)
+// são calculados manualmente pelo admin (regra da Cláusula 5ª do /termos) —
+// sem cálculo automático nesta etapa.
+model CancellationRequest {
+  id           String   @id @default(cuid())
+  companyId    String
+  requestedAt  DateTime
+  reason       String
+  requestedBy  String
+  handledBy    String?
+  feeCents     Int?
+  pendingCents Int?
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("cancellation_requests")
 }
 
 // ── PARCEIROS ────────────────────────────────────────────────

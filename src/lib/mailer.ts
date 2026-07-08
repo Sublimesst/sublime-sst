@@ -446,6 +446,47 @@ export async function sendPartnerActivated(data: {
   )
 }
 
+// ATENÇÃO: propaga erros (sem catch interno) — o chamador precisa saber se o
+// e-mail realmente saiu, para reportar `emailSent` na resposta da rota.
+export async function sendCancellationConfirmedClient(data: {
+  to: string; responsavel: string; companyName: string; requestedAt: Date; reason: string
+}) {
+  const dataStr = data.requestedAt.toLocaleDateString('pt-BR')
+  await sendEmail(data.to, `Cancelamento confirmado — ${data.companyName}`,
+    baseHtml('Cancelamento do contrato confirmado',
+      `<p style="font-size:15px;color:#334155;margin:0 0 12px">
+        Olá, <strong>${data.responsavel}</strong>. Confirmamos o cancelamento do contrato da
+        <strong>${data.companyName}</strong> com a Sublime SST, conforme solicitado.
+      </p>` +
+      row('Data do pedido', dataStr) +
+      row('Motivo informado', data.reason) +
+      `<p style="font-size:13px;color:#64748b;margin:16px 0 0">
+        Eventuais valores pendentes seguem as condições da Cláusula 5ª do contrato aceito no cadastro.
+        Qualquer dúvida, fale com a gente no WhatsApp
+        <a href="https://wa.me/5521997248630" style="color:#1a9e8c">(21) 99724-8630</a>.
+      </p>`
+    )
+  )
+}
+
+// ATENÇÃO: propaga erros (sem catch interno) — mesmo motivo da função acima.
+export async function notifyPartnerCompanyCancelled(data: {
+  to: string; partnerName: string; companyName: string
+}) {
+  await sendEmail(data.to, `Contrato cancelado: ${data.companyName}`,
+    baseHtml('Cliente indicado cancelou o contrato',
+      `<p style="font-size:15px;color:#334155;margin:0 0 12px">
+        Olá, <strong>${data.partnerName}</strong>. A empresa <strong>${data.companyName}</strong>,
+        indicada por você, cancelou o contrato com a Sublime SST.
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 16px">
+        Comissões já liberadas ou pagas referentes a essa empresa permanecem devidas.
+        Não serão geradas novas comissões a partir de agora.
+      </p>`
+    )
+  )
+}
+
 export async function sendDocumentExpiryAlert(data: {
   to: string; responsavel: string; companyName: string
   documents: { nome: string; vencimento: Date; diasRestantes: number }[]

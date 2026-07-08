@@ -29,7 +29,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const company = await prisma.company.findUnique({
     where: { id: params.id },
-    include: { plan: true, payments: { where: { type: 'implantacao' }, take: 1 } },
+    include: {
+      plan: true,
+      payments: { where: { type: 'implantacao' }, take: 1 },
+      cancellationRequests: { orderBy: { createdAt: 'desc' } },
+    },
   })
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })
 
@@ -55,11 +59,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     )
   }
 
+  const enteringDocumentsDelivered =
+    status === 'documents_delivered' && company.status !== 'documents_delivered' && !company.documentsDeliveredAt
+
   const updated = await prisma.company.update({
     where: { id: params.id },
     data: {
       ...(status ? { status } : {}),
       ...(reviewedBy !== undefined ? { reviewedBy, reviewedAt: reviewedBy ? new Date() : null } : {}),
+      ...(enteringDocumentsDelivered ? { documentsDeliveredAt: new Date() } : {}),
     },
   })
 

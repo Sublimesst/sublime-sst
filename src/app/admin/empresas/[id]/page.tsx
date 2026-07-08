@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowLeft, Save, Upload } from 'lucide-react'
+import { ArrowLeft, Save, Upload, Ban } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { formatDate } from '@/lib/utils'
+import { formatDate, maskCurrencyBRL } from '@/lib/utils'
 
 const DOCUMENTO_TIPOS = [
   { value: 'pgr',        label: 'PGR' },
@@ -44,6 +44,18 @@ interface DocumentItem {
   uploadedAt: string
 }
 
+interface CancellationRequest {
+  id: string
+  requestedAt: string
+  reason: string
+  requestedBy: string
+  handledBy?: string | null
+  feeCents?: number | null
+  pendingCents?: number | null
+  notes?: string | null
+  createdAt: string
+}
+
 interface EsocialLog {
   id: string
   tipoEvento: string
@@ -71,6 +83,7 @@ interface Company {
   contractAcceptedAt?: string | null
   createdAt: string
   plan?: { label: string; monthlyPrice: number } | null
+  cancellationRequests?: CancellationRequest[]
 }
 
 const ITEM_STATUSES = [
@@ -107,6 +120,12 @@ export default function EmpresaDetailPage() {
   const [saving, setSaving] = useState(false)
   const [savingReview, setSavingReview] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [cancelForm, setCancelForm] = useState({
+    reason: '', requestedBy: '', requestedAt: '', handledBy: '', feeReais: '', pendingReais: '', notes: '',
+  })
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
+  const [cancelEmailStatus, setCancelEmailStatus] = useState<{ cliente: boolean; parceiro: boolean | null } | null>(null)
 
   const headers = { 'x-admin-secret': getAdminSecret(), 'Content-Type': 'application/json' }
 
@@ -186,6 +205,48 @@ export default function EmpresaDetailPage() {
     } finally { setUploading(false) }
   }
 
+  function reaisToCents(v: string): number | null {
+    if (!v.trim()) return null
+    const n = Number(v.replace(',', '.'))
+    return Number.isFinite(n) ? Math.round(n * 100) : null
+  }
+
+  async function cancelCompany() {
+    if (!cancelForm.reason.trim() || !cancelForm.requestedBy.trim()) {
+      setCancelError('Motivo e responsável pelo pedido são obrigatórios.')
+      return
+    }
+    if (!window.confirm(`Confirma o cancelamento do contrato de ${company?.razaoSocial}? Essa ação não pode ser desfeita por aqui.`)) return
+
+    setCancelling(true)
+    setCancelError('')
+    try {
+      const res = await fetch(`/api/admin/empresas/${id}/cancel`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          reason:       cancelForm.reason,
+          requestedBy:  cancelForm.requestedBy,
+          requestedAt:  cancelForm.requestedAt || undefined,
+          handledBy:    cancelForm.handledBy || null,
+          feeCents:     reaisToCents(cancelForm.feeReais),
+          pendingCents: reaisToCents(cancelForm.pendingReais),
+          notes:        cancelForm.notes || null,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setCompany(c => c ? {
+          ...c, status: 'cancelled',
+          cancellationRequests: [data.data.cancellationRequest, ...(c.cancellationRequests ?? [])],
+        } : c)
+        setCancelEmailStatus(data.data.emailSent)
+      } else {
+        setCancelError(data.error ?? 'Falha ao cancelar.')
+      }
+    } finally { setCancelling(false) }
+  }
+
   function ChecklistRow({ label, statusKey, concluidoPorKey, concluidoEmValue, show = true }:
     { label: string; statusKey: keyof Checklist; concluidoPorKey: keyof Checklist; concluidoEmValue?: string | null; show?: boolean }) {
     if (!show) return null
@@ -235,8 +296,131 @@ export default function EmpresaDetailPage() {
         <div className="text-right">
           <span className="text-[12px] text-gray-500 capitalize">{company.planType ?? '—'}</span>
           {company.ltcatAddon && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">+LTCAT</span>}
+          {company.status === 'cancelled' && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">CANCELADO</span>}
           <p className="text-[11px] text-gray-400 mt-0.5">Cadastro: {formatDate(company.createdAt)}</p>
         </div>
+      </div>
+
+      {/* Cancelamento */}
+      <div className="bg-white rounded-[12px] border border-red-200 p-5 mb-6">
+        <p className="text-[14px] font-semibold text-gray-800 mb-4">Cancelamento do contrato</p>
+
+        {company.status === 'cancelled' ? (
+          <div>
+            <p className="text-[12px] text-red-600 font-semibold mb-3">🚫 Contrato cancelado</p>
+            {company.cancellationRequests?.[0] && (
+              <div className="text-[12px] text-gray-600 space-y-1">
+                <p><span className="text-gray-400">Data do pedido:</span> {formatDate(company.cancellationRequests[0].requestedAt)}</p>
+                <p><span className="text-gray-400">Motivo:</span> {company.cancellationRequests[0].reason}</p>
+                <p><span className="text-gray-400">Solicitado por:</span> {company.cancellationRequests[0].requestedBy}</p>
+                {company.cancellationRequests[0].handledBy && (
+                  <p><span className="text-gray-400">Tratado por:</span> {company.cancellationRequests[0].handledBy}</p>
+                )}
+                {company.cancellationRequests[0].feeCents != null && (
+                  <p><span className="text-gray-400">Multa/mensalidades devidas:</span> {maskCurrencyBRL(company.cancellationRequests[0].feeCents)}</p>
+                )}
+                {company.cancellationRequests[0].pendingCents != null && (
+                  <p><span className="text-gray-400">Valores em aberto:</span> {maskCurrencyBRL(company.cancellationRequests[0].pendingCents)}</p>
+                )}
+                {company.cancellationRequests[0].notes && (
+                  <p><span className="text-gray-400">Observações:</span> {company.cancellationRequests[0].notes}</p>
+                )}
+              </div>
+            )}
+            {cancelEmailStatus && (
+              <p className="text-[11px] text-gray-500 mt-3">
+                E-mail cliente: {cancelEmailStatus.cliente ? '✅ enviado' : '⚠️ falhou'} ·
+                {' '}E-mail parceiro: {cancelEmailStatus.parceiro === null ? 'não aplicável' : cancelEmailStatus.parceiro ? '✅ enviado' : '⚠️ falhou'}
+              </p>
+            )}
+            <p className="text-[11px] text-amber-600 mt-3">
+              ⚠️ Lembrete: cancele também a cobrança no painel da Asaas manualmente — ainda não há integração automática de assinatura recorrente.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Motivo *</label>
+                <input
+                  type="text"
+                  value={cancelForm.reason}
+                  onChange={e => setCancelForm(f => ({ ...f, reason: e.target.value }))}
+                  className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Solicitado por *</label>
+                <input
+                  type="text"
+                  value={cancelForm.requestedBy}
+                  onChange={e => setCancelForm(f => ({ ...f, requestedBy: e.target.value }))}
+                  className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Data do pedido</label>
+                <input
+                  type="date"
+                  value={cancelForm.requestedAt}
+                  onChange={e => setCancelForm(f => ({ ...f, requestedAt: e.target.value }))}
+                  className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Tratado por</label>
+                <input
+                  type="text"
+                  value={cancelForm.handledBy}
+                  onChange={e => setCancelForm(f => ({ ...f, handledBy: e.target.value }))}
+                  className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Multa/mensalidades devidas (R$)</label>
+                <input
+                  type="text"
+                  placeholder="0,00"
+                  value={cancelForm.feeReais}
+                  onChange={e => setCancelForm(f => ({ ...f, feeReais: e.target.value }))}
+                  className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Valores em aberto (R$)</label>
+                <input
+                  type="text"
+                  placeholder="0,00"
+                  value={cancelForm.pendingReais}
+                  onChange={e => setCancelForm(f => ({ ...f, pendingReais: e.target.value }))}
+                  className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+                />
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Observações</label>
+              <textarea
+                rows={2}
+                value={cancelForm.notes}
+                onChange={e => setCancelForm(f => ({ ...f, notes: e.target.value }))}
+                className="w-full text-[13px] border border-gray-200 rounded-[8px] px-3 py-2 focus:outline-none focus:border-teal resize-none"
+              />
+            </div>
+            {cancelError && <p className="text-[12px] text-red-600 mb-2">{cancelError}</p>}
+            <button
+              className="btn btn-sm bg-red-600 text-white hover:bg-red-700"
+              onClick={cancelCompany}
+              disabled={cancelling}
+            >
+              {cancelling ? 'Cancelando…' : <><Ban size={13} /> Cancelar contrato</>}
+            </button>
+            <p className="text-[11px] text-gray-400 mt-2">
+              Ao confirmar: empresa marcada como cancelada, comissões em carência são estornadas
+              (liberadas/pagas não são afetadas), e-mails enviados ao cliente e ao parceiro (se houver).
+              Cancelamento da cobrança na Asaas continua manual nesta fase.
+            </p>
+          </>
+        )}
       </div>
 
       {/* Reviewed by */}

@@ -1,9 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, Save } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { ArrowLeft, Save, Upload } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { formatDate } from '@/lib/utils'
+
+const DOCUMENTO_TIPOS = [
+  { value: 'pgr',        label: 'PGR' },
+  { value: 'pcmso',      label: 'PCMSO' },
+  { value: 'declaracao', label: 'Declaração técnica' },
+  { value: 'os_epi',     label: 'OS + Fichas de EPI' },
+  { value: 'ltcat',      label: 'LTCAT' },
+  { value: 'contrato',   label: 'Contrato' },
+]
 
 interface Checklist {
   pgrStatus: string
@@ -23,6 +32,16 @@ interface Checklist {
   ltcatConcluidoEm?: string | null
   ltcatConcluidoPor?: string | null
   observacoes?: string | null
+}
+
+interface DocumentItem {
+  id: string
+  tipoDocumento: string
+  nomeArquivo: string
+  mimeType: string
+  tamanhoBytes: number
+  uploadedBy?: string | null
+  uploadedAt: string
 }
 
 interface EsocialLog {
@@ -80,6 +99,11 @@ export default function EmpresaDetailPage() {
   const [esocialLogs, setEsocialLogs] = useState<EsocialLog[]>([])
   const [esocialForm, setEsocialForm] = useState({ tipoEvento: 'S-2220', protocolo: '', descricao: '', status: 'enviado' })
   const [addingEsocial, setAddingEsocial] = useState(false)
+  const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [docTipo, setDocTipo] = useState('pgr')
+  const [uploadedBy, setUploadedBy] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [savingReview, setSavingReview] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -87,16 +111,18 @@ export default function EmpresaDetailPage() {
   const headers = { 'x-admin-secret': getAdminSecret(), 'Content-Type': 'application/json' }
 
   const fetchData = useCallback(async () => {
-    const [compRes, ckRes, esRes] = await Promise.all([
+    const [compRes, ckRes, esRes, docRes] = await Promise.all([
       fetch(`/api/admin/empresas/${id}`, { headers }),
       fetch(`/api/admin/empresas/${id}/checklist`, { headers }),
       fetch(`/api/admin/empresas/${id}/esocial`, { headers }),
+      fetch(`/api/admin/empresas/${id}/documents`, { headers }),
     ])
-    const [compData, ckData, esData] = await Promise.all([compRes.json(), ckRes.json(), esRes.json()])
+    const [compData, ckData, esData, docData] = await Promise.all([compRes.json(), ckRes.json(), esRes.json(), docRes.json()])
     if (compData.success) { setCompany(compData.data); setReviewedBy(compData.data.reviewedBy ?? '') }
     if (ckData.success && ckData.data) { setChecklist(ckData.data); setForm(ckData.data) }
     else if (ckData.success) { setChecklist(null); setForm({}) }
     if (esData.success) setEsocialLogs(esData.data)
+    if (docData.success) setDocuments(docData.data)
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData() }, [fetchData])
@@ -135,6 +161,29 @@ export default function EmpresaDetailPage() {
       const data = await res.json()
       if (data.success) setEsocialLogs(logs => [data.data, ...logs])
     } finally { setAddingEsocial(false) }
+  }
+
+  async function uploadDocument() {
+    const file = fileInputRef.current?.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('tipoDocumento', docTipo)
+      if (uploadedBy) body.append('uploadedBy', uploadedBy)
+
+      const res = await fetch(`/api/admin/empresas/${id}/documents`, {
+        method: 'POST',
+        headers: { 'x-admin-secret': getAdminSecret() },
+        body,
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDocuments(docs => [data.data, ...docs])
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }
+    } finally { setUploading(false) }
   }
 
   function ChecklistRow({ label, statusKey, concluidoPorKey, concluidoEmValue, show = true }:
@@ -283,6 +332,69 @@ export default function EmpresaDetailPage() {
             className="w-full text-[13px] border border-gray-200 rounded-[8px] px-3 py-2 focus:outline-none focus:border-teal"
           />
         </div>
+      </div>
+
+      {/* Documentos */}
+      <div className="bg-white rounded-[12px] border border-gray-200 p-5 mb-6">
+        <p className="text-[14px] font-semibold text-gray-800 mb-4">Documentos entregues</p>
+
+        <div className="grid grid-cols-[160px_1fr_160px_auto] gap-2 mb-4 items-end">
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Tipo</label>
+            <select
+              value={docTipo}
+              onChange={e => setDocTipo(e.target.value)}
+              className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 bg-white focus:outline-none focus:border-teal"
+            >
+              {DOCUMENTO_TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Arquivo</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 bg-white focus:outline-none focus:border-teal"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Responsável</label>
+            <input
+              type="text"
+              placeholder="Quem anexou"
+              value={uploadedBy}
+              onChange={e => setUploadedBy(e.target.value)}
+              className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
+            />
+          </div>
+          <button className="btn btn-primary btn-sm self-end" onClick={uploadDocument} disabled={uploading}>
+            {uploading ? '…' : <><Upload size={13} /> Anexar</>}
+          </button>
+        </div>
+
+        {documents.length === 0 ? (
+          <p className="text-[12px] text-gray-400 py-4 text-center">Nenhum documento anexado.</p>
+        ) : (
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Tipo', 'Arquivo', 'Responsável', 'Enviado em'].map(h => (
+                  <th key={h} className="text-left py-2 font-semibold text-[10px] text-gray-400 uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {documents.map(doc => (
+                <tr key={doc.id} className="border-b border-gray-50">
+                  <td className="py-2.5 font-medium">{DOCUMENTO_TIPOS.find(t => t.value === doc.tipoDocumento)?.label ?? doc.tipoDocumento}</td>
+                  <td className="py-2.5 text-gray-600">{doc.nomeArquivo}</td>
+                  <td className="py-2.5 text-gray-400">{doc.uploadedBy ?? '—'}</td>
+                  <td className="py-2.5 text-gray-400">{formatDate(doc.uploadedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* eSocial Log */}

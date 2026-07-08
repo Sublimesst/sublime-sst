@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { CheckCircle2, Clock, FileText, CreditCard, LogOut, AlertCircle, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Clock, FileText, CreditCard, LogOut, AlertCircle, ChevronRight, Download } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { verifySessionCookie } from '@/lib/sessionCookie'
 import type { ClientSessionPayload } from '@/lib/clientAuth'
@@ -25,8 +25,14 @@ async function getCompany() {
       plan: true,
       payments: { orderBy: { createdAt: 'desc' } },
       onboardingData: true,
+      documents: { orderBy: { uploadedAt: 'desc' } },
     },
   })
+}
+
+const DOCUMENTO_LABELS: Record<string, string> = {
+  pgr: 'PGR', pcmso: 'PCMSO', declaracao: 'Declaração técnica',
+  os_epi: 'OS + Fichas de EPI', ltcat: 'LTCAT', contrato: 'Contrato',
 }
 
 type Step = { label: string; description: string; done: boolean; pending: boolean }
@@ -191,10 +197,30 @@ export default async function DashboardPage() {
               <FileText size={15} className="text-gray-400" />
               <span className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide">Documentos</span>
             </div>
-            <p className="text-[14px] text-gray-700">
-              {company.onboardingData ? 'Em elaboração' : 'Aguardando dados'}
-            </p>
-            <p className="text-[12px] text-gray-500 mt-1">PGR · PCMSO · ASOs</p>
+            {company.documents.length === 0 ? (
+              <>
+                <p className="text-[14px] text-gray-700">
+                  {company.onboardingData ? 'Em elaboração' : 'Aguardando dados'}
+                </p>
+                <p className="text-[12px] text-gray-500 mt-1">PGR · PCMSO · ASOs</p>
+              </>
+            ) : (
+              <ul className="space-y-2">
+                {company.documents.map(doc => (
+                  <li key={doc.id} className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] text-gray-700 truncate">
+                      {DOCUMENTO_LABELS[doc.tipoDocumento] ?? doc.tipoDocumento}
+                    </span>
+                    <a
+                      href={`/api/cliente/documents/${doc.id}/download`}
+                      className="flex items-center gap-1 text-[12px] text-teal hover:text-petrol font-medium shrink-0"
+                    >
+                      <Download size={13} /> Baixar
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 

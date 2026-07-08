@@ -152,6 +152,7 @@ model Company {
   esocialLogs        EsocialLog[]
   documentAccessLogs DocumentAccessLog[]
   commissions        Commission[]
+  documents          Document[]
 
   @@map("companies")
 }
@@ -234,6 +235,42 @@ model DocumentAccessLog {
 
   @@index([companyId, accessedAt])
   @@map("document_access_logs")
+}
+
+// ── DOCUMENTOS ENTREGUES (PGR, PCMSO, etc.) ───────────────────
+// Document não sabe COMO os bytes são guardados — só referencia
+// storageProvider + storageKey (ver src/lib/storage). Trocar de
+// provider no futuro não exige mudar este model.
+model Document {
+  id              String   @id @default(cuid())
+  companyId       String
+  tipoDocumento   String   // pgr | pcmso | declaracao | os_epi | ltcat | contrato
+  nomeArquivo     String
+  mimeType        String
+  tamanhoBytes    Int
+  storageProvider String   // "db" (interino, ver src/lib/storage/dbProvider.ts)
+  storageKey      String   @unique
+  uploadedBy      String?
+  uploadedAt      DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("documents")
+}
+
+// ── OBJETOS DE ARMAZENAMENTO (provider interino "db") ─────────
+// "Bucket" dentro do Postgres, usado só pelo DbStorageProvider.
+// Fica isolado do model Document de propósito: quando o provider
+// definitivo (Supabase Storage) entrar, esta tabela para de ser
+// usada e nada no Document precisa mudar.
+model DbStorageObject {
+  key         String   @id
+  data        Bytes
+  contentType String
+  createdAt   DateTime @default(now())
+
+  @@map("storage_objects_db")
 }
 
 // ── PARCEIROS ────────────────────────────────────────────────

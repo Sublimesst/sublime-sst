@@ -317,10 +317,10 @@ export default function EmpresaDetailPage() {
                   <p><span className="text-gray-400">Tratado por:</span> {company.cancellationRequests[0].handledBy}</p>
                 )}
                 {company.cancellationRequests[0].feeCents != null && (
-                  <p><span className="text-gray-400">Multa/mensalidades devidas:</span> {maskCurrencyBRL(company.cancellationRequests[0].feeCents)}</p>
+                  <p><span className="text-gray-400">Valor de rescisão antecipada:</span> {maskCurrencyBRL(company.cancellationRequests[0].feeCents)}</p>
                 )}
                 {company.cancellationRequests[0].pendingCents != null && (
-                  <p><span className="text-gray-400">Valores em aberto:</span> {maskCurrencyBRL(company.cancellationRequests[0].pendingCents)}</p>
+                  <p><span className="text-gray-400">Débitos já vencidos/em aberto:</span> {maskCurrencyBRL(company.cancellationRequests[0].pendingCents)}</p>
                 )}
                 {company.cancellationRequests[0].notes && (
                   <p><span className="text-gray-400">Observações:</span> {company.cancellationRequests[0].notes}</p>
@@ -377,7 +377,7 @@ export default function EmpresaDetailPage() {
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Multa/mensalidades devidas (R$)</label>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Valor de rescisão antecipada (R$)</label>
                 <input
                   type="text"
                   placeholder="0,00"
@@ -385,9 +385,13 @@ export default function EmpresaDetailPage() {
                   onChange={e => setCancelForm(f => ({ ...f, feeReais: e.target.value }))}
                   className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
                 />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Informe manualmente o valor devido pela quebra do prazo contratual mínimo, se aplicável.
+                  Pode incluir multa, mensalidades vincendas ou valor negociado de rescisão.
+                </p>
               </div>
               <div>
-                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Valores em aberto (R$)</label>
+                <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Débitos já vencidos/em aberto (R$)</label>
                 <input
                   type="text"
                   placeholder="0,00"
@@ -395,6 +399,10 @@ export default function EmpresaDetailPage() {
                   onChange={e => setCancelForm(f => ({ ...f, pendingReais: e.target.value }))}
                   className="w-full text-[12px] border border-gray-200 rounded-[6px] px-2 py-1.5 focus:outline-none focus:border-teal"
                 />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Informe mensalidades, implantação, serviços adicionais ou outros valores já vencidos
+                  antes do pedido de cancelamento.
+                </p>
               </div>
             </div>
             <div className="mb-3">

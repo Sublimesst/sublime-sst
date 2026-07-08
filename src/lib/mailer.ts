@@ -385,6 +385,28 @@ export async function notifyPaymentOverdue(data: {
   ).catch(err => console.error('[MAILER] notifyPaymentOverdue:', err))
 }
 
+// ATENÇÃO: propaga erros (sem catch interno) — o chamador precisa saber se o
+// aviso à equipe realmente saiu. Uma falha de assinatura já é grave; se o
+// e-mail que avisa disso também falhar silenciosamente, ninguém fica sabendo
+// que a assinatura precisa ser criada manualmente.
+export async function notifySubscriptionFailed(data: {
+  companyName: string; cnpj: string; companyId: string; error: string
+}) {
+  await sendEmail(NOTIFY, `🔴 Assinatura Asaas falhou: ${data.companyName}`,
+    baseHtml('Assinatura recorrente não foi criada',
+      `<div style="margin-bottom:14px">` + badge('🔴 AÇÃO MANUAL NECESSÁRIA', '#fee2e2', '#b91c1c') + `</div>` +
+      row('Empresa', data.companyName) +
+      row('CNPJ', data.cnpj) +
+      row('ID interno', data.companyId) +
+      `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
+        A cobrança de implantação foi criada normalmente, mas a assinatura recorrente
+        (mensalidade) falhou:<br><code style="font-size:12px;color:#b91c1c">${data.error}</code>
+        <br><br>Crie a assinatura manualmente no painel da Asaas para este cliente.
+      </p>`
+    )
+  )
+}
+
 export async function notifyOnboardingSubmitted(data: {
   companyName: string; cnpj: string; numFuncionarios: number; cargos?: string | null
 }) {

@@ -84,6 +84,9 @@ interface Company {
   createdAt: string
   plan?: { label: string; monthlyPrice: number } | null
   cancellationRequests?: CancellationRequest[]
+  asaasCustomerId?: string | null
+  asaasSubscriptionId?: string | null
+  subscriptionStatus?: string | null
 }
 
 const ITEM_STATUSES = [
@@ -299,6 +302,20 @@ export default function EmpresaDetailPage() {
           {company.status === 'cancelled' && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">CANCELADO</span>}
           <p className="text-[11px] text-gray-400 mt-0.5">Cadastro: {formatDate(company.createdAt)}</p>
         </div>
+      </div>
+
+      {/* Assinatura Asaas */}
+      <div className="bg-white rounded-[12px] border border-gray-200 p-4 mb-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-[12px] text-gray-500">
+        <span className="font-semibold text-gray-700">Assinatura Asaas</span>
+        <span>Customer: <span className="font-mono">{company.asaasCustomerId ?? '—'}</span></span>
+        <span>Assinatura: <span className="font-mono">{company.asaasSubscriptionId ?? '—'}</span></span>
+        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+          company.subscriptionStatus === 'active'  ? 'bg-green-100 text-green-700' :
+          company.subscriptionStatus === 'overdue' ? 'bg-red-100 text-red-700' :
+                                                       'bg-gray-100 text-gray-500'
+        }`}>
+          {company.subscriptionStatus ?? 'sem assinatura'}
+        </span>
       </div>
 
       {/* Cancelamento */}

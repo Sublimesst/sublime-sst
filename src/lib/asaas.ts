@@ -8,6 +8,13 @@ const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL ?? 'https://sandbox.asaas.com/
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY ?? ''
 const IS_MOCK = !ASAAS_API_KEY || ASAAS_API_KEY.startsWith('$aact_SuaChave')
 
+// Forma de pagamento da assinatura recorrente. UNDEFINED = cliente escolhe
+// na Asaas (mesmo padrão já usado na cobrança de implantação); a partir do
+// 1º pagamento a forma escolhida se repete nos ciclos seguintes. Configurável
+// porque o comportamento pode depender de recursos habilitados na conta Asaas.
+const SUBSCRIPTION_BILLING_TYPE =
+  (process.env.ASAAS_SUBSCRIPTION_BILLING_TYPE as CreateChargeParams['billingType']) ?? 'UNDEFINED'
+
 interface AsaasCustomer {
   id: string
   name: string
@@ -27,6 +34,14 @@ interface AsaasCharge {
   invoiceNumber: string
 }
 
+interface AsaasSubscription {
+  id: string
+  status: string
+  value: number
+  nextDueDate: string
+  cycle: string
+}
+
 interface CreateChargeParams {
   customer: string
   value: number
@@ -34,6 +49,17 @@ interface CreateChargeParams {
   description: string
   billingType?: 'BOLETO' | 'PIX' | 'CREDIT_CARD' | 'UNDEFINED'
   externalReference?: string
+}
+
+// Log de alerta quando uma operação real cai em modo mock. Em produção isso
+// nunca deveria acontecer — vira console.error (alto) em vez do warn de dev,
+// para não mascarar silenciosamente uma ASAAS_API_KEY ausente na Vercel.
+function warnMock(fnName: string) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error(`[ASAAS] ASAAS_API_KEY ausente/inválida em PRODUÇÃO — ${fnName} rodando em modo mock. Nenhuma cobrança real foi criada.`)
+  } else {
+    console.warn(`[ASAAS MOCK] ${fnName} — configure ASAAS_API_KEY para usar produção`)
+  }
 }
 
 // ── MOCK RESPONSES ────────────────────────────────────────────
@@ -57,6 +83,16 @@ function mockCharge(value: number): AsaasCharge {
     invoiceUrl: `https://sandbox.asaas.com/i/${id}`,
     bankSlipUrl: `https://sandbox.asaas.com/b/${id}`,
     invoiceNumber: `MOCK-${Date.now()}`,
+  }
+}
+
+function mockSubscription(value: number): AsaasSubscription {
+  return {
+    id: `sub_mock_${Date.now()}`,
+    status: 'ACTIVE',
+    value,
+    nextDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    cycle: 'MONTHLY',
   }
 }
 
@@ -85,15 +121,24 @@ export async function createOrFindCustomer(params: {
   phone: string
 }): Promise<AsaasCustomer> {
   if (IS_MOCK) {
-    console.warn('[ASAAS MOCK] createOrFindCustomer — configure ASAAS_API_KEY para usar produção')
+    warnMock('createOrFindCustomer')
     return mockCustomer(params.cnpj, params.name)
+  }
+
+  const cpfCnpj = params.cnpj.replace(/\D/g, '')
+
+  // Busca real por CNPJ antes de criar — evita duplicar customer na Asaas
+  // em reenvios/retries do formulário de cadastro.
+  const existing = await asaasFetch<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cpfCnpj}`)
+  if (existing.data.length > 0) {
+    return existing.data[0]
   }
 
   return asaasFetch<AsaasCustomer>('/customers', {
     method: 'POST',
     body: JSON.stringify({
       name: params.name,
-      cpfCnpj: params.cnpj.replace(/\D/g, ''),
+      cpfCnpj,
       email: params.email,
       mobilePhone: params.phone.replace(/\D/g, ''),
       notificationDisabled: false,
@@ -112,7 +157,7 @@ export async function createImplantacaoCharge(params: {
   const value = params.amount
 
   if (IS_MOCK) {
-    console.warn('[ASAAS MOCK] createImplantacaoCharge — retornando mock')
+    warnMock('createImplantacaoCharge')
     return mockCharge(value)
   }
 
@@ -131,6 +176,38 @@ export async function createImplantacaoCharge(params: {
       value,
       dueDate,
       description: `Sublime Digital ${params.planLabel} — Implantação${descPromo} (${valorFmt})`,
+      externalReference: params.companyId,
+    }),
+  })
+}
+
+export async function createSubscription(params: {
+  customerId: string
+  companyId: string
+  value: number   // em reais (não centavos) — mensalidade do plano/faixa
+  planLabel: string
+}): Promise<AsaasSubscription> {
+  if (IS_MOCK) {
+    warnMock('createSubscription')
+    return mockSubscription(params.value)
+  }
+
+  // Primeira cobrança da assinatura 30 dias após a criação (mesma janela de
+  // carência já usada para liberação de comissão — sem relação direta, só
+  // um valor de negócio razoável para o 1º ciclo de mensalidade).
+  const nextDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0]
+
+  return asaasFetch<AsaasSubscription>('/subscriptions', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer: params.customerId,
+      billingType: SUBSCRIPTION_BILLING_TYPE,
+      value: params.value,
+      nextDueDate,
+      cycle: 'MONTHLY',
+      description: `Sublime Digital ${params.planLabel} — Mensalidade`,
       externalReference: params.companyId,
     }),
   })

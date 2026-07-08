@@ -139,6 +139,11 @@ model Company {
   reviewedAt           DateTime?
   documentsDeliveredAt DateTime? // preparação P1: setado quando status vira documents_delivered pela 1ª vez
 
+  // Assinatura recorrente Asaas (E4)
+  asaasCustomerId     String?
+  asaasSubscriptionId String?   @unique
+  subscriptionStatus  String?   // active | overdue | inactive — null = assinatura nunca criada
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -401,25 +406,25 @@ model Commission {
 
 // ── PAGAMENTOS ───────────────────────────────────────────────
 model Payment {
-  id          String   @id @default(cuid())
-  companyId   String
-  asaasId     String?
-  type        String   // implantacao | mensalidade
-  amount      Int      // centavos
-  status      String   @default("pending") // pending | confirmed | failed | refunded
-  dueDate     DateTime?
-  paidAt      DateTime?
-  checkoutUrl String?
-  invoiceUrl  String?
-  billingType String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  companyId         String
+  asaasId           String?  @unique
+  externalReference String?  // ecoado pela Asaas (= companyId, propagado da assinatura) — usado p/ reconciliar mensalidade desconhecida
+  type              String   // implantacao | mensalidade
+  amount            Int      // centavos
+  status            String   @default("pending") // pending | confirmed | failed | refunded
+  dueDate           DateTime?
+  paidAt            DateTime?
+  checkoutUrl       String?
+  invoiceUrl        String?
+  billingType       String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   company     Company    @relation(fields: [companyId], references: [id])
   commissions Commission[]
 
-  @@index([asaasId])
   @@index([companyId, type, status])
   @@map("payments")
 }

@@ -25,28 +25,67 @@ export async function POST(req: NextRequest) {
   const { event, payment } = body
 
   if (event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED') {
-    const dbPayment = await prisma.payment.findFirst({
+    let dbPayment = await prisma.payment.findFirst({
       where: { asaasId: payment.id },
       include: { company: { include: { lead: true } } },
     })
 
     if (!dbPayment) {
-      return NextResponse.json({ ok: true, note: 'payment not found in db' })
-    }
+      // Mensalidade gerada pela assinatura Asaas, ainda sem Payment local.
+      // Reconcilia por externalReference (= companyId, propagado da
+      // assinatura para cada cobrança gerada) ou, se ausente, pelo
+      // subscription id gravado em Company.asaasSubscriptionId. Uma
+      // implantação NUNCA cai aqui — o Payment dela já existe antes de
+      // qualquer webhook (criado na mesma request que gera a cobrança).
+      const byExternalRef = payment.externalReference
+        ? await prisma.company.findUnique({ where: { id: payment.externalReference } })
+        : null
+      const resolvedCompany = byExternalRef ?? (payment.subscription
+        ? await prisma.company.findFirst({ where: { asaasSubscriptionId: payment.subscription } })
+        : null)
 
-    // Idempotência atômica: só o primeiro webhook consegue fazer a transição
-    // pending → confirmed. Entregas simultâneas (Asaas reenvia) retornam aqui
-    // sem duplicar comissão nem reenviar e-mail.
-    const transition = await prisma.payment.updateMany({
-      where: { id: dbPayment.id, status: { not: 'confirmed' } },
-      data: {
-        status:      'confirmed',
-        paidAt:      new Date(),
-        billingType: payment.billingType ?? null,
-      },
-    })
-    if (transition.count === 0) {
-      return NextResponse.json({ ok: true, note: 'already processed' })
+      if (!resolvedCompany) {
+        console.error('[WEBHOOK] Pagamento desconhecido, sem externalReference/subscription reconciliável:', payment.id)
+        return NextResponse.json({ ok: true, note: 'payment not found in db' })
+      }
+
+      // asaasId é @unique: uma 2ª entrega concorrente do mesmo evento colide
+      // aqui e cai no catch — tratado como idempotente, sem duplicar.
+      try {
+        const created = await prisma.payment.create({
+          data: {
+            companyId:         resolvedCompany.id,
+            asaasId:           payment.id,
+            externalReference: payment.externalReference ?? null,
+            type:              'mensalidade',
+            amount:            Math.round((payment.value ?? 0) * 100),
+            status:            'confirmed',
+            paidAt:            new Date(),
+            billingType:       payment.billingType ?? null,
+          },
+        })
+        dbPayment = await prisma.payment.findUniqueOrThrow({
+          where: { id: created.id },
+          include: { company: { include: { lead: true } } },
+        })
+      } catch (err) {
+        return NextResponse.json({ ok: true, note: 'already processed (race)' })
+      }
+    } else {
+      // Idempotência atômica: só o primeiro webhook consegue fazer a transição
+      // pending → confirmed. Entregas simultâneas (Asaas reenvia) retornam aqui
+      // sem duplicar comissão nem reenviar e-mail.
+      const transition = await prisma.payment.updateMany({
+        where: { id: dbPayment.id, status: { not: 'confirmed' } },
+        data: {
+          status:      'confirmed',
+          paidAt:      new Date(),
+          billingType: payment.billingType ?? null,
+        },
+      })
+      if (transition.count === 0) {
+        return NextResponse.json({ ok: true, note: 'already processed' })
+      }
     }
 
     // Notifica a equipe (com await — fire-and-forget morre em serverless)

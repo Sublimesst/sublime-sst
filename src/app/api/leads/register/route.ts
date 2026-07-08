@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { createOrFindCustomer, createImplantacaoCharge, isAsaasMock } from '@/lib/asaas'
+import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock } from '@/lib/asaas'
+import { notifySubscriptionFailed } from '@/lib/mailer'
 import { getPromoDeadline } from '@/lib/utils'
 import { PRICING, CONTRACT_VERSION, PROMO_WINDOW_MS, type PlanKey, type FaixaKey } from '@/lib/pricing'
 
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
         partnerId:            partner?.id,
         source:               partner ? 'partner' : 'site',
         status:               'pending',
+        asaasCustomerId:      customer.id,
       },
     })
 
@@ -135,6 +137,43 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Assinatura recorrente (mensalidade). Falha aqui NÃO derruba o cadastro —
+    // o cliente já tem uma cobrança de implantação válida. subscriptionCreated
+    // vai na resposta como sinal explícito (não só em log) para o time saber
+    // que precisa criar a assinatura manualmente no painel da Asaas.
+    let subscriptionCreated = true
+    let subscriptionFailureNotified: boolean | null = null
+    try {
+      const subscription = await createSubscription({
+        customerId: customer.id,
+        companyId:  company.id,
+        value:      mensalidadeValor / 100,
+        planLabel:  plan.name,
+      })
+      await prisma.company.update({
+        where: { id: company.id },
+        data: {
+          asaasSubscriptionId: subscription.id,
+          subscriptionStatus:  subscription.status.toLowerCase(),
+        },
+      })
+    } catch (err) {
+      subscriptionCreated = false
+      console.error('[LEADS/REGISTER] Falha ao criar assinatura recorrente:', err)
+      try {
+        await notifySubscriptionFailed({
+          companyName: company.razaoSocial,
+          cnpj:        company.cnpj,
+          companyId:   company.id,
+          error:       err instanceof Error ? err.message : String(err),
+        })
+        subscriptionFailureNotified = true
+      } catch (notifyErr) {
+        subscriptionFailureNotified = false
+        console.error('[LEADS/REGISTER] Falha ao notificar equipe sobre assinatura (e-mail NÃO enviado):', notifyErr)
+      }
+    }
+
     await prisma.lead.update({
       where: { id: lead.id },
       data: { status: 'registered', ...(partner ? { partnerId: partner.id } : {}) },
@@ -150,6 +189,8 @@ export async function POST(req: NextRequest) {
         planType,
         implantacaoValor: implantacaoValorReais,
         mensalidadeValor,
+        subscriptionCreated,
+        ...(subscriptionCreated ? {} : { subscriptionFailureNotified }),
       },
     })
   } catch (err) {

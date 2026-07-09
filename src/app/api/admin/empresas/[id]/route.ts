@@ -49,6 +49,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { status, reviewedBy } = parsed.data
 
+  if (status === 'cancelled') {
+    return NextResponse.json(
+      { success: false, error: 'Use o fluxo dedicado de cancelamento (bloco "Cancelamento do contrato" na página da empresa) para cancelar. Esta rota genérica não registra motivo, não estorna comissão nem envia e-mails.' },
+      { status: 400 }
+    )
+  }
+
   const company = await prisma.company.findUnique({ where: { id: params.id } })
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })
 

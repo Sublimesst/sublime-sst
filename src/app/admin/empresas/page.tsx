@@ -34,6 +34,12 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   cancelled:           { label: 'Cancelado',          color: 'bg-gray-100 text-gray-500' },
 }
 
+// Cancelamento é excluído das opções editáveis do dropdown genérico de propósito:
+// só pode acontecer pelo bloco dedicado em /admin/empresas/[id], que registra
+// motivo, estorna comissão em_carencia e envia e-mails. A API também rejeita
+// essa transição por aqui (ver PATCH /api/admin/empresas/[id]).
+const EDITABLE_STATUSES = Object.entries(STATUS_LABELS).filter(([k]) => k !== 'cancelled')
+
 function formatBRL(cents: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
 }
@@ -220,17 +226,26 @@ export default function EmpresasPage() {
                       </td>
                       <td className="px-5 py-3.5 text-gray-500 whitespace-nowrap text-[11px]">{formatDate(c.createdAt)}</td>
                       <td className="px-5 py-3.5">
-                        <select
-                          value={c.status}
-                          disabled={isUpdating}
-                          onChange={e => updateStatus(c.id, e.target.value)}
-                          className="text-[11px] border border-gray-200 rounded-[6px] px-2 py-1 bg-white focus:outline-none focus:border-teal disabled:opacity-50 cursor-pointer"
-                        >
-                          {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                            <option key={k} value={k}>{v.label}</option>
-                          ))}
-                        </select>
-                        {isUpdating && <p className="text-[10px] text-gray-400 mt-0.5">Salvando…</p>}
+                        {c.status === 'cancelled' ? (
+                          <>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${st.color}`}>{st.label}</span>
+                            <p className="text-[10px] text-gray-400 mt-0.5">Gerencie na página da empresa</p>
+                          </>
+                        ) : (
+                          <>
+                            <select
+                              value={c.status}
+                              disabled={isUpdating}
+                              onChange={e => updateStatus(c.id, e.target.value)}
+                              className="text-[11px] border border-gray-200 rounded-[6px] px-2 py-1 bg-white focus:outline-none focus:border-teal disabled:opacity-50 cursor-pointer"
+                            >
+                              {EDITABLE_STATUSES.map(([k, v]) => (
+                                <option key={k} value={k}>{v.label}</option>
+                              ))}
+                            </select>
+                            {isUpdating && <p className="text-[10px] text-gray-400 mt-0.5">Salvando…</p>}
+                          </>
+                        )}
                       </td>
                     </tr>
                   )

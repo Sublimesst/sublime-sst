@@ -250,6 +250,23 @@ export default function EmpresaDetailPage() {
     } finally { setCancelling(false) }
   }
 
+  function AsaasManualAlert() {
+    return (
+      <div className="bg-amber-50 border border-amber-300 rounded-[8px] p-3 mb-4 text-[12px] text-amber-800">
+        <p className="font-semibold mb-1">⚠️ Cancelamento da assinatura Asaas ainda é manual</p>
+        <p>
+          Cancelar aqui NÃO cancela a cobrança recorrente na Asaas. Após registrar o cancelamento,
+          acesse o painel da Asaas e cancele a assinatura manualmente.
+        </p>
+        {company!.asaasSubscriptionId ? (
+          <p className="mt-1">ID da assinatura: <span className="font-mono font-semibold">{company!.asaasSubscriptionId}</span></p>
+        ) : (
+          <p className="mt-1">Não há assinatura registrada no sistema para esta empresa.</p>
+        )}
+      </div>
+    )
+  }
+
   function ChecklistRow({ label, statusKey, concluidoPorKey, concluidoEmValue, show = true }:
     { label: string; statusKey: keyof Checklist; concluidoPorKey: keyof Checklist; concluidoEmValue?: string | null; show?: boolean }) {
     if (!show) return null
@@ -325,6 +342,7 @@ export default function EmpresaDetailPage() {
         {company.status === 'cancelled' ? (
           <div>
             <p className="text-[12px] text-red-600 font-semibold mb-3">🚫 Contrato cancelado</p>
+            <AsaasManualAlert />
             {company.cancellationRequests?.[0] && (
               <div className="text-[12px] text-gray-600 space-y-1">
                 <p><span className="text-gray-400">Data do pedido:</span> {formatDate(company.cancellationRequests[0].requestedAt)}</p>
@@ -350,12 +368,10 @@ export default function EmpresaDetailPage() {
                 {' '}E-mail parceiro: {cancelEmailStatus.parceiro === null ? 'não aplicável' : cancelEmailStatus.parceiro ? '✅ enviado' : '⚠️ falhou'}
               </p>
             )}
-            <p className="text-[11px] text-amber-600 mt-3">
-              ⚠️ Lembrete: cancele também a cobrança no painel da Asaas manualmente — ainda não há integração automática de assinatura recorrente.
-            </p>
           </div>
         ) : (
           <>
+            <AsaasManualAlert />
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-[10px] text-gray-400 uppercase tracking-wide mb-1 block">Motivo *</label>
@@ -442,7 +458,6 @@ export default function EmpresaDetailPage() {
             <p className="text-[11px] text-gray-400 mt-2">
               Ao confirmar: empresa marcada como cancelada, comissões em carência são estornadas
               (liberadas/pagas não são afetadas), e-mails enviados ao cliente e ao parceiro (se houver).
-              Cancelamento da cobrança na Asaas continua manual nesta fase.
             </p>
           </>
         )}

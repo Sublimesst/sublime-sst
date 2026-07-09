@@ -292,64 +292,77 @@ function ElegibilidadeInner() {
   const handleSubmit = async () => {
     if (!validateStep2()) return
     setLoading(true)
+    setErrors(e => { const n = { ...e }; delete n.generic; return n })
 
     // Vínculo com o parceiro indicador desde a captura (?ref=CODE → sessionStorage)
     const partnerRef = typeof window !== 'undefined'
       ? sessionStorage.getItem('sublime_partner_ref') ?? undefined
       : undefined
 
-    fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cnpj: form.cnpj, companyName: form.companyName,
-        name: form.name, email: form.email, whatsapp: form.whatsapp,
-        partnerRef,
-      }),
-    }).catch(() => {})
-    track('lead_captured', utmRef.current)
-    track('eligibility_step_completed', { step: 2, ...utmRef.current })
-
-    const engineResult = runEngine({
-      cnaeCode: form.cnaeCode, cnaeInCatalog: form.cnaeInCatalog,
-      employees: form.employees,
-      usesMachines: form.usesMachines!,   usesChemicals: form.usesChemicals!,
-      worksAtHeight: form.worksAtHeight!, hasExternalWork: form.hasExternalWork!,
-    })
-
-    setResult(engineResult)
-
-    if (engineResult.eligible) {
-      track('eligibility_result_eligible', { employees: form.employees, ...utmRef.current })
-      setStep('eligible')
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('sublime_eligibility', JSON.stringify({
-          ...form, promoEnd,
-        }))
-      }
-    } else {
-      track('eligibility_result_custom_quote', {
-        reasons: engineResult.reasons.join(','), ...utmRef.current,
+    try {
+      // Lead e assessment precisam estar salvos ANTES de mostrar qualquer
+      // resultado — se qualquer um falhar, não avança (evita cadastro
+      // sem EligibilityAssessment, causa raiz do fallback de preço errado).
+      const leadRes = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cnpj: form.cnpj, companyName: form.companyName,
+          name: form.name, email: form.email, whatsapp: form.whatsapp,
+          partnerRef,
+        }),
       })
-      setStep('backoffice')
-    }
+      const leadData = await leadRes.json()
+      if (!leadRes.ok || !leadData.success) throw new Error('lead')
 
-    setLoading(false)
+      track('lead_captured', utmRef.current)
+      track('eligibility_step_completed', { step: 2, ...utmRef.current })
 
-    fetch('/api/eligibility', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cnpj: form.cnpj, companyName: form.companyName,
-        name: form.name, email: form.email, whatsapp: form.whatsapp,
-        cnae: form.cnaeDisplay, cnaeCode: form.cnaeCode,
+      const engineResult = runEngine({
+        cnaeCode: form.cnaeCode, cnaeInCatalog: form.cnaeInCatalog,
         employees: form.employees,
-        usesMachines: form.usesMachines, usesChemicals: form.usesChemicals,
-        worksAtHeight: form.worksAtHeight, hasExternalWork: form.hasExternalWork,
-        declaration: form.declaration,
-        partnerRef,
-      }),
-    }).catch(() => {})
+        usesMachines: form.usesMachines!,   usesChemicals: form.usesChemicals!,
+        worksAtHeight: form.worksAtHeight!, hasExternalWork: form.hasExternalWork!,
+      })
+
+      const assessRes = await fetch('/api/eligibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cnpj: form.cnpj, companyName: form.companyName,
+          name: form.name, email: form.email, whatsapp: form.whatsapp,
+          cnae: form.cnaeDisplay, cnaeCode: form.cnaeCode,
+          employees: form.employees,
+          usesMachines: form.usesMachines, usesChemicals: form.usesChemicals,
+          worksAtHeight: form.worksAtHeight, hasExternalWork: form.hasExternalWork,
+          declaration: form.declaration,
+          partnerRef,
+        }),
+      })
+      const assessData = await assessRes.json()
+      if (!assessRes.ok || !assessData.success) throw new Error('assessment')
+
+      setResult(engineResult)
+
+      if (engineResult.eligible) {
+        track('eligibility_result_eligible', { employees: form.employees, ...utmRef.current })
+        setStep('eligible')
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('sublime_eligibility', JSON.stringify({
+            ...form, promoEnd,
+          }))
+        }
+      } else {
+        track('eligibility_result_custom_quote', {
+          reasons: engineResult.reasons.join(','), ...utmRef.current,
+        })
+        setStep('backoffice')
+      }
+    } catch {
+      setErrors(e => ({ ...e, generic: 'Não foi possível salvar sua avaliação agora. Verifique sua conexão e tente novamente.' }))
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleStartRegistration = () => {
@@ -641,6 +654,9 @@ function ElegibilidadeInner() {
                     {errors.whatsapp && <p className="text-[12px] text-red-500 mt-1">{errors.whatsapp}</p>}
                   </div>
                 </div>
+                {errors.generic && (
+                  <p className="text-[13px] text-red-600 mb-4 p-3 bg-red-50 rounded-[8px]">{errors.generic}</p>
+                )}
                 <div className="flex gap-3">
                   <button className="btn btn-ghost" onClick={() => setStep(1)}>
                     <ArrowLeft size={16} /> Voltar

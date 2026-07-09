@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock } from '@/lib/asaas'
 import { notifySubscriptionFailed } from '@/lib/mailer'
 import { getPromoDeadline } from '@/lib/utils'
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
 import { PRICING, CONTRACT_VERSION, PROMO_WINDOW_MS, type PlanKey, type FaixaKey } from '@/lib/pricing'
 
 const schema = z.object({
+  cnpj:               z.string().min(14),
   razaoSocial:        z.string().min(1),
   nomeFantasia:       z.string().optional(),
   responsavel:        z.string().min(1),
@@ -28,7 +31,32 @@ const schema = z.object({
   partnerRef:         z.string().optional(),
 })
 
+// Monta a resposta de sucesso a partir de uma Company já existente — usado
+// tanto no caminho normal de idempotência quanto na corrida de duplo-clique.
+function idempotentResponse(company: {
+  id: string; implantacaoPromo: boolean; planType: string | null; implantacaoValor: number
+  asaasSubscriptionId: string | null; payments: { checkoutUrl: string | null }[]
+}, mensalidadeValor: number) {
+  return NextResponse.json({
+    success: true,
+    data: {
+      companyId:           company.id,
+      checkoutUrl:         company.payments[0]?.checkoutUrl ?? null,
+      isMock:              isAsaasMock,
+      isPromo:             company.implantacaoPromo,
+      planType:            company.planType,
+      implantacaoValor:    company.implantacaoValor / 100,
+      mensalidadeValor,
+      subscriptionCreated: !!company.asaasSubscriptionId,
+      alreadyRegistered:   true,
+    },
+  })
+}
+
 export async function POST(req: NextRequest) {
+  const limit = Number(process.env.RATE_LIMIT_REGISTER ?? 5)
+  if (!rateLimit(req, limit)) return rateLimitResponse()
+
   try {
     const body = await req.json()
     const data = schema.parse(body)
@@ -41,9 +69,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'É necessário aceitar o contrato de prestação de serviços.' }, { status: 400 })
     }
 
-    const lead = await prisma.lead.findFirst({
-      where: { email: data.email },
-      orderBy: { createdAt: 'desc' },
+    // Lead resolvido pelo mesmo id determinístico usado em /api/leads e
+    // /api/eligibility (cnpj_XXXX) — não mais por e-mail, que é ambíguo
+    // (mesmo e-mail pode ter testado várias empresas/CNPJs diferentes).
+    const leadId = `cnpj_${data.cnpj.replace(/\D/g, '')}`
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
       include: { eligibilityAssessments: { orderBy: { createdAt: 'desc' }, take: 1 } },
     })
 
@@ -52,17 +83,38 @@ export async function POST(req: NextRequest) {
     }
 
     const assessment = lead.eligibilityAssessments[0]
-    const isPromo = assessment?.resultShownAt
+    if (!assessment) {
+      return NextResponse.json(
+        { success: false, error: 'Não encontramos sua avaliação de elegibilidade. Refaça o teste antes de continuar o cadastro.' },
+        { status: 422 }
+      )
+    }
+
+    const isPromo = assessment.resultShownAt
       ? (Date.now() - new Date(assessment.resultShownAt).getTime()) < PROMO_WINDOW_MS
       : false
 
     const planType = data.planType as PlanKey
-    const employees = ((assessment?.employees ?? '1-5') as FaixaKey)
+    const employees = assessment.employees as FaixaKey
     const plan = PRICING[planType]
 
     const implantacaoValorCentavos = isPromo ? plan.implantacao.promo : plan.implantacao.padrao
     const implantacaoValorReais    = implantacaoValorCentavos / 100
-    const mensalidadeValor         = plan.faixas[employees]?.monthly ?? plan.faixas['1-5'].monthly
+    // Fallback aqui é só defesa de indexação (employees nunca deveria ser algo
+    // fora das 3 faixas, já que '21+' nunca é elegível) — não é mais o fallback
+    // de dado ausente que existia antes de o assessment ser obrigatório acima.
+    const mensalidadeValor = plan.faixas[employees]?.monthly ?? plan.faixas['1-5'].monthly
+
+    // Idempotência: Company.leadId é @unique — se já existe uma empresa para
+    // este lead, retorna o resultado já existente em vez de criar duplicata
+    // (cobre duplo-clique e retry do mesmo POST).
+    const existingCompany = await prisma.company.findUnique({
+      where: { leadId: lead.id },
+      include: { payments: { where: { type: 'implantacao' }, take: 1 } },
+    })
+    if (existingCompany) {
+      return idempotentResponse(existingCompany, mensalidadeValor)
+    }
 
     const dbPlan = await prisma.plan.findFirst({ where: { name: employees } })
 
@@ -83,38 +135,53 @@ export async function POST(req: NextRequest) {
       ?? 'unknown'
     const clientUa = req.headers.get('user-agent') ?? 'unknown'
 
-    const company = await prisma.company.create({
-      data: {
-        leadId:               lead.id,
-        planId:               dbPlan?.id,
-        cnpj:                 lead.cnpj,
-        razaoSocial:          data.razaoSocial,
-        nomeFantasia:         data.nomeFantasia,
-        responsavel:          data.responsavel,
-        email:                data.email,
-        whatsapp:             data.whatsapp,
-        cep:                  data.cep,
-        cidade:               data.cidade,
-        estado:               data.estado,
-        endereco:             data.endereco,
-        numFuncionarios:      data.numFuncionarios,
-        cargos:               data.cargos,
-        observations:         data.observations,
-        planType,
-        implantacaoValor:     implantacaoValorCentavos,
-        implantacaoPromo:     isPromo,
-        promoDeadline:        isPromo ? getPromoDeadline(24) : null,
-        contractAcceptedAt:   new Date(),
-        contractAcceptanceIp: clientIp,
-        contractAcceptanceUa: clientUa,
-        contractVersion:      CONTRACT_VERSION,
-        ltcatAddon:           data.ltcatAddon,
-        partnerId:            partner?.id,
-        source:               partner ? 'partner' : 'site',
-        status:               'pending',
-        asaasCustomerId:      customer.id,
-      },
-    })
+    let company
+    try {
+      company = await prisma.company.create({
+        data: {
+          leadId:               lead.id,
+          planId:               dbPlan?.id,
+          cnpj:                 lead.cnpj,
+          razaoSocial:          data.razaoSocial,
+          nomeFantasia:         data.nomeFantasia,
+          responsavel:          data.responsavel,
+          email:                data.email,
+          whatsapp:             data.whatsapp,
+          cep:                  data.cep,
+          cidade:               data.cidade,
+          estado:               data.estado,
+          endereco:             data.endereco,
+          numFuncionarios:      data.numFuncionarios,
+          cargos:               data.cargos,
+          observations:         data.observations,
+          planType,
+          implantacaoValor:     implantacaoValorCentavos,
+          implantacaoPromo:     isPromo,
+          promoDeadline:        isPromo ? getPromoDeadline(24) : null,
+          contractAcceptedAt:   new Date(),
+          contractAcceptanceIp: clientIp,
+          contractAcceptanceUa: clientUa,
+          contractVersion:      CONTRACT_VERSION,
+          ltcatAddon:           data.ltcatAddon,
+          partnerId:            partner?.id,
+          source:               partner ? 'partner' : 'site',
+          status:               'pending',
+          asaasCustomerId:      customer.id,
+        },
+      })
+    } catch (err) {
+      // Corrida: outra requisição (duplo-clique/retry quase simultâneo) já
+      // criou a Company para este leadId entre o check de idempotência acima
+      // e este create — trata como sucesso idempotente, não como erro.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const raced = await prisma.company.findUnique({
+          where: { leadId: lead.id },
+          include: { payments: { where: { type: 'implantacao' }, take: 1 } },
+        })
+        if (raced) return idempotentResponse(raced, mensalidadeValor)
+      }
+      throw err
+    }
 
     const charge = await createImplantacaoCharge({
       customerId: customer.id,

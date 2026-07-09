@@ -17,6 +17,7 @@ export default function CadastroPage() {
     consentDataUsage: false, consentDeclaration: false, consentTerms: false,
   })
   const [plan, setPlan] = useState<{ monthly: number; implantacaoPromo: number; label: string; planType?: string; planName?: string } | null>(null)
+  const [cnpj, setCnpj] = useState('')
   const [planType, setPlanType] = useState<'essencial' | 'premium'>('essencial')
   const [faixa, setFaixa] = useState<'1-5' | '6-10' | '11-20' | null>(null)
   const [ltcatAddon, setLtcatAddon] = useState(false)
@@ -39,6 +40,7 @@ export default function CadastroPage() {
         email: data.email || '',
         whatsapp: data.whatsapp || '',
       }))
+      if (data.cnpj) setCnpj(data.cnpj)
       if (data.plan) setPlan(data.plan)
       if (data.planType) setPlanType(data.planType)
       if (data.employees === '1-5' || data.employees === '6-10' || data.employees === '11-20') setFaixa(data.employees)
@@ -101,11 +103,12 @@ export default function CadastroPage() {
   const handleSubmit = async () => {
     if (!validate()) return
     setLoading(true)
+    setErrors(e => { const n = { ...e }; delete n.generic; return n })
     try {
       const res = await fetch('/api/leads/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, planType, ltcatAddon, partnerRef, contractAccepted }),
+        body: JSON.stringify({ ...form, cnpj, planType, ltcatAddon, partnerRef, contractAccepted }),
       })
       const data = await res.json()
       if (data.success) {
@@ -119,6 +122,8 @@ export default function CadastroPage() {
           track('asaas_checkout_clicked')
           setTimeout(() => { window.location.href = checkoutUrl }, 1500)
         }
+      } else {
+        setErrors({ generic: data.error ?? 'Não foi possível concluir o cadastro. Tente novamente ou fale conosco pelo WhatsApp.' })
       }
     } catch {
       setErrors({ generic: 'Erro ao enviar. Tente novamente ou fale conosco pelo WhatsApp.' })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Search, CheckCircle, XCircle, Clock } from 'lucide-react'
 import cnaeCatalog from '@/lib/cnae_catalog.json'
 
@@ -34,20 +34,11 @@ function normalizeStatus(raw: string | undefined): CnaeStatus {
 export default function AdminCnaePage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<CnaeStatus | 'all'>('all')
-  const [overrides, setOverrides] = useState<Record<string, CnaeStatus>>({})
 
-  useEffect(() => {
-    const saved = localStorage.getItem('sublime_cnae_overrides')
-    if (saved) setOverrides(JSON.parse(saved))
-  }, [])
-
-  const setStatus = (code: string, status: CnaeStatus) => {
-    const updated = { ...overrides, [code]: status }
-    setOverrides(updated)
-    localStorage.setItem('sublime_cnae_overrides', JSON.stringify(updated))
-  }
-
-  const getStatus = (row: CnaeRow): CnaeStatus => overrides[row.nr4_class_code] ?? normalizeStatus(row.online_catalog_status)
+  // Status informativo, direto do catálogo oficial — não há override manual
+  // nesta tela. A elegibilidade real é decidida por runEligibilityEngine
+  // (presença do código no catálogo), que não lê nenhum status desta página.
+  const getStatus = (row: CnaeRow): CnaeStatus => normalizeStatus(row.online_catalog_status)
 
   const filtered = entries.filter(e => {
     const q = search.toLowerCase()
@@ -69,7 +60,7 @@ export default function AdminCnaePage() {
         <p className="text-[13px] text-gray-500">{entries.length} CNAEs GR1 importados da NR-4</p>
       </div>
 
-      {/* Status summary */}
+      {/* Status summary — informativo, clique só filtra a listagem abaixo */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {(Object.entries(STATUS_CONFIG) as [CnaeStatus, typeof STATUS_CONFIG[CnaeStatus]][]).map(([key, cfg]) => {
           const Icon = cfg.icon
@@ -86,10 +77,11 @@ export default function AdminCnaePage() {
         })}
       </div>
 
-      {/* Warning */}
-      <div className="bg-amber-50 border border-amber-200 rounded-[10px] p-4 mb-5 text-[13px] text-amber-800">
-        ⚠️ <strong>Atenção:</strong> Aprovar um CNAE aqui o torna elegível para o modelo digital. Bloqueá-lo impede o fluxo online mesmo que seja GR1.
-        Apenas o responsável técnico deve alterar este catálogo. As alterações desta sessão são salvas localmente — em produção, use a API.
+      {/* Aviso informativo */}
+      <div className="bg-blue-50 border border-blue-200 rounded-[10px] p-4 mb-5 text-[13px] text-blue-900">
+        A elegibilidade do Sublime Digital é definida pela presença do CNAE no catálogo oficial do sistema.
+        Esta tela é apenas informativa nesta fase. Alterações de elegibilidade devem ser feitas por atualização
+        controlada do catálogo, com revisão técnica, e não por botões operacionais.
       </div>
 
       {/* Search */}
@@ -105,7 +97,7 @@ export default function AdminCnaePage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                {['Código','Descrição','GR','Status','Ações'].map(h => (
+                {['Código','Descrição','GR','Status'].map(h => (
                   <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600 text-[11px] uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -127,26 +119,14 @@ export default function AdminCnaePage() {
                         <Icon size={11} /> {cfg.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        {(['approved','pending','blocked'] as CnaeStatus[]).map(s => (
-                          <button key={s}
-                            disabled={st === s}
-                            onClick={() => setStatus(row.nr4_class_code, s)}
-                            className={`text-[11px] px-2 py-1 rounded border transition-colors ${st === s ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-default' : 'bg-white border-gray-200 text-gray-600 hover:border-petrol hover:text-petrol'}`}>
-                            {s === 'approved' ? '✓ Aprovar' : s === 'blocked' ? '✗ Bloquear' : '~ Pendente'}
-                          </button>
-                        ))}
-                      </div>
-                    </td>
                   </tr>
                 )
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Nenhum CNAE encontrado.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Nenhum CNAE encontrado.</td></tr>
               )}
               {filtered.length > 100 && (
-                <tr><td colSpan={5} className="px-4 py-3 text-center text-gray-400 text-[12px]">Mostrando 100 de {filtered.length}. Refine a busca.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-3 text-center text-gray-400 text-[12px]">Mostrando 100 de {filtered.length}. Refine a busca.</td></tr>
               )}
             </tbody>
           </table>

@@ -10,6 +10,7 @@ import type {
   EmployeeRange,
 } from '@/types'
 import { getPlan } from '@/lib/utils'
+import { onlyDigits, normalizeCnaeCode } from '@/lib/cnae'
 import cnaeCatalog from '@/lib/cnae_catalog.json'
 
 // ── CNAE CATALOG ──────────────────────────────────────────────
@@ -24,9 +25,14 @@ interface CnaeEntry {
 
 const catalog: CnaeEntry[] = (cnaeCatalog as { entries: CnaeEntry[] }).entries
 
-// Índice rápido por código
+// Índice rápido por código — chave sempre normalizada pro nível de classe
+// (o catálogo já vem nesse formato, mas normalizar aqui também é defensivo
+// e mantém a mesma regra usada nas buscas/lookups abaixo).
 const cnaeIndex = new Map<string, CnaeEntry>()
-catalog.forEach((entry) => cnaeIndex.set(entry.nr4_class_code, entry))
+catalog.forEach((entry) => {
+  const key = normalizeCnaeCode(entry.nr4_class_code) ?? entry.nr4_class_code
+  cnaeIndex.set(key, entry)
+})
 
 // ── REGRA DE ELEGIBILIDADE ────────────────────────────────────
 /**
@@ -45,8 +51,10 @@ export function runEligibilityEngine(data: EligibilityData): EligibilityResult {
     reasons.push('MAIS_DE_20_FUNCIONARIOS')
   }
 
-  // Regra 2 — CNAE no catálogo GR1
-  const cnaeEntry = data.cnaeCode ? cnaeIndex.get(data.cnaeCode) : undefined
+  // Regra 2 — CNAE no catálogo GR1 (normalizado pro nível de classe — fontes
+  // como a BrasilAPI retornam CNAE no nível de subclasse, que o catálogo não guarda)
+  const normalizedCnaeCode = data.cnaeCode ? normalizeCnaeCode(data.cnaeCode) : null
+  const cnaeEntry = normalizedCnaeCode ? cnaeIndex.get(normalizedCnaeCode) : undefined
   if (!cnaeEntry) {
     reasons.push('CNAE_NAO_GR1')
   }
@@ -67,24 +75,34 @@ export function runEligibilityEngine(data: EligibilityData): EligibilityResult {
 }
 
 // ── BUSCA DE CNAE ─────────────────────────────────────────────
+// Mantém o match textual original (código com pontuação ou descrição) e
+// ADICIONA um match numérico tolerante a formato — cobre busca só com
+// números (sem pontuação) e o caso de subclasse (7 dígitos, ex.: BrasilAPI)
+// batendo com a classe (5 dígitos) do catálogo, nas duas direções.
 export function searchCnae(query: string, limit = 8): CnaeEntry[] {
   const q = query.toLowerCase().trim()
   if (!q || q.length < 2) return []
+  const qDigits = onlyDigits(query)
   return catalog
-    .filter(
-      (c) =>
-        c.nr4_class_code.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q)
-    )
+    .filter((c) => {
+      if (c.nr4_class_code.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)) {
+        return true
+      }
+      if (!qDigits) return false
+      const entryDigits = onlyDigits(c.nr4_class_code)
+      return entryDigits.startsWith(qDigits) || qDigits.startsWith(entryDigits)
+    })
     .slice(0, limit)
 }
 
 export function getCnaeByCode(code: string): CnaeEntry | undefined {
-  return cnaeIndex.get(code)
+  const normalized = normalizeCnaeCode(code)
+  return normalized ? cnaeIndex.get(normalized) : undefined
 }
 
 export function isCnaeWhitelisted(code: string): boolean {
-  return cnaeIndex.has(code)
+  const normalized = normalizeCnaeCode(code)
+  return normalized ? cnaeIndex.has(normalized) : false
 }
 
 // ── LABEL DOS MOTIVOS ─────────────────────────────────────────

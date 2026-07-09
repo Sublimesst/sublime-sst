@@ -31,12 +31,14 @@ const schema = z.object({
   partnerRef:         z.string().optional(),
 })
 
-// Monta a resposta de sucesso a partir de uma Company já existente — usado
-// tanto no caminho normal de idempotência quanto na corrida de duplo-clique.
-function idempotentResponse(company: {
+type ExistingCompany = {
   id: string; implantacaoPromo: boolean; planType: string | null; implantacaoValor: number
   asaasSubscriptionId: string | null; payments: { checkoutUrl: string | null }[]
-}, mensalidadeValor: number) {
+}
+
+// Monta a resposta de sucesso a partir de uma Company já existente — usado
+// tanto no caminho normal de idempotência quanto na corrida de duplo-clique.
+function idempotentResponse(company: ExistingCompany, mensalidadeValor: number) {
   return NextResponse.json({
     success: true,
     data: {
@@ -51,6 +53,25 @@ function idempotentResponse(company: {
       alreadyRegistered:   true,
     },
   })
+}
+
+// Única checagem de idempotência (usada nos dois pontos onde uma Company já
+// existente é encontrada) — só considera "sucesso" se houver Payment de
+// implantação com checkoutUrl real. Sem isso, é um estado parcial de uma
+// falha anterior na cobrança (Company criada, createImplantacaoCharge falhou
+// depois) — um retry NÃO pode disfarçar isso de sucesso com checkoutUrl nulo.
+function respondForExistingCompany(company: ExistingCompany, mensalidadeValor: number, leadId: string) {
+  const payment = company.payments[0]
+  if (payment?.checkoutUrl) {
+    return idempotentResponse(company, mensalidadeValor)
+  }
+  console.error(
+    `[LEADS/REGISTER] Company existente SEM Payment de implantação válido — provável estado parcial de falha anterior na cobrança. leadId=${leadId} companyId=${company.id}`
+  )
+  return NextResponse.json(
+    { success: false, error: 'Encontramos um cadastro iniciado, mas a cobrança não foi gerada corretamente. Nossa equipe foi acionada para concluir o processo.' },
+    { status: 409 }
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -113,7 +134,7 @@ export async function POST(req: NextRequest) {
       include: { payments: { where: { type: 'implantacao' }, take: 1 } },
     })
     if (existingCompany) {
-      return idempotentResponse(existingCompany, mensalidadeValor)
+      return respondForExistingCompany(existingCompany, mensalidadeValor, lead.id)
     }
 
     const dbPlan = await prisma.plan.findFirst({ where: { name: employees } })
@@ -123,12 +144,26 @@ export async function POST(req: NextRequest) {
       ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
       : null
 
-    const customer = await createOrFindCustomer({
-      cnpj:  lead.cnpj,
-      name:  data.razaoSocial,
-      email: data.email,
-      phone: data.whatsapp,
-    })
+    // Nenhuma Company é criada antes deste ponto — se a Asaas falhar aqui
+    // (ex.: chave/URL de ambiente incompatível, conta mal configurada), nada
+    // fica pendente no banco local. Mensagem específica em vez de cair no
+    // catch genérico, que sempre dizia "erro ao processar cadastro" mesmo
+    // quando o problema era só de configuração/conectividade com a Asaas.
+    let customer
+    try {
+      customer = await createOrFindCustomer({
+        cnpj:  lead.cnpj,
+        name:  data.razaoSocial,
+        email: data.email,
+        phone: data.whatsapp,
+      })
+    } catch (err) {
+      console.error('[LEADS/REGISTER] Falha ao criar/buscar customer na Asaas:', err)
+      return NextResponse.json(
+        { success: false, error: 'Não foi possível conectar ao sistema de cobrança no momento. Tente novamente em alguns minutos ou fale conosco pelo WhatsApp.' },
+        { status: 502 }
+      )
+    }
 
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       ?? req.headers.get('x-real-ip')
@@ -178,19 +213,31 @@ export async function POST(req: NextRequest) {
           where: { leadId: lead.id },
           include: { payments: { where: { type: 'implantacao' }, take: 1 } },
         })
-        if (raced) return idempotentResponse(raced, mensalidadeValor)
+        if (raced) return respondForExistingCompany(raced, mensalidadeValor, lead.id)
       }
       throw err
     }
 
-    const charge = await createImplantacaoCharge({
-      customerId: customer.id,
-      isPromo,
-      companyId:  company.id,
-      cnpj:       lead.cnpj,
-      amount:     implantacaoValorReais,
-      planLabel:  plan.name,
-    })
+    // A Company (id acima) já existe no banco neste ponto — se a cobrança
+    // falhar aqui, fica uma Company sem Payment. Logamos o companyId pra dar
+    // pra investigar/retomar manualmente; o cliente recebe mensagem específica.
+    let charge
+    try {
+      charge = await createImplantacaoCharge({
+        customerId: customer.id,
+        isPromo,
+        companyId:  company.id,
+        cnpj:       lead.cnpj,
+        amount:     implantacaoValorReais,
+        planLabel:  plan.name,
+      })
+    } catch (err) {
+      console.error(`[LEADS/REGISTER] Falha ao criar cobrança de implantação na Asaas (companyId=${company.id}):`, err)
+      return NextResponse.json(
+        { success: false, error: 'Não foi possível gerar a cobrança de implantação no momento. Tente novamente em alguns minutos ou fale conosco pelo WhatsApp.' },
+        { status: 502 }
+      )
+    }
 
     await prisma.payment.create({
       data: {

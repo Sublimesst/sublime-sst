@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret')
-  if (secret !== process.env.ADMIN_SECRET) {
+  if (!verifyAdminSecret(secret)) {
     return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
   }
 

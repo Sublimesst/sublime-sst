@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 const VALID_STATUSES = [
   'pending',
@@ -21,7 +22,7 @@ const patchSchema = z.object({
 })
 
 function auth(req: NextRequest) {
-  return req.headers.get('x-admin-secret') === process.env.ADMIN_SECRET
+  return verifyAdminSecret(req.headers.get('x-admin-secret'))
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {

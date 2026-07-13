@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { notifyNewPartner, notifyNewLead, sendPartnerActivated } from '@/lib/mailer'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
 import { PARTNER_TERMS_VERSION } from '@/lib/pricing'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 // .nullish() (não .optional()): o frontend envia referral: null quando o
 // checkbox de indicação está desmarcado, e .optional() rejeita null com
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret')
-  if (secret !== process.env.ADMIN_SECRET) {
+  if (!verifyAdminSecret(secret)) {
     return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
   }
   const partners = await prisma.partner.findMany({
@@ -168,7 +169,7 @@ const patchSchema = z.object({
 // o parceiro não consegue logar nem ter indicações rastreadas
 export async function PATCH(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret')
-  if (secret !== process.env.ADMIN_SECRET) {
+  if (!verifyAdminSecret(secret)) {
     return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
   }
   try {

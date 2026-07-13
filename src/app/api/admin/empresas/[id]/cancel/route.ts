@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { sendCancellationConfirmedClient, notifyPartnerCompanyCancelled } from '@/lib/mailer'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 // NOTA OPERACIONAL (P0): esta rota não cancela nada na Asaas — não existe
 // assinatura recorrente via API ainda (E4). Depois de registrar aqui, o
 // admin precisa cancelar a cobrança manualmente no painel da Asaas.
 function auth(req: NextRequest) {
-  return req.headers.get('x-admin-secret') === process.env.ADMIN_SECRET
+  return verifyAdminSecret(req.headers.get('x-admin-secret'))
 }
 
 const schema = z.object({

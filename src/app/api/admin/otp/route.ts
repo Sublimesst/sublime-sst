@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { rateLimitByKey, rateLimitResponse } from '@/lib/rateLimit'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 // OTP stateless: o código é assinado (HMAC-SHA256 com ADMIN_SECRET) e o token
 // assinado viaja num cookie HttpOnly. Isso funciona entre instâncias serverless
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const { secret } = body as { secret?: string }
 
-  if (!secret || secret !== secretEnv) {
+  if (!verifyAdminSecret(secret)) {
     return NextResponse.json({ success: false, error: 'Credencial inválida.' }, { status: 401 })
   }
 

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 // GET /api/admin/stats — contagens agregadas REAIS para o dashboard.
 // Substitui o cálculo anterior, que somava apenas a primeira página de leads
 // e rotulava o resultado como total.
 export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret')
-  if (secret !== process.env.ADMIN_SECRET) {
+  if (!verifyAdminSecret(secret)) {
     return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
   }
 

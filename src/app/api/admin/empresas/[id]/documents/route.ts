@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { storage } from '@/lib/storage'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 const TIPOS = ['pgr', 'pcmso', 'declaracao', 'os_epi', 'ltcat', 'contrato'] as const
 
 function auth(req: NextRequest) {
-  return req.headers.get('x-admin-secret') === process.env.ADMIN_SECRET
+  return verifyAdminSecret(req.headers.get('x-admin-secret'))
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {

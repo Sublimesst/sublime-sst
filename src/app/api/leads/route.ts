@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { notifyNewLead } from '@/lib/mailer'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
+import { verifyAdminSecret } from '@/lib/adminAuth'
 
 // POST /api/leads — captura inicial do lead
 const leadSchema = z.object({
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const secret = req.headers.get('x-admin-secret')
-    if (secret !== process.env.ADMIN_SECRET) {
+    if (!verifyAdminSecret(secret)) {
       return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
     }
 
@@ -123,7 +124,7 @@ const patchSchema = z.object({
 
 export async function PATCH(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret')
-  if (secret !== process.env.ADMIN_SECRET) {
+  if (!verifyAdminSecret(secret)) {
     return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
   }
   try {

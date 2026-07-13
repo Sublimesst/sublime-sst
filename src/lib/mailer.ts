@@ -64,6 +64,20 @@ async function sendEmail(
   console.log('[MAILER] Configure RESEND_API_KEY ou SMTP_HOST/USER/PASS')
 }
 
+// ── ESCAPE HTML ────────────────────────────────────────────
+// Só para valores dinâmicos potencialmente digitados pelo usuário (nome,
+// razão social, motivo, descrição etc.) — nunca para a estrutura fixa dos
+// templates abaixo. Ordem importa: & primeiro, senão as entidades inseridas
+// pelas trocas seguintes seriam escapadas de novo.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 // ── TEMPLATE BASE (table-based para compatibilidade com clientes de e-mail) ──
 function baseHtml(title: string, body: string) {
   return `<!DOCTYPE html>
@@ -129,11 +143,11 @@ export async function notifyNewLead(data: {
   const waLink = `https://wa.me/55${data.whatsapp.replace(/\D/g, '')}`
   await sendEmail(NOTIFY, `🆕 Novo lead: ${data.companyName}`,
     baseHtml('Novo lead capturado no teste de elegibilidade',
-      row('Empresa', data.companyName) +
-      row('CNPJ', data.cnpj) +
-      row('Responsável', data.name) +
-      row('E-mail', data.email) +
-      row('WhatsApp', data.whatsapp) +
+      row('Empresa', escapeHtml(data.companyName)) +
+      row('CNPJ', escapeHtml(data.cnpj)) +
+      row('Responsável', escapeHtml(data.name)) +
+      row('E-mail', escapeHtml(data.email)) +
+      row('WhatsApp', escapeHtml(data.whatsapp)) +
       cta(waLink, '💬 Falar no WhatsApp agora')
     )
   ).catch(err => console.error('[MAILER] notifyNewLead:', err))
@@ -148,11 +162,11 @@ export async function notifyEligibleResult(data: {
   await sendEmail(NOTIFY, `✅ Empresa ELEGÍVEL: ${data.companyName}`,
     baseHtml('Empresa aprovada no modelo digital!',
       `<div style="margin-bottom:14px">` + badge('✅ ELEGÍVEL', '#dcfce7', '#15803d') + `</div>` +
-      row('Empresa', data.companyName) +
-      row('CNPJ', data.cnpj) +
-      row('Responsável', data.name) +
-      row('WhatsApp', data.whatsapp) +
-      row('CNAE', data.cnae) +
+      row('Empresa', escapeHtml(data.companyName)) +
+      row('CNPJ', escapeHtml(data.cnpj)) +
+      row('Responsável', escapeHtml(data.name)) +
+      row('WhatsApp', escapeHtml(data.whatsapp)) +
+      row('CNAE', escapeHtml(data.cnae)) +
       row('Funcionários', data.employees) +
       row('Parcela mensal', `<span style="color:#1a9e8c;font-size:16px;font-weight:700">${monthly}/mês</span>`) +
       cta(waLink, '💬 Entrar em contato agora')
@@ -171,11 +185,11 @@ export async function notifyBackofficeResult(data: {
   await sendEmail(NOTIFY, `🔍 Análise necessária: ${data.companyName}`,
     baseHtml('Empresa encaminhada para análise personalizada',
       `<div style="margin-bottom:14px">` + badge('🔍 ANÁLISE PERSONALIZADA', '#fef9c3', '#854d0e') + `</div>` +
-      row('Empresa', data.companyName) +
-      row('CNPJ', data.cnpj) +
-      row('Responsável', data.name) +
-      row('WhatsApp', data.whatsapp) +
-      row('CNAE', data.cnae) +
+      row('Empresa', escapeHtml(data.companyName)) +
+      row('CNPJ', escapeHtml(data.cnpj)) +
+      row('Responsável', escapeHtml(data.name)) +
+      row('WhatsApp', escapeHtml(data.whatsapp)) +
+      row('CNAE', escapeHtml(data.cnae)) +
       `<div style="background:#fef9c3;border-radius:8px;padding:12px 14px;margin:12px 0">
         <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#854d0e">Motivos:</p>
         ${reasonsHtml}
@@ -192,13 +206,13 @@ export async function notifyConsultancyRequest(data: {
   await sendEmail(NOTIFY, `📋 Orçamento solicitado: ${data.company}`,
     baseHtml('Nova solicitação de orçamento de Consultoria SST',
       `<div style="margin-bottom:14px">` + badge('📋 CONSULTORIA SST', '#dbeafe', '#1e40af') + `</div>` +
-      row('Nome', data.name) +
-      row('Empresa', data.company) +
-      row('E-mail', data.email) +
-      row('WhatsApp', data.whatsapp) +
+      row('Nome', escapeHtml(data.name)) +
+      row('Empresa', escapeHtml(data.company)) +
+      row('E-mail', escapeHtml(data.email)) +
+      row('WhatsApp', escapeHtml(data.whatsapp)) +
       `<div style="background:#f1f5f9;border-radius:8px;padding:12px 14px;margin:12px 0">
         <p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#334155">Descrição da necessidade:</p>
-        <p style="margin:0;font-size:13px;color:#334155">${data.description}</p>
+        <p style="margin:0;font-size:13px;color:#334155">${escapeHtml(data.description)}</p>
       </div>` +
       cta(waLink, '💬 Responder no WhatsApp')
     )
@@ -212,9 +226,9 @@ export async function sendMagicLink(data: {
   const isParceiro = data.portal === 'parceiro'
   const portalTitle = isParceiro ? 'Acesso ao Portal do Parceiro' : 'Acesso ao Portal do Cliente'
   const intro = isParceiro
-    ? `Olá, <strong>${data.companyName}</strong>! Aqui está seu acesso ao Portal do Parceiro,
+    ? `Olá, <strong>${escapeHtml(data.companyName)}</strong>! Aqui está seu acesso ao Portal do Parceiro,
        onde você acompanha suas indicações e comissões.`
-    : `Olá! Aqui está seu acesso ao portal da <strong>${data.companyName}</strong>,
+    : `Olá! Aqui está seu acesso ao portal da <strong>${escapeHtml(data.companyName)}</strong>,
        onde ficam seus documentos e o acompanhamento do seu plano.`
   await sendEmail(data.to, `Seu link de acesso — Sublime SST`,
     baseHtml(portalTitle,
@@ -243,8 +257,8 @@ export async function sendWelcomeEmail(data: {
   await sendEmail(data.to, `Bem-vindo(a) ao Sublime Digital! 🎉`,
     baseHtml('Pagamento confirmado — próximos passos',
       `<p style="font-size:15px;color:#334155;margin:0 0 12px">
-        Olá, <strong>${data.responsavel}</strong>!<br><br>
-        Recebemos o pagamento da implantação da <strong>${data.companyName}</strong> — obrigado pela confiança!
+        Olá, <strong>${escapeHtml(data.responsavel)}</strong>!<br><br>
+        Recebemos o pagamento da implantação da <strong>${escapeHtml(data.companyName)}</strong> — obrigado pela confiança!
         A partir de agora, a regularização da sua empresa em segurança do trabalho está em nossas mãos.
       </p>
       <div style="background:${planBg};border-radius:8px;padding:10px 14px;margin-bottom:16px">
@@ -281,8 +295,8 @@ export async function sendOnboardingReminder(data: {
   await sendEmail(data.to, `Falta pouco: precisamos dos seus dados para começar`,
     baseHtml('Seus documentos estão aguardando você',
       `<p style="font-size:15px;color:#334155;margin:0 0 16px">
-        Olá, <strong>${data.responsavel}</strong>! Seu pagamento já foi confirmado e nossa equipe está
-        pronta para elaborar os documentos da <strong>${data.companyName}</strong> — mas ainda falta
+        Olá, <strong>${escapeHtml(data.responsavel)}</strong>! Seu pagamento já foi confirmado e nossa equipe está
+        pronta para elaborar os documentos da <strong>${escapeHtml(data.companyName)}</strong> — mas ainda falta
         um passo seu: o preenchimento dos dados da empresa e dos funcionários.
       </p>
       <p style="font-size:14px;color:#334155;margin:0 0 8px">
@@ -305,7 +319,7 @@ export async function sendPaymentReminder(data: {
   await sendEmail(data.to, `Seu cadastro está quase completo — Sublime Digital`,
     baseHtml('Só falta o pagamento para começarmos',
       `<p style="font-size:15px;color:#334155;margin:0 0 16px">
-        Olá, <strong>${data.responsavel}</strong>! O cadastro da <strong>${data.companyName}</strong> está
+        Olá, <strong>${escapeHtml(data.responsavel)}</strong>! O cadastro da <strong>${escapeHtml(data.companyName)}</strong> está
         pronto — falta apenas confirmar o pagamento da implantação (${value}) para
         nossa equipe começar a elaborar seus documentos.
       </p>
@@ -331,13 +345,13 @@ export async function notifyNewPartner(data: {
   await sendEmail(NOTIFY, `🤝 Novo parceiro: ${data.name} — ${data.office}`,
     baseHtml('Novo parceiro cadastrado no programa',
       `<div style="margin-bottom:14px">` + badge('🤝 NOVO PARCEIRO', '#dbeafe', '#1e40af') + `</div>` +
-      row('Nome', data.name) +
-      row('Escritório', data.office) +
-      row('E-mail', data.email) +
-      row('WhatsApp', data.whatsapp) +
-      row('Cidade/UF', `${data.city}/${data.state}`) +
+      row('Nome', escapeHtml(data.name)) +
+      row('Escritório', escapeHtml(data.office)) +
+      row('E-mail', escapeHtml(data.email)) +
+      row('WhatsApp', escapeHtml(data.whatsapp)) +
+      row('Cidade/UF', `${escapeHtml(data.city)}/${escapeHtml(data.state)}`) +
       (data.clientsEstimate ? row('Clientes aprox.', String(data.clientsEstimate)) : '') +
-      (data.hasReferral ? row('Indicação', data.referralCompany ?? 'Sim') : '') +
+      (data.hasReferral ? row('Indicação', escapeHtml(data.referralCompany ?? 'Sim')) : '') +
       cta(waLink, '💬 Contatar parceiro no WhatsApp')
     )
   ).catch(err => console.error('[MAILER] notifyNewPartner:', err))
@@ -351,8 +365,8 @@ export async function notifyPaymentConfirmed(data: {
   await sendEmail(NOTIFY, `💰 Pagamento confirmado: ${data.companyName} (${tipoLabel} ${valor})`,
     baseHtml('Pagamento confirmado',
       `<div style="margin-bottom:14px">` + badge('💰 PAGAMENTO CONFIRMADO', '#dcfce7', '#15803d') + `</div>` +
-      row('Empresa', data.companyName) +
-      row('CNPJ', data.cnpj) +
+      row('Empresa', escapeHtml(data.companyName)) +
+      row('CNPJ', escapeHtml(data.cnpj)) +
       row('Tipo', tipoLabel) +
       row('Valor', `<span style="color:#15803d;font-weight:700">${valor}</span>`) +
       (data.planType ? row('Plano', data.planType) : '') +
@@ -372,8 +386,8 @@ export async function notifyPaymentOverdue(data: {
   await sendEmail(NOTIFY, `🔴 Inadimplência: ${data.companyName} (${valor})`,
     baseHtml('Pagamento vencido sem confirmação',
       `<div style="margin-bottom:14px">` + badge('🔴 INADIMPLENTE', '#fee2e2', '#b91c1c') + `</div>` +
-      row('Empresa', data.companyName) +
-      row('CNPJ', data.cnpj) +
+      row('Empresa', escapeHtml(data.companyName)) +
+      row('CNPJ', escapeHtml(data.cnpj)) +
       row('Tipo', data.tipo === 'implantacao' ? 'Implantação' : 'Mensalidade') +
       row('Valor', `<span style="color:#b91c1c;font-weight:700">${valor}</span>`) +
       `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
@@ -395,12 +409,12 @@ export async function notifySubscriptionFailed(data: {
   await sendEmail(NOTIFY, `🔴 Assinatura Asaas falhou: ${data.companyName}`,
     baseHtml('Assinatura recorrente não foi criada',
       `<div style="margin-bottom:14px">` + badge('🔴 AÇÃO MANUAL NECESSÁRIA', '#fee2e2', '#b91c1c') + `</div>` +
-      row('Empresa', data.companyName) +
-      row('CNPJ', data.cnpj) +
+      row('Empresa', escapeHtml(data.companyName)) +
+      row('CNPJ', escapeHtml(data.cnpj)) +
       row('ID interno', data.companyId) +
       `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
         A cobrança de implantação foi criada normalmente, mas a assinatura recorrente
-        (mensalidade) falhou:<br><code style="font-size:12px;color:#b91c1c">${data.error}</code>
+        (mensalidade) falhou:<br><code style="font-size:12px;color:#b91c1c">${escapeHtml(data.error)}</code>
         <br><br>Crie a assinatura manualmente no painel da Asaas para este cliente.
       </p>`
     )
@@ -413,10 +427,10 @@ export async function notifyOnboardingSubmitted(data: {
   await sendEmail(NOTIFY, `📋 Onboarding preenchido: ${data.companyName}`,
     baseHtml('Cliente preencheu o onboarding — produção pode começar',
       `<div style="margin-bottom:14px">` + badge('📋 ONBOARDING COMPLETO', '#dbeafe', '#1e40af') + `</div>` +
-      row('Empresa', data.companyName) +
-      row('CNPJ', data.cnpj) +
+      row('Empresa', escapeHtml(data.companyName)) +
+      row('CNPJ', escapeHtml(data.cnpj)) +
       row('Funcionários', String(data.numFuncionarios)) +
-      (data.cargos ? row('Cargos', data.cargos) : '') +
+      (data.cargos ? row('Cargos', escapeHtml(data.cargos)) : '') +
       `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
         Os dados para elaboração do PGR/PCMSO estão disponíveis. Inicie a produção dos documentos
         e atualize o checklist no admin.
@@ -437,7 +451,7 @@ export async function sendPartnerActivated(data: {
   await sendEmail(data.to, `Sua parceria com a Sublime SST está ativa! 🤝`,
     baseHtml('Bem-vindo(a) ao programa de parceiros',
       `<p style="font-size:15px;color:#334155;margin:0 0 12px">
-        Olá, <strong>${data.name}</strong>! Seu cadastro no programa de parceiros da Sublime SST
+        Olá, <strong>${escapeHtml(data.name)}</strong>! Seu cadastro no programa de parceiros da Sublime SST
         foi aprovado — seja muito bem-vindo(a)! 🎉
       </p>
       <p style="font-size:14px;color:#334155;margin:0 0 16px">
@@ -456,7 +470,7 @@ export async function sendPartnerActivated(data: {
       <p style="font-size:14px;color:#334155;margin:0 0 6px"><strong>Seu primeiro acesso, em 3 passos:</strong></p>
       <p style="font-size:13px;color:#334155;margin:0 0 16px;line-height:1.9">
         1. Acesse o Portal do Parceiro pelo botão abaixo<br>
-        2. Informe este e-mail (<strong>${data.to}</strong>) — sem senha: você recebe um link de entrada por e-mail a cada acesso<br>
+        2. Informe este e-mail (<strong>${escapeHtml(data.to)}</strong>) — sem senha: você recebe um link de entrada por e-mail a cada acesso<br>
         3. No portal: suas indicações, o extrato de comissões (10% de cada mensalidade, por até 12 meses por cliente) e textos prontos de divulgação
       </p>` +
       cta(loginUrl, '🔑 Acessar o Portal do Parceiro') +
@@ -477,11 +491,11 @@ export async function sendCancellationConfirmedClient(data: {
   await sendEmail(data.to, `Cancelamento confirmado — ${data.companyName}`,
     baseHtml('Cancelamento do contrato confirmado',
       `<p style="font-size:15px;color:#334155;margin:0 0 12px">
-        Olá, <strong>${data.responsavel}</strong>. Confirmamos o cancelamento do contrato da
-        <strong>${data.companyName}</strong> com a Sublime SST, conforme solicitado.
+        Olá, <strong>${escapeHtml(data.responsavel)}</strong>. Confirmamos o cancelamento do contrato da
+        <strong>${escapeHtml(data.companyName)}</strong> com a Sublime SST, conforme solicitado.
       </p>` +
       row('Data do pedido', dataStr) +
-      row('Motivo informado', data.reason) +
+      row('Motivo informado', escapeHtml(data.reason)) +
       `<p style="font-size:13px;color:#64748b;margin:16px 0 0">
         Eventuais valores pendentes seguem as condições da Cláusula 5ª do contrato aceito no cadastro.
         Qualquer dúvida, fale com a gente no WhatsApp
@@ -498,7 +512,7 @@ export async function notifyPartnerCompanyCancelled(data: {
   await sendEmail(data.to, `Contrato cancelado: ${data.companyName}`,
     baseHtml('Cliente indicado cancelou o contrato',
       `<p style="font-size:15px;color:#334155;margin:0 0 12px">
-        Olá, <strong>${data.partnerName}</strong>. A empresa <strong>${data.companyName}</strong>,
+        Olá, <strong>${escapeHtml(data.partnerName)}</strong>. A empresa <strong>${escapeHtml(data.companyName)}</strong>,
         indicada por você, cancelou o contrato com a Sublime SST.
       </p>
       <p style="font-size:13px;color:#64748b;margin:0 0 16px">
@@ -528,7 +542,7 @@ export async function sendDocumentExpiryAlert(data: {
   await sendEmail(data.to, `⚠️ Documentos a vencer — ${data.companyName}`,
     baseHtml('Hora de renovar seus documentos',
       `<p style="font-size:15px;color:#334155;margin:0 0 8px">
-        Olá, <strong>${data.responsavel}</strong>! Alguns documentos da <strong>${data.companyName}</strong>
+        Olá, <strong>${escapeHtml(data.responsavel)}</strong>! Alguns documentos da <strong>${escapeHtml(data.companyName)}</strong>
         estão chegando perto do vencimento.
       </p>
       <p style="font-size:13px;color:#64748b;margin:0 0 16px">

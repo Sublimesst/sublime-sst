@@ -3,31 +3,25 @@ import { prisma } from '@/lib/prisma'
 import { getPartnerSession } from '@/lib/partnerAuth'
 
 export async function GET(req: NextRequest) {
-  const session = getPartnerSession(req)
-  if (!session?.partnerId) {
+  const partner = await getPartnerSession(req)
+  if (!partner) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
   }
 
-  const [partner, leads, commissions] = await Promise.all([
-    prisma.partner.findUnique({
-      where: { id: session.partnerId },
-      select: { id: true, name: true, code: true, email: true, tier: true, status: true },
-    }),
+  const [leads, commissions] = await Promise.all([
     prisma.lead.findMany({
-      where: { partnerId: session.partnerId },
+      where: { partnerId: partner.id },
       orderBy: { createdAt: 'desc' },
       include: {
         company: { select: { status: true, planType: true, createdAt: true } },
       },
     }),
     prisma.commission.findMany({
-      where: { partnerId: session.partnerId },
+      where: { partnerId: partner.id },
       orderBy: { createdAt: 'desc' },
       include: { company: { select: { razaoSocial: true } } },
     }),
   ])
-
-  if (!partner) return NextResponse.json({ error: 'Parceiro não encontrado.' }, { status: 404 })
 
   // Estornadas ficam fora do total previsto — o parceiro não vai receber esses valores
   const totalComissoes = commissions.filter(c => c.status !== 'estornada').reduce((sum, c) => sum + c.valorComissao, 0)

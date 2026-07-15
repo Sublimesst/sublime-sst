@@ -15,6 +15,27 @@ const IS_MOCK = !ASAAS_API_KEY || ASAAS_API_KEY.startsWith('$aact_SuaChave')
 const SUBSCRIPTION_BILLING_TYPE =
   (process.env.ASAAS_SUBSCRIPTION_BILLING_TYPE as CreateChargeParams['billingType']) ?? 'UNDEFINED'
 
+// Parâmetros de mora — devem ser IDÊNTICOS à Cláusula 4ª do /termos ("multa de
+// 2%... e juros de mora de 1% ao mês, pro rata die"). Fonte única aqui: mudar
+// o contrato exige mudar aqui também, nunca duplicar o número em outro lugar.
+const MORA_MULTA_PERCENTUAL = 2
+const MORA_JUROS_PERCENTUAL_MES = 1
+
+interface AsaasMoraCharges {
+  fine: { value: number; type: 'PERCENTAGE' }
+  interest: { value: number }
+}
+
+// Aplicada em toda cobrança/assinatura criada — nunca em desconto (não pedido
+// pelo contrato). `fine.type: 'PERCENTAGE'` é explícito mesmo sendo o default
+// da Asaas, para não depender de um comportamento implícito da API.
+export function moraCharges(): AsaasMoraCharges {
+  return {
+    fine:     { value: MORA_MULTA_PERCENTUAL, type: 'PERCENTAGE' },
+    interest: { value: MORA_JUROS_PERCENTUAL_MES },
+  }
+}
+
 interface AsaasCustomer {
   id: string
   name: string
@@ -177,6 +198,7 @@ export async function createImplantacaoCharge(params: {
       dueDate,
       description: `Sublime Digital ${params.planLabel} — Implantação${descPromo} (${valorFmt})`,
       externalReference: params.companyId,
+      ...moraCharges(),
     }),
   })
 }
@@ -209,6 +231,7 @@ export async function createSubscription(params: {
       cycle: 'MONTHLY',
       description: `Sublime Digital ${params.planLabel} — Mensalidade`,
       externalReference: params.companyId,
+      ...moraCharges(),
     }),
   })
 }

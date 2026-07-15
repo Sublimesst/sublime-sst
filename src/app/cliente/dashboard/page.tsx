@@ -19,7 +19,7 @@ async function getCompany() {
   const payload = verifySessionCookie<ClientSessionPayload>(raw)
   if (!payload?.companyId) return null
 
-  return await prisma.company.findUnique({
+  const company = await prisma.company.findUnique({
     where: { id: payload.companyId },
     include: {
       plan: true,
@@ -28,6 +28,12 @@ async function getCompany() {
       documents: { orderBy: { uploadedAt: 'desc' } },
     },
   })
+
+  // Empresa cancelada não deve manter acesso ao portal — mesma Company já
+  // carregada acima, sem query nova.
+  if (!company || company.status === 'cancelled') return null
+
+  return company
 }
 
 const DOCUMENTO_LABELS: Record<string, string> = {

@@ -14,8 +14,8 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const session = getClientSession(req)
-  if (!session) {
+  const company = await getClientSession(req)
+  if (!company) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
   }
 
@@ -28,19 +28,18 @@ export async function POST(req: NextRequest) {
   const data = parsed.data
 
   await prisma.onboardingData.upsert({
-    where: { companyId: session.companyId },
+    where: { companyId: company.id },
     update: { ...data },
-    create: { companyId: session.companyId, ...data },
+    create: { companyId: company.id, ...data },
   })
 
   // D2: onboarding preenchido inicia a PRODUÇÃO dos documentos.
   // Transição condicional: só onboarding_pending avança (resubmissão de uma
   // empresa já em produção/ativa não regride o pipeline).
   await prisma.company.updateMany({
-    where: { id: session.companyId, status: { in: ['pending', 'onboarding_pending'] } },
+    where: { id: company.id, status: { in: ['pending', 'onboarding_pending'] } },
     data: { status: 'in_production' },
   })
-  const company = await prisma.company.findUniqueOrThrow({ where: { id: session.companyId } })
 
   // Equipe precisa saber que a produção pode começar (await: serverless)
   await notifyOnboardingSubmitted({

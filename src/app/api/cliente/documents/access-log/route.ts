@@ -10,8 +10,8 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const session = getClientSession(req)
-  if (!session?.companyId) {
+  const company = await getClientSession(req)
+  if (!company) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
   }
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.documentAccessLog.create({
     data: {
-      companyId:     session.companyId,
+      companyId:     company.id,
       tipoDocumento: parsed.data.tipoDocumento,
       nomeDocumento: parsed.data.nomeDocumento,
       acao:          parsed.data.acao,

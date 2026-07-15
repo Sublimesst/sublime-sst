@@ -24,11 +24,12 @@ export async function POST(req: NextRequest) {
   }
 
   const company = await prisma.company.findFirst({
-    where: { email: { equals: email, mode: 'insensitive' } },
+    where: { email: { equals: email, mode: 'insensitive' }, NOT: { status: 'cancelled' } },
     orderBy: { createdAt: 'desc' },
   })
 
-  // Always return 200 to avoid email enumeration
+  // Always return 200 to avoid email enumeration — cobre tanto "não existe"
+  // quanto "existe mas está cancelada" com a mesma resposta.
   if (!company) {
     return NextResponse.json({ success: true })
   }

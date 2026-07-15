@@ -8,11 +8,11 @@ function safeFilename(name: string): string {
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = getClientSession(req)
-  if (!session) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  const company = await getClientSession(req)
+  if (!company) return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
 
   const document = await prisma.document.findUnique({ where: { id: params.id } })
-  if (!document || document.companyId !== session.companyId) {
+  if (!document || document.companyId !== company.id) {
     return NextResponse.json({ error: 'Documento não encontrado.' }, { status: 404 })
   }
 

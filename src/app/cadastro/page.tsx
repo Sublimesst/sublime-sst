@@ -6,6 +6,7 @@ import { Navbar } from '@/components/layout/Navbar'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import { maskPhone, maskCEP, maskCurrencyBRL } from '@/lib/utils'
 import { track } from '@/lib/analytics'
+import { LTCAT_ADDON_PRICE_CENTS } from '@/lib/pricing'
 
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
@@ -16,11 +17,15 @@ export default function CadastroPage() {
     numFuncionarios: '', cargos: '', observations: '',
     consentDataUsage: false, consentDeclaration: false, consentTerms: false,
   })
-  const [plan, setPlan] = useState<{ monthly: number; implantacaoPromo: number; label: string; planType?: string; planName?: string } | null>(null)
+  const [plan, setPlan] = useState<{ monthly: number; implantacao: number; implantacaoPromo: number; label: string; planType?: string; planName?: string } | null>(null)
   const [cnpj, setCnpj] = useState('')
   const [planType, setPlanType] = useState<'essencial' | 'premium'>('essencial')
   const [faixa, setFaixa] = useState<'1-5' | '6-10' | '11-20' | null>(null)
   const [ltcatAddon, setLtcatAddon] = useState(false)
+  // Mesmo prazo de 24h já usado em /elegibilidade (mesma origem de dado, propagada
+  // via sessionStorage) — garante que o resumo mostre a MESMA condição de promo
+  // que o backend vai aplicar de fato no momento do envio.
+  const [promoEnd, setPromoEnd] = useState<number | null>(null)
   const [partnerRef, setPartnerRef] = useState<string | undefined>()
   const [contractAccepted, setContractAccepted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -47,6 +52,7 @@ export default function CadastroPage() {
       if (data.ltcatAddon) setLtcatAddon(true)
       if (data.partnerRef) setPartnerRef(data.partnerRef)
       if (data.contractAccepted) setContractAccepted(true)
+      if (typeof data.promoEnd === 'number') setPromoEnd(data.promoEnd)
     }
   }, [])
 
@@ -79,6 +85,17 @@ export default function CadastroPage() {
   const FAIXA_RANGE: Record<string, [number, number]> = { '1-5': [1, 5], '6-10': [6, 10], '11-20': [11, 20] }
   const [minFunc, maxFunc] = faixa ? FAIXA_RANGE[faixa] : [1, 20]
   const funcOptions = Array.from({ length: maxFunc - minFunc + 1 }, (_, i) => minFunc + i)
+
+  // Resumo financeiro pré-confirmação — replica exatamente as mesmas regras do
+  // backend (register/route.ts): promo só na implantação-base, LTCAT nunca
+  // descontado e só cobrado no Essencial, 1ª mensalidade = mensalidade cheia
+  // da assinatura (vence no ato, sem cobrança avulsa separada — ver asaas.ts).
+  const isPromoActive = promoEnd !== null && Date.now() < promoEnd
+  const ltcatCharged = ltcatAddon && planType === 'essencial'
+  const implantacaoBase = plan ? (isPromoActive ? plan.implantacaoPromo : plan.implantacao) : 0
+  const implantacaoTotal = implantacaoBase + (ltcatCharged ? LTCAT_ADDON_PRICE_CENTS : 0)
+  const primeiraMensalidade = plan?.monthly ?? 0
+  const totalDevidoHoje = implantacaoTotal + primeiraMensalidade
 
   const validate = () => {
     const e: Record<string, string> = {}
@@ -269,17 +286,34 @@ export default function CadastroPage() {
               </div>
             ))}
 
-            {/* Plan summary */}
+            {/* Resumo financeiro — valores devidos antes da confirmação */}
             {plan && (
               <div className="mt-6 p-5 bg-teal-pale rounded-[12px] border border-teal/20">
-                <p className="text-[14px] font-semibold text-petrol mb-3">Resumo do plano</p>
-                <div className="flex justify-between mb-2">
-                  <span className="text-[14px] text-gray-600">Parcela mensal ({plan.label})</span>
-                  <span className="text-[16px] font-bold text-teal">{maskCurrencyBRL(plan.monthly)}/mês</span>
+                <p className="text-[14px] font-semibold text-petrol mb-3">Resumo do plano ({plan.label})</p>
+
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-[13px] text-gray-600">
+                    Implantação{ltcatCharged ? ' + LTCAT' : ''}
+                    {isPromoActive && <span className="ml-1.5 text-[11px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full">Promocional 24h</span>}
+                  </span>
+                  <span className="text-[14px] font-semibold text-gray-800">{maskCurrencyBRL(implantacaoTotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[13px] text-gray-500">Implantação promocional (24h)</span>
-                  <span className="text-[14px] font-semibold">{maskCurrencyBRL(plan.implantacaoPromo)}</span>
+
+                <div className="flex justify-between items-baseline mb-3">
+                  <span className="text-[13px] text-gray-600">1ª mensalidade <span className="text-[11px] text-gray-400">(vence hoje)</span></span>
+                  <span className="text-[14px] font-semibold text-gray-800">{maskCurrencyBRL(primeiraMensalidade)}</span>
+                </div>
+
+                <div className="h-px bg-teal/20 my-3" />
+
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-[14px] font-semibold text-petrol">Total devido hoje</span>
+                  <span className="text-[18px] font-bold text-teal">{maskCurrencyBRL(totalDevidoHoje)}</span>
+                </div>
+
+                <div className="flex justify-between items-baseline">
+                  <span className="text-[12px] text-gray-500">A partir do mês seguinte</span>
+                  <span className="text-[13px] text-gray-600">{maskCurrencyBRL(plan.monthly)}/mês</span>
                 </div>
               </div>
             )}

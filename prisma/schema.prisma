@@ -122,6 +122,11 @@ model Company {
   implantacaoValor Int     @default(19900)
   implantacaoPromo Boolean @default(false)
   promoDeadline   DateTime?
+  // Snapshot da mensalidade contratada (centavos) — congelado no cadastro,
+  // NUNCA relido de pricing.ts depois. Reprecificar pricing.ts só afeta
+  // contratações novas; clientes existentes mantêm este valor para sempre.
+  // Sem default de propósito: todo cadastro precisa gravar o valor real.
+  mensalidadeValor Int
 
   // Plano e contrato
   planType             String?   // "essencial" | "premium"

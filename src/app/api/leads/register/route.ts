@@ -33,12 +33,16 @@ const schema = z.object({
 
 type ExistingCompany = {
   id: string; implantacaoPromo: boolean; planType: string | null; implantacaoValor: number
+  mensalidadeValor: number
   asaasSubscriptionId: string | null; payments: { checkoutUrl: string | null }[]
 }
 
 // Monta a resposta de sucesso a partir de uma Company já existente — usado
 // tanto no caminho normal de idempotência quanto na corrida de duplo-clique.
-function idempotentResponse(company: ExistingCompany, mensalidadeValor: number) {
+// mensalidadeValor SEMPRE vem do snapshot gravado na Company (nunca recalculado
+// a partir de pricing.ts) — um reenvio/retry depois de pricing.ts mudar não
+// pode fazer a resposta divergir do que foi realmente contratado.
+function idempotentResponse(company: ExistingCompany) {
   return NextResponse.json({
     success: true,
     data: {
@@ -48,7 +52,7 @@ function idempotentResponse(company: ExistingCompany, mensalidadeValor: number) 
       isPromo:             company.implantacaoPromo,
       planType:            company.planType,
       implantacaoValor:    company.implantacaoValor / 100,
-      mensalidadeValor,
+      mensalidadeValor:    company.mensalidadeValor,
       subscriptionCreated: !!company.asaasSubscriptionId,
       alreadyRegistered:   true,
     },
@@ -60,10 +64,10 @@ function idempotentResponse(company: ExistingCompany, mensalidadeValor: number) 
 // implantação com checkoutUrl real. Sem isso, é um estado parcial de uma
 // falha anterior na cobrança (Company criada, createImplantacaoCharge falhou
 // depois) — um retry NÃO pode disfarçar isso de sucesso com checkoutUrl nulo.
-function respondForExistingCompany(company: ExistingCompany, mensalidadeValor: number, leadId: string) {
+function respondForExistingCompany(company: ExistingCompany, leadId: string) {
   const payment = company.payments[0]
   if (payment?.checkoutUrl) {
-    return idempotentResponse(company, mensalidadeValor)
+    return idempotentResponse(company)
   }
   console.error(
     `[LEADS/REGISTER] Company existente SEM Payment de implantação válido — provável estado parcial de falha anterior na cobrança. leadId=${leadId} companyId=${company.id}`
@@ -143,7 +147,7 @@ export async function POST(req: NextRequest) {
       include: { payments: { where: { type: 'implantacao' }, take: 1 } },
     })
     if (existingCompany) {
-      return respondForExistingCompany(existingCompany, mensalidadeValor, lead.id)
+      return respondForExistingCompany(existingCompany, lead.id)
     }
 
     const dbPlan = await prisma.plan.findFirst({ where: { name: employees } })
@@ -200,6 +204,7 @@ export async function POST(req: NextRequest) {
           observations:         data.observations,
           planType,
           implantacaoValor:     implantacaoValorCentavos,
+          mensalidadeValor,
           implantacaoPromo:     isPromo,
           promoDeadline:        isPromo ? getPromoDeadline(24) : null,
           contractAcceptedAt:   new Date(),
@@ -222,7 +227,7 @@ export async function POST(req: NextRequest) {
           where: { leadId: lead.id },
           include: { payments: { where: { type: 'implantacao' }, take: 1 } },
         })
-        if (raced) return respondForExistingCompany(raced, mensalidadeValor, lead.id)
+        if (raced) return respondForExistingCompany(raced, lead.id)
       }
       throw err
     }
@@ -271,7 +276,7 @@ export async function POST(req: NextRequest) {
       const subscription = await createSubscription({
         customerId: customer.id,
         companyId:  company.id,
-        value:      mensalidadeValor / 100,
+        value:      company.mensalidadeValor / 100,
         planLabel:  plan.name,
       })
       await prisma.company.update({
@@ -312,7 +317,7 @@ export async function POST(req: NextRequest) {
         isPromo,
         planType,
         implantacaoValor: implantacaoValorReais,
-        mensalidadeValor,
+        mensalidadeValor: company.mensalidadeValor,
         subscriptionCreated,
         ...(subscriptionCreated ? {} : { subscriptionFailureNotified }),
       },

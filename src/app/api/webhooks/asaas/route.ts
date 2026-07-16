@@ -100,33 +100,49 @@ export async function POST(req: NextRequest) {
     // Commission engine: create Commission record for mensalidade payments with a partner
     // (empresa cancelada não gera comissão nova — P0 cancelamento)
     if (dbPayment.type === 'mensalidade' && dbPayment.company.partnerId && dbPayment.company.status !== 'cancelled') {
-      // Competência = posição cronológica FIXA entre os Payment de mensalidade
-      // já criados pra esta empresa — conta TODOS os status, não só 'confirmed'.
-      // Uma competência já contada nunca "libera vaga": refund/chargeback só
-      // mudam o status da linha, nunca a apagam, então a contagem jamais
-      // decresce. Sem isso, estornar uma mensalidade antiga fazia a 13ª ser
-      // comissionada como se fosse a 12ª (bug corrigido aqui).
-      const mensalidadeCount = await prisma.payment.count({
-        where: { companyId: dbPayment.companyId, type: 'mensalidade' },
-      })
-      if (mensalidadeCount <= 12) {
-        const net = dbPayment.amount // uses gross amount as net proxy (adjust if taxes are known)
-        const valorComissao = Math.round(net * 0.10)
-        const now = new Date()
-        await prisma.commission.create({
-          data: {
-            partnerId:     dbPayment.company.partnerId,
-            companyId:     dbPayment.companyId,
-            paymentId:     dbPayment.id,
-            mensalidadeNum: mensalidadeCount,
-            mensalidadeLiq: net,
-            percentual:    10,
-            valorComissao,
-            status:        'em_carencia',
-            liberadaEm:    new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-            referencia:    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
-          },
-        }).catch(err => console.error('[WEBHOOK] Falha ao criar Commission:', err))
+      // Se já existe Commission para este Payment, NÃO cria de novo — cobre o
+      // caso de um chargeback revertido (disputa ganha): o pagamento volta a
+      // confirmed e cai aqui de novo, mas a competência já foi contada uma
+      // vez. Só reabre (bloqueada -> em_carencia) a comissão que essa mesma
+      // recuperação de valor está devolvendo; qualquer outro status (em
+      // carência, liberada, paga, estornada) fica como está.
+      const existingCommission = await prisma.commission.findFirst({ where: { paymentId: dbPayment.id } })
+      if (existingCommission) {
+        if (existingCommission.status === 'bloqueada') {
+          await prisma.commission.update({
+            where: { id: existingCommission.id },
+            data: { status: 'em_carencia' },
+          }).catch(err => console.error('[WEBHOOK] Falha ao reverter Commission bloqueada:', err))
+        }
+      } else {
+        // Competência = posição cronológica FIXA entre os Payment de mensalidade
+        // já criados pra esta empresa — conta TODOS os status, não só 'confirmed'.
+        // Uma competência já contada nunca "libera vaga": refund/chargeback só
+        // mudam o status da linha, nunca a apagam, então a contagem jamais
+        // decresce. Sem isso, estornar uma mensalidade antiga fazia a 13ª ser
+        // comissionada como se fosse a 12ª (bug corrigido em sessão anterior).
+        const mensalidadeCount = await prisma.payment.count({
+          where: { companyId: dbPayment.companyId, type: 'mensalidade' },
+        })
+        if (mensalidadeCount <= 12) {
+          const net = dbPayment.amount // uses gross amount as net proxy (adjust if taxes are known)
+          const valorComissao = Math.round(net * 0.10)
+          const now = new Date()
+          await prisma.commission.create({
+            data: {
+              partnerId:     dbPayment.company.partnerId,
+              companyId:     dbPayment.companyId,
+              paymentId:     dbPayment.id,
+              mensalidadeNum: mensalidadeCount,
+              mensalidadeLiq: net,
+              percentual:    10,
+              valorComissao,
+              status:        'em_carencia',
+              liberadaEm:    new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+              referencia:    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+            },
+          }).catch(err => console.error('[WEBHOOK] Falha ao criar Commission:', err))
+        }
       }
     }
 
@@ -219,16 +235,65 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Estorno de pagamento estorna a comissão vinculada (razão de ser da carência de 30d)
+    // Estorno de pagamento estorna a comissão vinculada (razão de ser da carência de 30d).
+    // Inclui 'bloqueada' porque este MESMO evento é o que a Asaas reemite quando
+    // uma disputa de chargeback é PERDIDA (chargeback efetivado) — a comissão que
+    // estava em espera (bloqueada) precisa virar estornada, não ficar presa.
     if (event === 'PAYMENT_REFUNDED') {
       const refunded = await prisma.payment.findFirst({ where: { asaasId: payment.id } })
       if (refunded) {
         await prisma.commission.updateMany({
-          where: { paymentId: refunded.id, status: { in: ['em_carencia', 'liberada'] } },
+          where: { paymentId: refunded.id, status: { in: ['em_carencia', 'liberada', 'bloqueada'] } },
           data: { status: 'estornada' },
         }).catch(err => console.error('[WEBHOOK] Falha ao estornar Commission:', err))
       }
     }
+  }
+
+  // Captura de cartão recusada: pagamento nunca chegou a existir como
+  // confirmado — se já houver um Payment local (pending, de alguma tentativa
+  // anterior), marca como failed. Nunca regride um pagamento já confirmed ou
+  // refunded (evento fora de ordem/atrasado não pode desfazer um pagamento
+  // já liquidado). Nenhuma Commission é tocada — nunca existiu uma pra esse
+  // Payment (só nasce a partir de CONFIRMED/RECEIVED).
+  if (event === 'PAYMENT_CREDIT_CARD_CAPTURE_REFUSED') {
+    const updated = await prisma.payment.updateMany({
+      where: { asaasId: payment.id, status: { notIn: ['confirmed', 'refunded'] } },
+      data: { status: 'failed' },
+    })
+    console.error(`[WEBHOOK] Captura de cartão recusada: asaasId=${payment.id} — Payment local atualizado: ${updated.count > 0}`)
+  }
+
+  // Chargeback solicitado pelo titular do cartão ou disputa em andamento
+  // (documentos enviados) — mesmo tratamento pros dois: o dinheiro está em
+  // risco até o desfecho, então a comissão correspondente fica em espera
+  // (bloqueada) em vez de liberar/pagar normalmente. Só toca em_carencia e
+  // liberada — igual ao PAYMENT_REFUNDED, comissão já paga não sofre
+  // clawback. Sinaliza ação manual via log (console.error). Se o Payment
+  // local não existir (fora de ordem/desconhecido), não há o que bloquear —
+  // no-op seguro.
+  if (event === 'PAYMENT_CHARGEBACK_REQUESTED' || event === 'PAYMENT_CHARGEBACK_DISPUTE') {
+    const transition = await prisma.payment.updateMany({
+      where: { asaasId: payment.id, status: 'confirmed' },
+      data: { status: 'disputed' },
+    })
+    const disputedPayment = await prisma.payment.findFirst({ where: { asaasId: payment.id } })
+    if (disputedPayment) {
+      await prisma.commission.updateMany({
+        where: { paymentId: disputedPayment.id, status: { in: ['em_carencia', 'liberada'] } },
+        data: { status: 'bloqueada' },
+      }).catch(err => console.error('[WEBHOOK] Falha ao bloquear Commission em disputa:', err))
+    }
+    console.error(`[WEBHOOK] AÇÃO MANUAL — ${event}: asaasId=${payment.id} — Payment marcado disputed: ${transition.count > 0}. Acompanhar desfecho no painel Asaas.`)
+  }
+
+  // Disputa ganha, aguardando o banco emissor devolver o valor — informativo
+  // por enquanto: o valor ainda não voltou (Payment continua disputed,
+  // Commission continua bloqueada). A recuperação de fato é sinalizada pela
+  // própria Asaas reemitindo PAYMENT_CONFIRMED/RECEIVED (tratado acima, no
+  // bloco que já existe — reabre a Commission bloqueada automaticamente).
+  if (event === 'PAYMENT_AWAITING_CHARGEBACK_REVERSAL') {
+    console.error(`[WEBHOOK] Disputa de chargeback ganha, aguardando estorno do banco: asaasId=${payment.id}`)
   }
 
   return NextResponse.json({ ok: true })

@@ -100,8 +100,14 @@ export async function POST(req: NextRequest) {
     // Commission engine: create Commission record for mensalidade payments with a partner
     // (empresa cancelada não gera comissão nova — P0 cancelamento)
     if (dbPayment.type === 'mensalidade' && dbPayment.company.partnerId && dbPayment.company.status !== 'cancelled') {
+      // Competência = posição cronológica FIXA entre os Payment de mensalidade
+      // já criados pra esta empresa — conta TODOS os status, não só 'confirmed'.
+      // Uma competência já contada nunca "libera vaga": refund/chargeback só
+      // mudam o status da linha, nunca a apagam, então a contagem jamais
+      // decresce. Sem isso, estornar uma mensalidade antiga fazia a 13ª ser
+      // comissionada como se fosse a 12ª (bug corrigido aqui).
       const mensalidadeCount = await prisma.payment.count({
-        where: { companyId: dbPayment.companyId, type: 'mensalidade', status: 'confirmed' },
+        where: { companyId: dbPayment.companyId, type: 'mensalidade' },
       })
       if (mensalidadeCount <= 12) {
         const net = dbPayment.amount // uses gross amount as net proxy (adjust if taxes are known)

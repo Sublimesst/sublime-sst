@@ -33,9 +33,17 @@ export async function POST(req: NextRequest) {
     // Resolve o parceiro indicador (vínculo preservado mesmo se o lead
     // parar no teste — inclusive no resultado não-elegível/backoffice)
     const leadId = `cnpj_${data.cnpj.replace(/\D/g,'')}`
-    const partner = data.partnerRef
+    let partner = data.partnerRef
       ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
       : null
+
+    // Autoindicação: parceiro não pode se indicar usando o próprio CNPJ. Ignora
+    // o vínculo (segue como se não houvesse ?ref=) — não bloqueia o cadastro,
+    // só evita que a empresa do parceiro gere Commission pra ele mesmo.
+    if (partner?.cnpj && partner.cnpj.replace(/\D/g, '') === data.cnpj.replace(/\D/g, '')) {
+      partner = null
+    }
+
     const existing = await prisma.lead.findUnique({ where: { id: leadId } })
 
     // Upsert lead

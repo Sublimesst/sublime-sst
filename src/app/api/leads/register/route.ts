@@ -195,9 +195,16 @@ export async function POST(req: NextRequest) {
     const dbPlan = await prisma.plan.findFirst({ where: { name: employees } })
 
     // Resolve partner from ref code
-    const partner = data.partnerRef
+    let partner = data.partnerRef
       ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
       : null
+
+    // Autoindicação: parceiro não pode se indicar usando o próprio CNPJ. Ignora
+    // o vínculo (segue como se não houvesse ?ref=) — não bloqueia o cadastro,
+    // só evita que a empresa do parceiro gere Commission pra ele mesmo.
+    if (partner?.cnpj && partner.cnpj.replace(/\D/g, '') === lead.cnpj.replace(/\D/g, '')) {
+      partner = null
+    }
 
     // Nenhuma Company é criada antes deste ponto — se a Asaas falhar aqui
     // (ex.: chave/URL de ambiente incompatível, conta mal configurada), nada

@@ -170,9 +170,10 @@ export async function createOrFindCustomer(params: {
 export async function createImplantacaoCharge(params: {
   customerId: string
   isPromo: boolean
+  ltcatAddon: boolean
   companyId: string
   cnpj: string
-  amount: number   // em reais (não centavos)
+  amount: number   // em reais (não centavos) — já inclui o LTCAT quando `ltcatAddon: true`
   planLabel: string
 }): Promise<AsaasCharge> {
   const value = params.amount
@@ -187,6 +188,7 @@ export async function createImplantacaoCharge(params: {
     .split('T')[0]
 
   const descPromo = params.isPromo ? ' Promocional' : ''
+  const descLtcat = params.ltcatAddon ? ' + LTCAT' : ''
   const valorFmt = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return asaasFetch<AsaasCharge>('/payments', {
@@ -196,7 +198,7 @@ export async function createImplantacaoCharge(params: {
       billingType: 'UNDEFINED',
       value,
       dueDate,
-      description: `Sublime Digital ${params.planLabel} — Implantação${descPromo} (${valorFmt})`,
+      description: `Sublime Digital ${params.planLabel} — Implantação${descPromo}${descLtcat} (${valorFmt})`,
       externalReference: params.companyId,
       ...moraCharges(),
     }),

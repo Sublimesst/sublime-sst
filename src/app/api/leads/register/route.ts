@@ -6,7 +6,7 @@ import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAs
 import { notifySubscriptionFailed } from '@/lib/mailer'
 import { getPromoDeadline } from '@/lib/utils'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
-import { PRICING, CONTRACT_VERSION, PROMO_WINDOW_MS, type PlanKey, type FaixaKey } from '@/lib/pricing'
+import { PRICING, CONTRACT_VERSION, PROMO_WINDOW_MS, LTCAT_ADDON_PRICE_CENTS, type PlanKey, type FaixaKey } from '@/lib/pricing'
 
 const schema = z.object({
   cnpj:               z.string().min(14),
@@ -119,7 +119,16 @@ export async function POST(req: NextRequest) {
     const employees = assessment.employees as FaixaKey
     const plan = PRICING[planType]
 
-    const implantacaoValorCentavos = isPromo ? plan.implantacao.promo : plan.implantacao.padrao
+    const implantacaoBaseCentavos = isPromo ? plan.implantacao.promo : plan.implantacao.padrao
+    // LTCAT só é um adicional pago no Essencial — no Premium já vem incluso
+    // (ltcatIncluido:true em pricing.ts), então cobrar de novo seria duplicar
+    // um serviço que o cliente já pagou dentro da mensalidade. A UI de
+    // /elegibilidade já só oferece o checkbox pro Essencial; esta é a mesma
+    // regra aplicada no backend, para não depender só do frontend.
+    const ltcatCharged = data.ltcatAddon && planType === 'essencial'
+    // R$450 somado DEPOIS da escolha promo/padrão — o desconto promocional
+    // nunca incide sobre o LTCAT, só sobre a implantação-base.
+    const implantacaoValorCentavos = implantacaoBaseCentavos + (ltcatCharged ? LTCAT_ADDON_PRICE_CENTS : 0)
     const implantacaoValorReais    = implantacaoValorCentavos / 100
     // Fallback aqui é só defesa de indexação (employees nunca deveria ser algo
     // fora das 3 faixas, já que '21+' nunca é elegível) — não é mais o fallback
@@ -226,6 +235,7 @@ export async function POST(req: NextRequest) {
       charge = await createImplantacaoCharge({
         customerId: customer.id,
         isPromo,
+        ltcatAddon: ltcatCharged,
         companyId:  company.id,
         cnpj:       lead.cnpj,
         amount:     implantacaoValorReais,

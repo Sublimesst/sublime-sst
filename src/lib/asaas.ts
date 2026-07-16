@@ -112,7 +112,7 @@ function mockSubscription(value: number): AsaasSubscription {
     id: `sub_mock_${Date.now()}`,
     status: 'ACTIVE',
     value,
-    nextDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    nextDueDate: new Date().toISOString().split('T')[0],
     cycle: 'MONTHLY',
   }
 }
@@ -198,7 +198,7 @@ export async function createImplantacaoCharge(params: {
       billingType: 'UNDEFINED',
       value,
       dueDate,
-      description: `Sublime Digital ${params.planLabel} — Implantação${descPromo}${descLtcat} (${valorFmt})`,
+      description: `Sublime ${params.planLabel} — Implantação${descPromo}${descLtcat} (${valorFmt})`,
       externalReference: params.companyId,
       ...moraCharges(),
     }),
@@ -216,12 +216,13 @@ export async function createSubscription(params: {
     return mockSubscription(params.value)
   }
 
-  // Primeira cobrança da assinatura 30 dias após a criação (mesma janela de
-  // carência já usada para liberação de comissão — sem relação direta, só
-  // um valor de negócio razoável para o 1º ciclo de mensalidade).
-  const nextDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split('T')[0]
+  // Primeira cobrança da assinatura vence HOJE (data da contratação) — é a
+  // 1ª mensalidade, cobrada no ato junto da implantação, não uma cobrança
+  // avulsa separada. Documentado pela própria Asaas: informar nextDueDate
+  // como a data atual faz a 1ª cobrança sair na criação da assinatura.
+  // Sem relação com a carência de 30 dias da Commission (calculada à parte,
+  // a partir da confirmação do pagamento — ver webhook/asaas/route.ts).
+  const nextDueDate = new Date().toISOString().split('T')[0]
 
   return asaasFetch<AsaasSubscription>('/subscriptions', {
     method: 'POST',
@@ -231,7 +232,7 @@ export async function createSubscription(params: {
       value: params.value,
       nextDueDate,
       cycle: 'MONTHLY',
-      description: `Sublime Digital ${params.planLabel} — Mensalidade`,
+      description: `Sublime ${params.planLabel} — Mensalidade`,
       externalReference: params.companyId,
       ...moraCharges(),
     }),

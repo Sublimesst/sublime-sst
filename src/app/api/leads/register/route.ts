@@ -32,9 +32,10 @@ const schema = z.object({
 })
 
 type ExistingCompany = {
-  id: string; implantacaoPromo: boolean; planType: string | null; implantacaoValor: number
+  id: string; razaoSocial: string; cnpj: string; implantacaoPromo: boolean; planType: string | null; implantacaoValor: number
   mensalidadeValor: number
-  asaasSubscriptionId: string | null; payments: { checkoutUrl: string | null }[]
+  asaasCustomerId: string | null; asaasSubscriptionId: string | null
+  payments: { checkoutUrl: string | null }[]
 }
 
 // Monta a resposta de sucesso a partir de uma Company já existente — usado
@@ -64,18 +65,59 @@ function idempotentResponse(company: ExistingCompany) {
 // implantação com checkoutUrl real. Sem isso, é um estado parcial de uma
 // falha anterior na cobrança (Company criada, createImplantacaoCharge falhou
 // depois) — um retry NÃO pode disfarçar isso de sucesso com checkoutUrl nulo.
-function respondForExistingCompany(company: ExistingCompany, leadId: string) {
+//
+// Se a implantação está OK mas a assinatura nunca foi criada (asaasSubscriptionId
+// nulo — único sinal existente de falha, o catch original nunca grava um valor
+// parcial), o retry tenta criar SÓ a assinatura, reaproveitando o customer já
+// existente e o snapshot de mensalidade já salvo — nunca recria a cobrança de
+// implantação, nunca cria uma segunda Company.
+async function respondForExistingCompany(company: ExistingCompany, leadId: string, planLabel: string) {
   const payment = company.payments[0]
-  if (payment?.checkoutUrl) {
-    return idempotentResponse(company)
+  if (!payment?.checkoutUrl) {
+    console.error(
+      `[LEADS/REGISTER] Company existente SEM Payment de implantação válido — provável estado parcial de falha anterior na cobrança. leadId=${leadId} companyId=${company.id}`
+    )
+    return NextResponse.json(
+      { success: false, error: 'Encontramos um cadastro iniciado, mas a cobrança não foi gerada corretamente. Nossa equipe foi acionada para concluir o processo.' },
+      { status: 409 }
+    )
   }
-  console.error(
-    `[LEADS/REGISTER] Company existente SEM Payment de implantação válido — provável estado parcial de falha anterior na cobrança. leadId=${leadId} companyId=${company.id}`
-  )
-  return NextResponse.json(
-    { success: false, error: 'Encontramos um cadastro iniciado, mas a cobrança não foi gerada corretamente. Nossa equipe foi acionada para concluir o processo.' },
-    { status: 409 }
-  )
+
+  let finalCompany = company
+  if (!company.asaasSubscriptionId && company.asaasCustomerId) {
+    try {
+      const subscription = await createSubscription({
+        customerId: company.asaasCustomerId,
+        companyId:  company.id,
+        value:      company.mensalidadeValor / 100,
+        planLabel,
+      })
+      finalCompany = await prisma.company.update({
+        where: { id: company.id },
+        data: {
+          asaasSubscriptionId: subscription.id,
+          subscriptionStatus:  subscription.status.toLowerCase(),
+        },
+        include: { payments: { where: { type: 'implantacao' }, take: 1 } },
+      })
+    } catch (err) {
+      console.error(`[LEADS/REGISTER] Retry de recuperação de assinatura falhou (companyId=${company.id}):`, err)
+      try {
+        await notifySubscriptionFailed({
+          companyName: company.razaoSocial,
+          cnpj:        company.cnpj,
+          companyId:   company.id,
+          error:       err instanceof Error ? err.message : String(err),
+        })
+      } catch (notifyErr) {
+        console.error('[LEADS/REGISTER] Falha ao notificar equipe sobre retry de assinatura (e-mail NÃO enviado):', notifyErr)
+      }
+      // segue sem assinatura — mesma resposta idempotente de sempre, só que
+      // ainda com subscriptionCreated:false, pronta pra próxima tentativa.
+    }
+  }
+
+  return idempotentResponse(finalCompany)
 }
 
 export async function POST(req: NextRequest) {
@@ -147,7 +189,7 @@ export async function POST(req: NextRequest) {
       include: { payments: { where: { type: 'implantacao' }, take: 1 } },
     })
     if (existingCompany) {
-      return respondForExistingCompany(existingCompany, lead.id)
+      return await respondForExistingCompany(existingCompany, lead.id, plan.name)
     }
 
     const dbPlan = await prisma.plan.findFirst({ where: { name: employees } })
@@ -227,7 +269,7 @@ export async function POST(req: NextRequest) {
           where: { leadId: lead.id },
           include: { payments: { where: { type: 'implantacao' }, take: 1 } },
         })
-        if (raced) return respondForExistingCompany(raced, lead.id)
+        if (raced) return await respondForExistingCompany(raced, lead.id, plan.name)
       }
       throw err
     }

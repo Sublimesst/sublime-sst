@@ -33,8 +33,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     include: { partner: true },
   })
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })
+  // Idempotente: repetir um cancelamento já concluído é sucesso, não erro —
+  // não chama a Asaas de novo (já foi cancelada da vez certa) nem toca
+  // CancellationRequest/Payment/Commission.
   if (company.status === 'cancelled') {
-    return NextResponse.json({ success: false, error: 'Empresa já está cancelada.' }, { status: 409 })
+    return NextResponse.json({ success: true, data: { alreadyCancelled: true } }, { status: 200 })
   }
 
   // Cancela a assinatura recorrente na Asaas ANTES de qualquer alteração local.
@@ -65,7 +68,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     data: { status: 'cancelled' },
   })
   if (transition.count === 0) {
-    return NextResponse.json({ success: false, error: 'Empresa já está cancelada.' }, { status: 409 })
+    // Corrida: outra chamada concorrente já cancelou entre o check acima e
+    // aqui — mesmo tratamento idempotente (a Asaas já foi cancelada por essa
+    // outra chamada, ou nunca existiu).
+    return NextResponse.json({ success: true, data: { alreadyCancelled: true } }, { status: 200 })
   }
 
   const requestedAt = d.requestedAt ?? new Date()

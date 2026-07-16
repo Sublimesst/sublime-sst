@@ -3,10 +3,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { sendCancellationConfirmedClient, notifyPartnerCompanyCancelled } from '@/lib/mailer'
 import { verifyAdminSecret } from '@/lib/adminAuth'
+import { cancelSubscription } from '@/lib/asaas'
 
-// NOTA OPERACIONAL (P0): esta rota não cancela nada na Asaas — não existe
-// assinatura recorrente via API ainda (E4). Depois de registrar aqui, o
-// admin precisa cancelar a cobrança manualmente no painel da Asaas.
 function auth(req: NextRequest) {
   return verifyAdminSecret(req.headers.get('x-admin-secret'))
 }
@@ -37,6 +35,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })
   if (company.status === 'cancelled') {
     return NextResponse.json({ success: false, error: 'Empresa já está cancelada.' }, { status: 409 })
+  }
+
+  // Cancela a assinatura recorrente na Asaas ANTES de qualquer alteração local.
+  // Se isso falhar, a Company NÃO pode virar 'cancelled' — sem esse cancelamento,
+  // a assinatura continuaria gerando cobrança real sem controle local nenhum.
+  // Empresa sem assinatura (nunca criada) segue direto pro fluxo local, como já
+  // era; em modo mock, cancelSubscription() já é um no-op seguro internamente.
+  if (company.asaasSubscriptionId) {
+    try {
+      await cancelSubscription(company.asaasSubscriptionId)
+    } catch (err) {
+      console.error(`[CANCEL] Falha ao cancelar assinatura na Asaas (companyId=${params.id}, subscriptionId=${company.asaasSubscriptionId}):`, err)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Não foi possível cancelar a assinatura na Asaas. O cancelamento NÃO foi concluído — tente novamente em alguns instantes ou fale com o time técnico.',
+        },
+        { status: 502 }
+      )
+    }
   }
 
   const d = parsed.data

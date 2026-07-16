@@ -246,4 +246,33 @@ export async function getCharge(chargeId: string): Promise<AsaasCharge> {
   return asaasFetch<AsaasCharge>(`/payments/${chargeId}`)
 }
 
+// Cancela a assinatura recorrente (DELETE /subscriptions/{id}). A Asaas
+// retorna 404 tanto para "já cancelada" quanto "nunca existiu" — os dois
+// casos já são o estado desejado (sem cobrança futura), então são tratados
+// como sucesso, não erro. Só propaga exceção pra falha de verdade (rede,
+// 401, 400 etc.), pra quem chama saber que a assinatura AINDA está ativa.
+export async function cancelSubscription(subscriptionId: string): Promise<{ alreadyCancelled: boolean }> {
+  if (IS_MOCK) {
+    warnMock('cancelSubscription')
+    return { alreadyCancelled: false }
+  }
+
+  const res = await fetch(`${ASAAS_BASE_URL}/subscriptions/${subscriptionId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      access_token: ASAAS_API_KEY,
+    },
+  })
+
+  if (res.status === 404) {
+    return { alreadyCancelled: true }
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(`Asaas API error ${res.status}: ${JSON.stringify(err)}`)
+  }
+  return { alreadyCancelled: false }
+}
+
 export const isAsaasMock = IS_MOCK

@@ -101,9 +101,7 @@ export default async function DashboardPage() {
   const pendingPayment = company.payments.find(p => p.type === 'implantacao' && p.status === 'pending')
   const needsOnboarding = company.payments.some(p => p.type === 'implantacao' && p.status === 'confirmed') && !company.onboardingData
 
-  const monthly = company.plan
-    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(company.plan.monthlyPrice / 100)
-    : '—'
+  const monthly = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(company.mensalidadeValor / 100)
 
   return (
     <div className="min-h-screen bg-gray-50">

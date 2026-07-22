@@ -252,11 +252,12 @@ export default function EmpresaDetailPage() {
 
   function AsaasManualAlert() {
     return (
-      <div className="bg-amber-50 border border-amber-300 rounded-[8px] p-3 mb-4 text-[12px] text-amber-800">
-        <p className="font-semibold mb-1">⚠️ Cancelamento da assinatura Asaas ainda é manual</p>
+      <div className="bg-blue-50 border border-blue-200 rounded-[8px] p-3 mb-4 text-[12px] text-blue-800">
+        <p className="font-semibold mb-1">ℹ️ Cancelamento também cancela a assinatura na Asaas</p>
         <p>
-          Cancelar aqui NÃO cancela a cobrança recorrente na Asaas. Após registrar o cancelamento,
-          acesse o painel da Asaas e cancele a assinatura manualmente.
+          Esta ação cancela automaticamente a assinatura recorrente na Asaas antes de aplicar o
+          cancelamento local. Se a chamada à Asaas falhar, nada é alterado e o cancelamento pode
+          ser tentado novamente.
         </p>
         {company!.asaasSubscriptionId ? (
           <p className="mt-1">ID da assinatura: <span className="font-mono font-semibold">{company!.asaasSubscriptionId}</span></p>

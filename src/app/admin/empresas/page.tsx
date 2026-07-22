@@ -16,6 +16,7 @@ interface Company {
   ltcatAddon: boolean
   reviewedBy?: string | null
   createdAt: string
+  mensalidadeValor: number
   plan?: { label: string; monthlyPrice: number } | null
   payments: { type: string; status: string; checkoutUrl?: string | null }[]
   onboardingData?: { submittedAt: string } | null
@@ -196,7 +197,7 @@ export default function EmpresasPage() {
                       </td>
                       <td className="px-5 py-3.5">
                         <p>{c.plan?.label ?? '—'}</p>
-                        {c.plan && <p className="text-[11px] text-teal">{formatBRL(c.plan.monthlyPrice)}/mês</p>}
+                        <p className="text-[11px] text-teal">{formatBRL(c.mensalidadeValor)}/mês</p>
                         {c.planType && <p className="text-[10px] text-gray-400 capitalize">{c.planType}</p>}
                       </td>
                       <td className="px-5 py-3.5">

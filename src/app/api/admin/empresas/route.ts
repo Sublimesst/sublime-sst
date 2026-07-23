@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       plan: true,
       payments: { where: { type: 'implantacao' }, orderBy: { createdAt: 'desc' }, take: 1 },
       onboardingData: { select: { submittedAt: true } },
+      partner: { select: { id: true, name: true, code: true } },
     },
     orderBy: { createdAt: 'desc' },
   })

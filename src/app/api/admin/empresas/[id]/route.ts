@@ -34,6 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       plan: true,
       payments: { where: { type: 'implantacao' }, take: 1 },
       cancellationRequests: { orderBy: { createdAt: 'desc' } },
+      partner: { select: { id: true, name: true, office: true, code: true } },
     },
   })
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })

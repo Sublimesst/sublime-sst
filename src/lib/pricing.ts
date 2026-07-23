@@ -44,3 +44,12 @@ export function getMonthlyPrice(plan: PlanKey, faixa: FaixaKey): number {
 export function getImplantacaoPrice(plan: PlanKey, isPromo: boolean): number {
   return isPromo ? PRICING[plan].implantacao.promo : PRICING[plan].implantacao.padrao
 }
+
+// Faixa de funcionários a partir da contagem real — fonte única para exibição
+// (admin, e-mail). NUNCA usar a tabela Plan (label/preço legado). O label
+// correspondente sai de PRICING[plan].faixas[key].label.
+export function faixaKeyFromCount(n: number): FaixaKey {
+  if (n <= 5) return '1-5'
+  if (n <= 10) return '6-10'
+  return '11-20'
+}

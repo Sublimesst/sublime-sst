@@ -20,6 +20,7 @@ interface Company {
   plan?: { label: string; monthlyPrice: number } | null
   payments: { type: string; status: string; checkoutUrl?: string | null }[]
   onboardingData?: { submittedAt: string } | null
+  partner?: { id: string; name: string; code: string } | null
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -175,14 +176,14 @@ export default function EmpresasPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  {['Empresa', 'Plano', 'Status', 'Onboarding', 'Implantação', 'Cadastro', 'Ações'].map(h => (
+                  {['Empresa', 'Plano', 'Origem', 'Status', 'Onboarding', 'Implantação', 'Cadastro', 'Ações'].map(h => (
                     <th key={h} className="text-left px-5 py-3 font-semibold text-gray-600 text-[11px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="px-5 py-10 text-center text-gray-400">Nenhuma empresa encontrada.</td></tr>
+                  <tr><td colSpan={8} className="px-5 py-10 text-center text-gray-400">Nenhuma empresa encontrada.</td></tr>
                 ) : filtered.map(c => {
                   const st = STATUS_LABELS[c.status] ?? { label: c.status, color: 'bg-gray-100 text-gray-600' }
                   const implantacao = c.payments.find(p => p.type === 'implantacao')
@@ -199,6 +200,16 @@ export default function EmpresasPage() {
                         <p>{c.plan?.label ?? '—'}</p>
                         <p className="text-[11px] text-teal">{formatBRL(c.mensalidadeValor)}/mês</p>
                         {c.planType && <p className="text-[10px] text-gray-400 capitalize">{c.planType}</p>}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {c.partner ? (
+                          <>
+                            <p className="text-[12px] text-gray-700">{c.partner.name}</p>
+                            <p className="text-[10px] text-gray-400 font-mono">{c.partner.code}</p>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-gray-400">Orgânico</span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${st.color}`}>{st.label}</span>

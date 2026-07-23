@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { ArrowLeft, Save, Upload, Ban } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { formatDate, maskCurrencyBRL } from '@/lib/utils'
+import { PRICING, faixaKeyFromCount } from '@/lib/pricing'
 
 const DOCUMENTO_TIPOS = [
   { value: 'pgr',        label: 'PGR' },
@@ -74,6 +75,10 @@ interface Company {
   cnpj: string
   email: string
   whatsapp: string
+  cep: string
+  cidade: string
+  estado: string
+  endereco: string
   numFuncionarios: number
   status: string
   planType?: string | null
@@ -82,6 +87,8 @@ interface Company {
   reviewedAt?: string | null
   contractAcceptedAt?: string | null
   createdAt: string
+  source?: string | null
+  partner?: { id: string; name: string; office: string; code: string } | null
   plan?: { label: string; monthlyPrice: number } | null
   cancellationRequests?: CancellationRequest[]
   asaasCustomerId?: string | null
@@ -319,6 +326,33 @@ export default function EmpresaDetailPage() {
           {company.ltcatAddon && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">+LTCAT</span>}
           {company.status === 'cancelled' && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">CANCELADO</span>}
           <p className="text-[11px] text-gray-400 mt-0.5">Cadastro: {formatDate(company.createdAt)}</p>
+        </div>
+      </div>
+
+      {/* Dados da empresa */}
+      <div className="bg-white rounded-[12px] border border-gray-200 p-5 mb-6">
+        <p className="text-[14px] font-semibold text-gray-800 mb-4">Dados da empresa</p>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-[13px]">
+          <div>
+            <span className="text-gray-400 block text-[11px] uppercase tracking-wide">WhatsApp</span>
+            <a href={`https://wa.me/55${company.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-teal">{company.whatsapp}</a>
+          </div>
+          <div>
+            <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Funcionários</span>
+            {company.numFuncionarios} · {PRICING[company.planType === 'premium' ? 'premium' : 'essencial'].faixas[faixaKeyFromCount(company.numFuncionarios)].label}
+          </div>
+          <div className="col-span-2">
+            <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Endereço</span>
+            {company.endereco}, {company.cidade}/{company.estado} · CEP {company.cep}
+          </div>
+          <div className="col-span-2">
+            <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Origem</span>
+            {company.partner ? (
+              <span>Parceiro: <strong>{company.partner.name}</strong> · {company.partner.office} <span className="font-mono text-[11px] text-gray-400">({company.partner.code})</span></span>
+            ) : (
+              <span className="text-gray-600">Orgânico</span>
+            )}
+          </div>
         </div>
       </div>
 

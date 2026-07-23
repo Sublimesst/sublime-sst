@@ -208,31 +208,76 @@ export async function POST(req: NextRequest) {
   }
 
   if (event === 'PAYMENT_OVERDUE' || event === 'PAYMENT_REFUNDED') {
-    await prisma.payment.updateMany({
-      where: { asaasId: payment.id },
-      data: { status: event === 'PAYMENT_OVERDUE' ? 'overdue' : 'refunded' },
-    })
-
     // Inadimplência de MENSALIDADE reflete no pipeline da empresa + avisa a equipe
     if (event === 'PAYMENT_OVERDUE') {
-      const overduePay = await prisma.payment.findFirst({
+      let dbPayment = await prisma.payment.findFirst({
         where: { asaasId: payment.id },
         include: { company: true },
       })
-      if (overduePay?.type === 'mensalidade') {
-        await prisma.company.updateMany({
-          where: { id: overduePay.companyId, status: { in: ['active', 'documents_delivered'] } },
+
+      if (!dbPayment) {
+        // Mensalidade que venceu SEM nunca ter sido confirmada antes — nunca
+        // teve Payment local criado (só nascia via reconciliação no bloco
+        // CONFIRMED/RECEIVED, que este bloco não tinha). Reconcilia do mesmo
+        // jeito, mas só quando há subscription: sem isso não dá pra assumir
+        // com segurança que é mensalidade.
+        if (!payment.subscription) {
+          console.error('[WEBHOOK] PAYMENT_OVERDUE desconhecido sem subscription — não classificado como mensalidade:', payment.id)
+          return NextResponse.json({ ok: true, note: 'overdue payment unknown, no subscription' })
+        }
+
+        const byExternalRef = payment.externalReference
+          ? await prisma.company.findUnique({ where: { id: payment.externalReference } })
+          : null
+        const resolvedCompany = byExternalRef ?? await prisma.company.findFirst({ where: { asaasSubscriptionId: payment.subscription } })
+
+        if (!resolvedCompany) {
+          console.error('[WEBHOOK] PAYMENT_OVERDUE desconhecido, sem externalReference/subscription reconciliável:', payment.id)
+          return NextResponse.json({ ok: true, note: 'overdue payment not found in db' })
+        }
+
+        // asaasId é @unique: uma 2ª entrega concorrente do mesmo evento colide
+        // aqui e cai no catch — tratado como idempotente, sem duplicar.
+        try {
+          const created = await prisma.payment.create({
+            data: {
+              companyId:         resolvedCompany.id,
+              asaasId:           payment.id,
+              externalReference: payment.externalReference ?? null,
+              type:              'mensalidade',
+              amount:            Math.round((payment.value ?? 0) * 100),
+              status:            'overdue',
+              dueDate:           payment.dueDate ? new Date(payment.dueDate) : null,
+              billingType:       payment.billingType ?? null,
+            },
+          })
+          dbPayment = await prisma.payment.findUniqueOrThrow({
+            where: { id: created.id },
+            include: { company: true },
+          })
+        } catch (err) {
+          return NextResponse.json({ ok: true, note: 'already processed (race)' })
+        }
+      } else {
+        await prisma.payment.updateMany({
+          where: { id: dbPayment.id, status: { not: 'overdue' } },
           data: { status: 'overdue' },
         })
       }
-      if (overduePay) {
-        await notifyPaymentOverdue({
-          companyName:   overduePay.company.razaoSocial,
-          cnpj:          overduePay.company.cnpj,
-          tipo:          overduePay.type,
-          valorCentavos: overduePay.amount,
+
+      if (dbPayment.type === 'mensalidade') {
+        await prisma.company.updateMany({
+          where: { id: dbPayment.companyId, status: { in: ['active', 'documents_delivered'] } },
+          data: { status: 'overdue' },
         })
       }
+
+      await notifyPaymentOverdue({
+        companyName:   dbPayment.company.razaoSocial,
+        cnpj:          dbPayment.company.cnpj,
+        tipo:          dbPayment.type,
+        valorCentavos: dbPayment.amount,
+      })
     }
 
     // Estorno de pagamento estorna a comissão vinculada (razão de ser da carência de 30d).
@@ -240,6 +285,11 @@ export async function POST(req: NextRequest) {
     // uma disputa de chargeback é PERDIDA (chargeback efetivado) — a comissão que
     // estava em espera (bloqueada) precisa virar estornada, não ficar presa.
     if (event === 'PAYMENT_REFUNDED') {
+      await prisma.payment.updateMany({
+        where: { asaasId: payment.id },
+        data: { status: 'refunded' },
+      })
+
       const refunded = await prisma.payment.findFirst({ where: { asaasId: payment.id } })
       if (refunded) {
         await prisma.commission.updateMany({

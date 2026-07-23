@@ -5,6 +5,8 @@
 //   2. SMTP/Gmail           — configure SMTP_HOST + SMTP_USER + SMTP_PASS
 // ═══════════════════════════════════════════════════════════
 
+import { PRICING, LTCAT_ADDON_PRICE_CENTS, type FaixaKey } from './pricing'
+
 const NOTIFY = process.env.EMAIL_NOTIFY ?? 'contato@sublimesst.com'
 const FROM   = process.env.EMAIL_FROM   ?? 'Sublime SST <onboarding@resend.dev>'
 
@@ -245,14 +247,56 @@ export async function sendMagicLink(data: {
   ).catch(err => console.error('[MAILER] sendMagicLink:', err))
 }
 
+// Faixa de funcionários a partir da contagem real — mesma fonte única
+// (pricing.ts) usada no cadastro, nunca a tabela Plan legada (que tinha
+// preços desatualizados, ver fix do portal do cliente/admin).
+function faixaKeyFromCount(n: number): FaixaKey {
+  if (n <= 5) return '1-5'
+  if (n <= 10) return '6-10'
+  return '11-20'
+}
+
+function formatBRL(cents: number): string {
+  return `R$ ${(cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+}
+
 export async function sendWelcomeEmail(data: {
   to: string; companyName: string; responsavel: string; loginUrl: string
-  planType?: string; planLabel?: string
+  planType?: string
+  numFuncionarios: number
+  implantacaoValor: number   // centavos — snapshot já cobrado (Company.implantacaoValor), nunca recalculado
+  mensalidadeValor: number   // centavos — snapshot já cobrado (Company.mensalidadeValor), nunca recalculado
+  ltcatAddon: boolean
   contractPdf?: Buffer
 }) {
-  const planName = data.planType === 'premium' ? 'Digital Premium' : 'Digital Essencial'
-  const planColor = data.planType === 'premium' ? '#1e40af' : '#0d4a5c'
-  const planBg    = data.planType === 'premium' ? '#dbeafe' : '#e0f2fe'
+  const isPremium = data.planType === 'premium'
+  const planKey = isPremium ? 'premium' : 'essencial'
+  const planName = isPremium ? 'Digital Premium' : 'Digital Essencial'
+  const planColor = isPremium ? '#1e40af' : '#0d4a5c'
+  const planBg    = isPremium ? '#dbeafe' : '#e0f2fe'
+  const faixaLabel = PRICING[planKey].faixas[faixaKeyFromCount(data.numFuncionarios)].label
+
+  // LTCAT só é tratado como adicional contratado no Essencial. No Premium o
+  // LTCAT já é incluso (PRICING.premium.ltcatIncluido) — por instrução
+  // explícita, preferimos NÃO mencionar LTCAT no Premium nesta etapa, para
+  // não gerar comunicação ambígua (parece cobrança extra sem ser).
+  const showLtcatAddon = !isPremium && data.ltcatAddon
+
+  const implantacaoTotalFmt = formatBRL(data.implantacaoValor)
+  const mensalidadeFmt = formatBRL(data.mensalidadeValor)
+
+  const resumoHtml = showLtcatAddon
+    ? (() => {
+        const ltcatFmt = formatBRL(LTCAT_ADDON_PRICE_CENTS)
+        const baseFmt = formatBRL(data.implantacaoValor - LTCAT_ADDON_PRICE_CENTS)
+        return `
+          <p style="margin:0;font-size:13px;color:#334155;line-height:1.8">
+            Implantação: ${baseFmt}<br>
+            LTCAT (adicional contratado): ${ltcatFmt}<br>
+            <strong>Total da implantação: ${implantacaoTotalFmt}</strong>
+          </p>`
+      })()
+    : `<p style="margin:0;font-size:13px;color:#334155">Implantação: ${implantacaoTotalFmt}</p>`
 
   await sendEmail(data.to, `Bem-vindo(a) ao Sublime Digital! 🎉`,
     baseHtml('Pagamento confirmado — próximos passos',
@@ -262,8 +306,15 @@ export async function sendWelcomeEmail(data: {
         A partir de agora, a regularização da sua empresa em segurança do trabalho está em nossas mãos.
       </p>
       <div style="background:${planBg};border-radius:8px;padding:10px 14px;margin-bottom:16px">
-        <span style="font-size:13px;font-weight:700;color:${planColor}">Plano contratado: ${planName}${data.planLabel ? ' · ' + data.planLabel : ''}</span>
+        <span style="font-size:13px;font-weight:700;color:${planColor}">Plano contratado: ${planName} · ${faixaLabel}</span>
       </div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border-radius:10px;margin-bottom:16px">
+        <tr><td style="padding:14px 18px">
+          <p style="margin:0 0 8px;font-weight:700;color:#0d4a5c;font-size:14px">💰 Resumo do valor pago</p>
+          ${resumoHtml}
+          <p style="margin:8px 0 0;font-size:13px;color:#334155">Mensalidade: ${mensalidadeFmt}/mês</p>
+        </td></tr>
+      </table>
       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0fdf9;border-radius:10px;margin-bottom:16px">
         <tr><td style="padding:16px 18px">
           <p style="margin:0 0 10px;font-weight:700;color:#0d4a5c;font-size:14px">📋 O que acontece agora — só falta 1 passo seu:</p>

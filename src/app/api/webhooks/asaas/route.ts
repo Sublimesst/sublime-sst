@@ -197,11 +197,15 @@ export async function POST(req: NextRequest) {
       }
 
       await sendWelcomeEmail({
-        to:          co.email,
-        companyName: co.razaoSocial,
-        responsavel: co.responsavel,
+        to:               co.email,
+        companyName:      co.razaoSocial,
+        responsavel:      co.responsavel,
         loginUrl,
-        planType:    co.planType ?? undefined,
+        planType:         co.planType ?? undefined,
+        numFuncionarios:  co.numFuncionarios,
+        implantacaoValor: co.implantacaoValor,
+        mensalidadeValor: co.mensalidadeValor,
+        ltcatAddon:       co.ltcatAddon,
         contractPdf,
       }).catch(console.error)
     }

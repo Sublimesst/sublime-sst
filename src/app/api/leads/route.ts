@@ -27,9 +27,16 @@ export async function POST(req: NextRequest) {
 
     // Vincula o parceiro já na captura — antes o vínculo só nascia no cadastro
     // completo, e leads que paravam no teste ficavam sem indicador
-    const partner = data.partnerRef
+    let partner = data.partnerRef
       ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
       : null
+
+    // Autoindicação: parceiro não pode se indicar usando o próprio CNPJ. Ignora
+    // o vínculo (segue como se não houvesse ?ref=) — mesma regra já aplicada
+    // em /api/eligibility e /api/leads/register.
+    if (partner?.cnpj && partner.cnpj.replace(/\D/g, '') === data.cnpj.replace(/\D/g, '')) {
+      partner = null
+    }
 
     const existing = await prisma.lead.findUnique({ where: { id } })
     const lead = await prisma.lead.upsert({

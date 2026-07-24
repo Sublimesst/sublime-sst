@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Building2, LayoutDashboard, Settings, LogOut, ChevronRight, Layers } from 'lucide-react'
+import { Users, Building2, LayoutDashboard, Settings, LogOut, ChevronRight, Layers, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { href: '/admin/leads', label: 'Leads', icon: Users },
   { href: '/admin/empresas', label: 'Empresas', icon: Building2 },
   { href: '/admin/partners', label: 'Parceiros', icon: Building2 },
+  { href: '/admin/comissoes', label: 'Comissões', icon: Wallet },
   { href: '/admin/cnae', label: 'CNAEs', icon: Layers },
 ]
 

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock } from '@/lib/asaas'
+import { syncFirstSubscriptionPayment } from '@/lib/subscriptionSync'
 import { notifySubscriptionFailed } from '@/lib/mailer'
 import { getPromoDeadline } from '@/lib/utils'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
@@ -335,6 +336,21 @@ export async function POST(req: NextRequest) {
           subscriptionStatus:  subscription.status.toLowerCase(),
         },
       })
+
+      // Sincroniza (só leitura no Asaas) a 1ª cobrança já gerada pela
+      // assinatura — nunca cria cobrança nova. Falha aqui NUNCA desfaz o
+      // cadastro nem cria uma 2ª assinatura/cobrança; o cliente segue
+      // recebendo o checkout da implantação normalmente (Etapa 1A).
+      try {
+        const syncResult = await syncFirstSubscriptionPayment({
+          companyId:           company.id,
+          subscriptionId:      subscription.id,
+          expectedAmountCents: company.mensalidadeValor,
+        })
+        console.error(`[LEADS/REGISTER] Sync 1ª mensalidade — companyId=${company.id} subscriptionId=${subscription.id.slice(0, 6)}...${subscription.id.slice(-4)} outcome=${syncResult.outcome}`)
+      } catch (syncErr) {
+        console.error(`[LEADS/REGISTER] Falha ao sincronizar 1ª mensalidade — companyId=${company.id}:`, syncErr)
+      }
     } catch (err) {
       subscriptionCreated = false
       console.error('[LEADS/REGISTER] Falha ao criar assinatura recorrente:', err)

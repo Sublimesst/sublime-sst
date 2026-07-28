@@ -44,7 +44,7 @@ interface AsaasCustomer {
   mobilePhone: string
 }
 
-interface AsaasCharge {
+export interface AsaasCharge {
   id: string
   status: string
   value: number
@@ -244,6 +244,25 @@ export async function getCharge(chargeId: string): Promise<AsaasCharge> {
     return mockCharge(190)
   }
   return asaasFetch<AsaasCharge>(`/payments/${chargeId}`)
+}
+
+// Lista as cobranças já geradas por uma assinatura (GET /subscriptions/{id}/payments).
+// Somente leitura — nunca cria cobrança nova. Usado logo após a criação da
+// assinatura, quando se espera só a 1ª cobrança — sem paginação de propósito
+// (o limit já cobre a janela real de uso; se reaproveitado em assinatura com
+// histórico extenso, paginar fica para uma etapa futura).
+export async function listSubscriptionPayments(subscriptionId: string): Promise<AsaasCharge[]> {
+  if (IS_MOCK) {
+    // Modo mock: nenhuma cobrança real foi criada na Asaas, então não há o
+    // que listar — devolver vazio é o único resultado honesto e não diverge
+    // por faixa/plano (um valor fixo divergiria da mensalidade real de cada
+    // faixa). Testes controlam o comportamento via vi.mock, não por aqui.
+    return []
+  }
+  const res = await asaasFetch<{ data: AsaasCharge[] }>(
+    `/subscriptions/${encodeURIComponent(subscriptionId)}/payments?limit=20`
+  )
+  return res.data
 }
 
 // Cancela a assinatura recorrente (DELETE /subscriptions/{id}). A Asaas

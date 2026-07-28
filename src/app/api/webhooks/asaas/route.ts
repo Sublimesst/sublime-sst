@@ -364,3 +364,57 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
+
+// ── DIAGNÓSTICO TEMPORÁRIO (Preview only) ─────────────────────
+// Valida generateContractPdf em runtime serverless real, sem tocar banco,
+// Asaas ou e-mail. Só responde em VERCEL_ENV=preview + ?diagnostic=contract-pdf
+// exato; qualquer outro caso é 404 — indistinguível de rota inexistente.
+// Dados 100% sintéticos. Remover após validar o Preview desta branch.
+export async function GET(req: NextRequest) {
+  const isPreview = process.env.VERCEL_ENV === 'preview'
+  const diagnostic = req.nextUrl.searchParams.get('diagnostic')
+  if (!isPreview || diagnostic !== 'contract-pdf') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const { generateContractPdf } = await import('@/lib/contractPdf')
+
+  try {
+    const buf = await generateContractPdf({
+      razaoSocial:          'EMPRESA DIAGNOSTICO SINTETICA LTDA',
+      cnpj:                 '00.000.000/0001-00',
+      responsavel:          'Diagnostico Sintetico',
+      endereco:             'Rua Diagnostico, 1',
+      cidade:               'Rio de Janeiro',
+      estado:               'RJ',
+      cep:                  '00000-000',
+      numFuncionarios:      1,
+      email:                'diagnostico@example.com',
+      planType:             'essencial',
+      implantacaoValor:     14900,
+      implantacaoPromo:     true,
+      contractAcceptedAt:   new Date(),
+      contractAcceptanceIp: '127.0.0.1',
+      contractAcceptanceUa: 'diagnostic',
+      contractVersion:      'diagnostic',
+    })
+
+    const headerOk = buf.subarray(0, 5).toString('ascii') === '%PDF-'
+    const eofOk = buf.subarray(-10).includes('%%EOF')
+    const hash = createHash('sha256').update(buf).digest('hex')
+
+    return NextResponse.json({
+      ok: headerOk && eofOk,
+      bytes: buf.length,
+      headerOk,
+      eofOk,
+      hashPrefix: hash.slice(0, 12),
+      runtime: process.version,
+    })
+  } catch (err) {
+    return NextResponse.json({
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }, { status: 500 })
+  }
+}

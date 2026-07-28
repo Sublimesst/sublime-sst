@@ -472,6 +472,36 @@ export async function notifySubscriptionFailed(data: {
   )
 }
 
+// Alerta interno de falha na geração do PDF do contrato — o webhook de
+// pagamento segue resiliente (o e-mail de boas-vindas sai mesmo sem anexo),
+// mas sem este alerta a única forma de descobrir a falha era auditar
+// Company.contractHash manualmente. Não bloqueia o chamador: falhas de envio
+// aqui só viram log, nunca exceção propagada.
+function maskRazaoSocial(nome: string): string {
+  const partes = nome.trim().split(/\s+/)
+  if (partes.length <= 1) return nome.slice(0, 3) + '***'
+  return partes[0] + ' ' + partes.slice(1).map(p => p[0] + '***').join(' ')
+}
+
+export async function notifyContractPdfFailed(data: {
+  companyId: string; companyName: string; errorName: string; errorMessage: string
+}) {
+  await sendEmail(NOTIFY, `🔴 Falha ao gerar PDF do contrato: ${maskRazaoSocial(data.companyName)}`,
+    baseHtml('Contrato não anexado ao e-mail de boas-vindas',
+      `<div style="margin-bottom:14px">` + badge('🔴 AÇÃO MANUAL NECESSÁRIA', '#fee2e2', '#b91c1c') + `</div>` +
+      row('Empresa', escapeHtml(maskRazaoSocial(data.companyName))) +
+      row('ID interno', data.companyId) +
+      row('Erro', escapeHtml(data.errorName)) +
+      `<p style="font-size:13px;color:#64748b;margin:14px 0 0">
+        O pagamento da implantação foi confirmado normalmente e o e-mail de boas-vindas
+        foi enviado, mas <strong>sem o PDF do contrato anexado</strong>:<br>
+        <code style="font-size:12px;color:#b91c1c">${escapeHtml(data.errorMessage.slice(0, 300))}</code>
+        <br><br>Gere o contrato manualmente para este cliente e reenvie por fora do sistema.
+      </p>`
+    )
+  ).catch(err => console.error('[MAILER] notifyContractPdfFailed:', err))
+}
+
 export async function notifyOnboardingSubmitted(data: {
   companyName: string; cnpj: string; numFuncionarios: number; cargos?: string | null
 }) {

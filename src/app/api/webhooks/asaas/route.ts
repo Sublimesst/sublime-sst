@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash, timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { sendWelcomeEmail, notifyPaymentConfirmed, notifyPaymentOverdue } from '@/lib/mailer'
+import { sendWelcomeEmail, notifyPaymentConfirmed, notifyPaymentOverdue, notifyContractPdfFailed } from '@/lib/mailer'
 import { generateContractPdf } from '@/lib/contractPdf'
 import { CONTRACT_VERSION } from '@/lib/pricing'
 
@@ -193,7 +193,19 @@ export async function POST(req: NextRequest) {
           }).catch(err => console.error('[WEBHOOK] Falha ao salvar contractHash:', err))
         }
       } catch (err) {
-        console.error('[WEBHOOK] Falha ao gerar PDF do contrato:', err)
+        // Resiliente de propósito: o pagamento já está confirmado e não pode
+        // ser desfeito por uma falha de PDF. Loga estruturado (sem payload
+        // completo nem dado pessoal além do necessário) e avisa a equipe —
+        // sem isso, a única forma de notar era auditar contractHash manualmente.
+        const errorName = err instanceof Error ? err.name : 'UnknownError'
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        console.error(`[WEBHOOK] Falha ao gerar PDF do contrato — companyId=${co.id} error=${errorName}: ${errorMessage}`)
+        await notifyContractPdfFailed({
+          companyId:    co.id,
+          companyName:  co.razaoSocial,
+          errorName,
+          errorMessage,
+        }).catch(notifyErr => console.error('[WEBHOOK] Falha ao notificar equipe sobre PDF do contrato:', notifyErr))
       }
 
       await sendWelcomeEmail({

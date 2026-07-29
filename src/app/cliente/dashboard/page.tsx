@@ -2,10 +2,17 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { CheckCircle2, Clock, FileText, CreditCard, LogOut, AlertCircle, ChevronRight, Download } from 'lucide-react'
+import { CheckCircle2, Clock, FileText, CreditCard, LogOut, AlertCircle, ChevronRight, Download, ExternalLink } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { verifySessionCookie } from '@/lib/sessionCookie'
 import type { ClientSessionPayload } from '@/lib/clientAuth'
+import {
+  deriveFinancialActivationState,
+  PAYMENT_SELECT,
+  getPaymentOrderBy,
+  type PaymentStatus,
+} from '@/lib/paymentPresentation'
+import { paymentDisplayInfo } from './paymentPresentationView'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -23,7 +30,11 @@ async function getCompany() {
     where: { id: payload.companyId },
     include: {
       plan: true,
-      payments: { orderBy: { createdAt: 'desc' } },
+      payments: {
+        where: { type: { in: ['implantacao', 'mensalidade'] } },
+        select: PAYMENT_SELECT,
+        orderBy: getPaymentOrderBy(),
+      },
       onboardingData: true,
       documents: { orderBy: { uploadedAt: 'desc' } },
     },
@@ -36,6 +47,41 @@ async function getCompany() {
   return company
 }
 
+function FinancialPaymentRow({
+  label,
+  payment,
+  status,
+}: {
+  label: string
+  payment: { amount: number; dueDate: Date | null; checkoutUrl: string | null } | null
+  status: PaymentStatus | 'not_ready' | null
+}) {
+  const { statusLabel, validUrl, amountLabel, dueDateLabel } = paymentDisplayInfo(payment, status)
+
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-amber-200/60 last:border-0">
+      <div>
+        <p className="text-[14px] font-medium text-gray-900">{label}</p>
+        <p className="text-[12px] text-gray-600">
+          {statusLabel}
+          {amountLabel && <> · {amountLabel}</>}
+          {dueDateLabel && <> · vence {dueDateLabel}</>}
+        </p>
+      </div>
+      {validUrl && (
+        <a
+          href={validUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-primary text-[13px] py-2 px-4 shrink-0 inline-flex items-center gap-1.5"
+        >
+          Ver ou pagar <ExternalLink size={13} />
+        </a>
+      )}
+    </div>
+  )
+}
+
 const DOCUMENTO_LABELS: Record<string, string> = {
   pgr: 'PGR', pcmso: 'PCMSO', declaracao: 'Declaração técnica',
   os_epi: 'OS + Fichas de EPI', ltcat: 'LTCAT', contrato: 'Contrato',
@@ -44,7 +90,8 @@ const DOCUMENTO_LABELS: Record<string, string> = {
 type Step = { label: string; description: string; done: boolean; pending: boolean }
 
 function getSteps(
-  company: NonNullable<Awaited<ReturnType<typeof getCompany>>>
+  company: NonNullable<Awaited<ReturnType<typeof getCompany>>>,
+  financiallyComplete: boolean
 ): Step[] {
   const hasPendingPayment = company.payments.some(p => p.type === 'implantacao' && p.status === 'pending')
   const hasConfirmedPayment = company.payments.some(p => p.type === 'implantacao' && p.status === 'confirmed')
@@ -72,9 +119,11 @@ function getSteps(
       label: 'Preenchimento dos dados',
       description: hasOnboarding
         ? 'Dados recebidos — em análise pela equipe.'
-        : 'Preencha o formulário de onboarding para iniciar a elaboração dos documentos.',
+        : financiallyComplete
+          ? 'Preencha o formulário de onboarding para iniciar a elaboração dos documentos.'
+          : 'Libera após a confirmação da implantação e da primeira mensalidade.',
       done: hasOnboarding,
-      pending: !hasOnboarding && hasConfirmedPayment,
+      pending: !hasOnboarding && financiallyComplete,
     },
     {
       label: 'Elaboração dos documentos',
@@ -97,9 +146,9 @@ export default async function DashboardPage() {
   const company = await getCompany()
   if (!company) redirect('/cliente/login')
 
-  const steps = getSteps(company)
-  const pendingPayment = company.payments.find(p => p.type === 'implantacao' && p.status === 'pending')
-  const needsOnboarding = company.payments.some(p => p.type === 'implantacao' && p.status === 'confirmed') && !company.onboardingData
+  const financialState = deriveFinancialActivationState(company.status, company.payments)
+  const steps = getSteps(company, financialState.financiallyComplete)
+  const needsOnboarding = financialState.financiallyComplete && !company.onboardingData
 
   const monthly = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(company.mensalidadeValor / 100)
 
@@ -145,23 +194,25 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {pendingPayment && pendingPayment.checkoutUrl && (
-          <div className="mb-6 card border-amber-300 bg-amber-50 p-5 flex items-start gap-4">
-            <CreditCard className="text-amber-600 shrink-0 mt-0.5" size={20} />
-            <div>
-              <p className="font-medium text-gray-900 text-[15px]">Pagamento aguardando</p>
-              <p className="text-[13px] text-gray-600 mb-3">
-                Realize o pagamento da taxa de implantação para ativar seus serviços.
-              </p>
-              <a
-                href={pendingPayment.checkoutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary text-[13px] py-2 px-4"
-              >
-                Pagar agora <ChevronRight size={14} />
-              </a>
+        {!financialState.financiallyComplete ? (
+          <div className="mb-6 card border-amber-300 bg-amber-50 p-5">
+            <div className="flex items-start gap-3 mb-3">
+              <CreditCard className="text-amber-600 shrink-0 mt-0.5" size={20} />
+              <div>
+                <p className="font-medium text-gray-900 text-[15px]">Concluir contratação</p>
+                <p className="text-[13px] text-gray-600">
+                  Finalize os pagamentos abaixo para ativar seus serviços. O preenchimento dos dados será liberado
+                  após a confirmação da implantação e da primeira mensalidade.
+                </p>
+              </div>
             </div>
+            <FinancialPaymentRow label="Implantação" payment={financialState.implantacao} status={financialState.implantacaoStatus} />
+            <FinancialPaymentRow label="Primeira mensalidade" payment={financialState.primeiraMensalidade} status={financialState.mensalidadeStatus} />
+          </div>
+        ) : (
+          <div className="mb-6 card border-teal bg-teal-pale p-5 flex items-center gap-3">
+            <CheckCircle2 className="text-teal shrink-0" size={20} />
+            <p className="font-medium text-gray-900 text-[15px]">Contratação ativada</p>
           </div>
         )}
 

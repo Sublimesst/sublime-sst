@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock } from '@/lib/asaas'
 import { syncFirstSubscriptionPayment } from '@/lib/subscriptionSync'
+import { issueCheckoutSessionToken, CHECKOUT_SESSION_COOKIE, CHECKOUT_SESSION_MAX_AGE_SECONDS } from '@/lib/checkoutSession'
 import { notifySubscriptionFailed } from '@/lib/mailer'
 import { getPromoDeadline } from '@/lib/utils'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
@@ -373,7 +374,7 @@ export async function POST(req: NextRequest) {
       data: { status: 'registered', ...(partner ? { partnerId: partner.id } : {}) },
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: {
         companyId:        company.id,
@@ -387,6 +388,21 @@ export async function POST(req: NextRequest) {
         ...(subscriptionCreated ? {} : { subscriptionFailureNotified }),
       },
     })
+    // Sessão de continuação é um extra de conveniência — se falhar (ex.: secret
+    // ausente), o cadastro já está 100% completo (Company/cobrança/assinatura
+    // persistidas) e a resposta ao cliente não pode virar erro por causa disso.
+    try {
+      response.cookies.set(CHECKOUT_SESSION_COOKIE, issueCheckoutSessionToken(company.id), {
+        httpOnly: true,
+        secure:   process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path:     '/',
+        maxAge:   CHECKOUT_SESSION_MAX_AGE_SECONDS,
+      })
+    } catch (cookieErr) {
+      console.error(`[LEADS/REGISTER] evento=checkout_session_falhou companyId=${company.id} tipoErro=${cookieErr instanceof Error ? cookieErr.constructor.name : typeof cookieErr}`)
+    }
+    return response
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Dados inválidos.', details: err.errors }, { status: 400 })

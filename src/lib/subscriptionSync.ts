@@ -14,10 +14,13 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import { listSubscriptionPayments, type AsaasCharge } from './asaas'
 
+// `asaasId` é exposto só para uso interno (ex.: configurar callback na
+// cobrança já existente na Etapa 2B) — nunca deve ir para uma resposta
+// pública; não altera outcomes nem a idempotência já existentes.
 export type SyncResult =
-  | { outcome: 'synced'; paymentId: string }
-  | { outcome: 'already_exists'; paymentId: string }
-  | { outcome: 'conflict'; paymentId: string }
+  | { outcome: 'synced'; paymentId: string; asaasId: string }
+  | { outcome: 'already_exists'; paymentId: string; asaasId: string }
+  | { outcome: 'conflict'; paymentId: string; asaasId: string }
   | { outcome: 'not_found' }
   | { outcome: 'ambiguous'; candidatesCount: number }
   | { outcome: 'error'; reason: string }
@@ -122,7 +125,7 @@ export async function syncFirstSubscriptionPayment(params: {
           invoiceUrl:  charge.invoiceUrl,
         },
       })
-      return { outcome: 'synced', paymentId: created.id }
+      return { outcome: 'synced', paymentId: created.id, asaasId: charge.id }
     } catch (createErr) {
       // asaasId já existe — atômico por constraint única (nunca findUnique
       // seguido de create separado, que abriria janela de corrida). Cobre
@@ -144,9 +147,9 @@ export async function syncFirstSubscriptionPayment(params: {
         existing.amount === amountCents
       if (!belongsHere) {
         console.error(`[SUBSCRIPTION_SYNC] Conflito de integridade — companyId=${companyId} paymentId=${existing.id}`)
-        return { outcome: 'conflict', paymentId: existing.id }
+        return { outcome: 'conflict', paymentId: existing.id, asaasId: charge.id }
       }
-      return { outcome: 'already_exists', paymentId: existing.id }
+      return { outcome: 'already_exists', paymentId: existing.id, asaasId: charge.id }
     }
   } catch (err) {
     return { outcome: 'error', reason: err instanceof Error ? err.message : 'unknown' }

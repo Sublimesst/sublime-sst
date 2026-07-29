@@ -295,3 +295,87 @@ export async function cancelSubscription(subscriptionId: string): Promise<{ alre
 }
 
 export const isAsaasMock = IS_MOCK
+
+// ── CALLBACK DE CONTINUAÇÃO (Etapa 2B.1) ──────────────────────
+// Best-effort: configura o retorno automático da Asaas para a página de
+// continuação (/cadastro/continuar) em uma cobrança JÁ CRIADA — nunca cria
+// cobrança, nunca mexe em assinatura (o `callback` da assinatura vazaria
+// para todos os ciclos futuros). Falha aqui nunca deve derrubar o cadastro:
+// esta função nunca lança, só devolve um resultado estruturado.
+
+const CALLBACK_URL = 'https://www.sublimesst.com/cadastro/continuar'
+const CALLBACK_EXPECTED_ASAAS_BASE_URL = 'https://api.asaas.com/v3'
+const CALLBACK_EXPECTED_APP_BASE_URL = 'https://www.sublimesst.com'
+
+function normalizeBaseUrl(raw: string | undefined): string {
+  return (raw ?? '').trim().replace(/\/+$/, '')
+}
+
+// Valida a forma da URL final antes de ela ir para qualquer payload — defesa
+// extra mesmo sendo hoje uma constante fixa (protege uma futura edição
+// acidental da constante, ex.: query string ou porta adicionada sem querer).
+function isValidCallbackUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:') return false
+    if (parsed.hostname !== 'www.sublimesst.com') return false
+    if (parsed.username !== '' || parsed.password !== '') return false
+    if (parsed.port !== '') return false
+    if (parsed.pathname !== '/cadastro/continuar') return false
+    if (parsed.search !== '' || parsed.hash !== '') return false
+    return true
+  } catch {
+    return false
+  }
+}
+
+export type CheckoutCallbackUrlResult =
+  | { outcome: 'available'; url: string }
+  | { outcome: 'skipped_environment' }
+  | { outcome: 'invalid_config' }
+
+// Só devolve uma URL fora do modo mock/teste e só em Produção (VERCEL_ENV),
+// com ASAAS_BASE_URL/NEXT_PUBLIC_BASE_URL exatamente iguais ao esperado e
+// ASAAS_API_KEY presente. Preview e qualquer outro ambiente: sempre
+// 'skipped_environment' — nunca reaproveita a base pública para o callback
+// fora de Produção, para nunca configurar por engano um retorno para o
+// domínio de Produção a partir de um teste em Preview.
+export function getCheckoutContinuationCallbackUrl(): CheckoutCallbackUrlResult {
+  if (process.env.VERCEL_ENV !== 'production') {
+    return { outcome: 'skipped_environment' }
+  }
+
+  const asaasBaseOk = normalizeBaseUrl(process.env.ASAAS_BASE_URL) === CALLBACK_EXPECTED_ASAAS_BASE_URL
+  const appBaseOk    = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL) === CALLBACK_EXPECTED_APP_BASE_URL
+  const apiKeyOk      = !!process.env.ASAAS_API_KEY
+
+  if (!asaasBaseOk || !appBaseOk || !apiKeyOk || !isValidCallbackUrl(CALLBACK_URL)) {
+    return { outcome: 'invalid_config' }
+  }
+
+  return { outcome: 'available', url: CALLBACK_URL }
+}
+
+export type ConfigureCallbackResult =
+  | { outcome: 'configured' }
+  | { outcome: 'skipped_mock' }
+  | { outcome: 'error' }
+
+// PUT /payments/{paymentId} — payload mínimo, só o callback. Nunca altera
+// valor, vencimento, billingType ou descrição da cobrança já existente.
+// Nunca lança: quem chama nunca precisa de try/catch para não quebrar.
+export async function configurePaymentCallback(paymentId: string, successUrl: string): Promise<ConfigureCallbackResult> {
+  if (IS_MOCK) return { outcome: 'skipped_mock' }
+
+  try {
+    await asaasFetch(`/payments/${encodeURIComponent(paymentId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        callback: { successUrl, autoRedirect: true },
+      }),
+    })
+    return { outcome: 'configured' }
+  } catch {
+    return { outcome: 'error' }
+  }
+}

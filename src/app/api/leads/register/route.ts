@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock } from '@/lib/asaas'
+import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock, configurePaymentCallback, getCheckoutContinuationCallbackUrl } from '@/lib/asaas'
 import { syncFirstSubscriptionPayment } from '@/lib/subscriptionSync'
 import { issueCheckoutSessionToken, CHECKOUT_SESSION_COOKIE, CHECKOUT_SESSION_MAX_AGE_SECONDS } from '@/lib/checkoutSession'
 import { notifySubscriptionFailed } from '@/lib/mailer'
@@ -323,6 +323,7 @@ export async function POST(req: NextRequest) {
     // que precisa criar a assinatura manualmente no painel da Asaas.
     let subscriptionCreated = true
     let subscriptionFailureNotified: boolean | null = null
+    let mensalidadeAsaasId: string | null = null
     try {
       const subscription = await createSubscription({
         customerId: customer.id,
@@ -349,6 +350,9 @@ export async function POST(req: NextRequest) {
           expectedAmountCents: company.mensalidadeValor,
         })
         console.error(`[LEADS/REGISTER] Sync 1ª mensalidade — companyId=${company.id} subscriptionId=${subscription.id.slice(0, 6)}...${subscription.id.slice(-4)} outcome=${syncResult.outcome}`)
+        if (syncResult.outcome === 'synced' || syncResult.outcome === 'already_exists') {
+          mensalidadeAsaasId = syncResult.asaasId
+        }
       } catch (syncErr) {
         console.error(`[LEADS/REGISTER] Falha ao sincronizar 1ª mensalidade — companyId=${company.id}:`, syncErr)
       }
@@ -373,6 +377,31 @@ export async function POST(req: NextRequest) {
       where: { id: lead.id },
       data: { status: 'registered', ...(partner ? { partnerId: partner.id } : {}) },
     })
+
+    // Callback de continuação (Etapa 2B.1) — best-effort sobre cobranças já
+    // criadas, nunca cria cobrança nova, nunca mexe na assinatura. Só roda
+    // em Produção com configuração validada (ver getCheckoutContinuationCallbackUrl);
+    // qualquer falha aqui é só log, nunca afeta a resposta do cadastro.
+    const callbackUrlResult = getCheckoutContinuationCallbackUrl()
+    if (callbackUrlResult.outcome === 'available') {
+      try {
+        const result = await configurePaymentCallback(charge.id, callbackUrlResult.url)
+        console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=implantacao outcome=${result.outcome}`)
+      } catch {
+        console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=implantacao`)
+      }
+
+      if (mensalidadeAsaasId) {
+        try {
+          const result = await configurePaymentCallback(mensalidadeAsaasId, callbackUrlResult.url)
+          console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=mensalidade outcome=${result.outcome}`)
+        } catch {
+          console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=mensalidade`)
+        }
+      } else {
+        console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${company.id} tipo=mensalidade motivo=nao_sincronizada`)
+      }
+    }
 
     const response = NextResponse.json({
       success: true,

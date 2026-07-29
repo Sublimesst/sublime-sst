@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
+// O rate limiter em memória (src/lib/rateLimit.ts) é compartilhado por todo o
+// processo de teste (mesma chave IP+pathname) — sem isso, os vários POSTs
+// deste arquivo esbarrariam no limite padrão (5) e voltariam 429.
+process.env.RATE_LIMIT_REGISTER = '1000'
+
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     lead:    { findUnique: vi.fn(), update: vi.fn() },
@@ -16,10 +21,12 @@ vi.mock('@/lib/asaas', () => ({
   createImplantacaoCharge: vi.fn(async () => ({ id: 'pay_mock_123', invoiceUrl: 'https://www.asaas.com/i/mock-abc' })),
   createSubscription:      vi.fn(async () => ({ id: 'sub_mock_123', status: 'ACTIVE' })),
   isAsaasMock: true,
+  getCheckoutContinuationCallbackUrl: vi.fn(() => ({ outcome: 'available', url: 'https://www.sublimesst.com/cadastro/continuar' })),
+  configurePaymentCallback: vi.fn(async () => ({ outcome: 'configured' })),
 }))
 
 vi.mock('@/lib/subscriptionSync', () => ({
-  syncFirstSubscriptionPayment: vi.fn(async () => ({ outcome: 'synced' })),
+  syncFirstSubscriptionPayment: vi.fn(async () => ({ outcome: 'synced', paymentId: 'payment_mock_1', asaasId: 'pay_mensalidade_mock_1' })),
 }))
 
 vi.mock('@/lib/mailer', () => ({
@@ -36,7 +43,8 @@ vi.mock('@/lib/checkoutSession', () => ({
 
 const { POST } = await import('./route')
 const { prisma } = await import('@/lib/prisma')
-const { createSubscription, createImplantacaoCharge } = await import('@/lib/asaas')
+const { createSubscription, createImplantacaoCharge, configurePaymentCallback } = await import('@/lib/asaas')
+const { syncFirstSubscriptionPayment } = await import('@/lib/subscriptionSync')
 
 function registerRequest() {
   const body = {
@@ -79,6 +87,11 @@ beforeEach(() => {
   vi.mocked(prisma.payment.create).mockResolvedValue({} as any)
   vi.mocked(prisma.company.update).mockResolvedValue({} as any)
   vi.mocked(prisma.lead.update).mockResolvedValue({} as any)
+  // vi.clearAllMocks() só limpa histórico de chamadas, não reimplementações
+  // via mockRejectedValue/mockResolvedValue — reafirmar o comportamento
+  // padrão aqui evita que um teste de falha "vaze" para o próximo.
+  vi.mocked(configurePaymentCallback).mockResolvedValue({ outcome: 'configured' } as any)
+  vi.mocked(syncFirstSubscriptionPayment).mockResolvedValue({ outcome: 'synced', paymentId: 'payment_mock_1', asaasId: 'pay_mensalidade_mock_1' } as any)
 })
 
 describe('POST /api/leads/register — sessão de continuação não pode quebrar o cadastro', () => {
@@ -101,5 +114,51 @@ describe('POST /api/leads/register — sessão de continuação não pode quebra
   it('não define o cookie de sessão quando a emissão falha', async () => {
     const res = await POST(registerRequest())
     expect(res.cookies.get('sublime_checkout_continuation')).toBeUndefined()
+  })
+})
+
+describe('POST /api/leads/register — callback de continuação (Etapa 2B.1)', () => {
+  it('sucesso: configura callback na implantação e na primeira mensalidade', async () => {
+    await POST(registerRequest())
+    expect(configurePaymentCallback).toHaveBeenCalledTimes(2)
+    expect(configurePaymentCallback).toHaveBeenNthCalledWith(1, 'pay_mock_123', 'https://www.sublimesst.com/cadastro/continuar')
+    expect(configurePaymentCallback).toHaveBeenNthCalledWith(2, 'pay_mensalidade_mock_1', 'https://www.sublimesst.com/cadastro/continuar')
+  })
+
+  it('falha ao configurar callback da implantação não impede a tentativa na mensalidade', async () => {
+    vi.mocked(configurePaymentCallback).mockRejectedValueOnce(new Error('Asaas indisponível'))
+    const res = await POST(registerRequest())
+    expect(res.status).toBe(200)
+    expect(configurePaymentCallback).toHaveBeenCalledTimes(2)
+    expect(configurePaymentCallback).toHaveBeenNthCalledWith(2, 'pay_mensalidade_mock_1', 'https://www.sublimesst.com/cadastro/continuar')
+  })
+
+  it('falha ao configurar qualquer callback nunca derruba o cadastro (200 + checkoutUrl preservado)', async () => {
+    vi.mocked(configurePaymentCallback).mockRejectedValue(new Error('Asaas indisponível'))
+    const res = await POST(registerRequest())
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.data.checkoutUrl).toBe('https://www.asaas.com/i/mock-abc')
+  })
+
+  it('mensalidade ainda não sincronizada (not_found) → configura somente a implantação', async () => {
+    vi.mocked(syncFirstSubscriptionPayment).mockResolvedValue({ outcome: 'not_found' } as any)
+    await POST(registerRequest())
+    expect(configurePaymentCallback).toHaveBeenCalledTimes(1)
+    expect(configurePaymentCallback).toHaveBeenCalledWith('pay_mock_123', 'https://www.sublimesst.com/cadastro/continuar')
+  })
+
+  it('nenhum callback é aplicado à assinatura — createSubscription nunca recebe callback', async () => {
+    await POST(registerRequest())
+    const subscriptionArgs = vi.mocked(createSubscription).mock.calls[0][0] as any
+    expect(subscriptionArgs.callback).toBeUndefined()
+    expect(configurePaymentCallback).not.toHaveBeenCalledWith('sub_mock_123', expect.anything())
+  })
+
+  it('nenhuma cobrança nova é criada por causa do callback (implantação e assinatura seguem 1x cada)', async () => {
+    vi.mocked(configurePaymentCallback).mockRejectedValue(new Error('Asaas indisponível'))
+    await POST(registerRequest())
+    expect(createImplantacaoCharge).toHaveBeenCalledTimes(1)
+    expect(createSubscription).toHaveBeenCalledTimes(1)
   })
 })

@@ -59,7 +59,7 @@ describe('syncFirstSubscriptionPayment', () => {
       companyId: 'company-1', subscriptionId: 'sub-1', expectedAmountCents: EXPECTED_CENTS,
     })
 
-    expect(result).toEqual({ outcome: 'synced', paymentId: 'payment-1' })
+    expect(result).toEqual({ outcome: 'synced', paymentId: 'payment-1', asaasId: 'pay_abc123' })
     expect(createMock).toHaveBeenCalledTimes(1)
     expect(createMock.mock.calls[0][0].data).toMatchObject({
       companyId: 'company-1', type: 'mensalidade', amount: 19900, status: 'pending', asaasId: 'pay_abc123',
@@ -76,7 +76,7 @@ describe('syncFirstSubscriptionPayment', () => {
       companyId: 'company-1', subscriptionId: 'sub-1', expectedAmountCents: EXPECTED_CENTS,
     })
 
-    expect(result).toEqual({ outcome: 'already_exists', paymentId: 'payment-1' })
+    expect(result).toEqual({ outcome: 'already_exists', paymentId: 'payment-1', asaasId: 'pay_abc123' })
     expect(findUniqueMock).toHaveBeenCalledWith({ where: { asaasId: 'pay_abc123' } })
   })
 
@@ -89,7 +89,7 @@ describe('syncFirstSubscriptionPayment', () => {
       companyId: 'company-1', subscriptionId: 'sub-1', expectedAmountCents: EXPECTED_CENTS,
     })
 
-    expect(result).toEqual({ outcome: 'already_exists', paymentId: 'payment-1' })
+    expect(result).toEqual({ outcome: 'already_exists', paymentId: 'payment-1', asaasId: 'pay_abc123' })
     expect((prisma.payment as any).update).toBeUndefined() // função não tem/usa update em lugar nenhum
   })
 
@@ -118,7 +118,7 @@ describe('syncFirstSubscriptionPayment', () => {
       companyId: 'company-1', subscriptionId: 'sub-1', expectedAmountCents: EXPECTED_CENTS,
     })
 
-    expect(result).toEqual({ outcome: 'conflict', paymentId: 'payment-de-outra-empresa' })
+    expect(result).toEqual({ outcome: 'conflict', paymentId: 'payment-de-outra-empresa', asaasId: 'pay_abc123' })
   })
 
   it('6) asaasId com type diferente retorna conflict', async () => {
@@ -130,7 +130,7 @@ describe('syncFirstSubscriptionPayment', () => {
       companyId: 'company-1', subscriptionId: 'sub-1', expectedAmountCents: EXPECTED_CENTS,
     })
 
-    expect(result).toEqual({ outcome: 'conflict', paymentId: 'payment-implantacao' })
+    expect(result).toEqual({ outcome: 'conflict', paymentId: 'payment-implantacao', asaasId: 'pay_abc123' })
   })
 
   it('7) asaasId com amount diferente retorna conflict', async () => {
@@ -142,7 +142,7 @@ describe('syncFirstSubscriptionPayment', () => {
       companyId: 'company-1', subscriptionId: 'sub-1', expectedAmountCents: EXPECTED_CENTS,
     })
 
-    expect(result).toEqual({ outcome: 'conflict', paymentId: 'payment-valor-errado' })
+    expect(result).toEqual({ outcome: 'conflict', paymentId: 'payment-valor-errado', asaasId: 'pay_abc123' })
   })
 
   it('8) dueDate inválida não cria Payment', async () => {
@@ -164,7 +164,7 @@ describe('syncFirstSubscriptionPayment', () => {
       companyId: 'company-1', subscriptionId: 'sub-1', expectedAmountCents: 110,
     })
 
-    expect(result).toEqual({ outcome: 'synced', paymentId: 'payment-1' })
+    expect(result).toEqual({ outcome: 'synced', paymentId: 'payment-1', asaasId: 'pay_abc123' })
     expect(createMock.mock.calls[0][0].data.amount).toBe(110)
   })
 

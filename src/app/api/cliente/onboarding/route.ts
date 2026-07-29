@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { getClientSession } from '@/lib/clientAuth'
 import { notifyOnboardingSubmitted } from '@/lib/mailer'
+import { deriveFinancialActivationState, PAYMENT_SELECT, getPaymentOrderBy } from '@/lib/paymentPresentation'
 
 const schema = z.object({
   numFuncionarios: z.coerce.number().min(1).max(20),
@@ -17,6 +18,26 @@ export async function POST(req: NextRequest) {
   const company = await getClientSession(req)
   if (!company) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
+  }
+
+  // Gate financeiro (Etapa 2C.1B) — nenhuma escrita acontece antes disto.
+  // Consulta só os Payments desta Company (isolamento por company.id, nunca
+  // por dado vindo do cliente); nunca chama a Asaas.
+  const payments = await prisma.payment.findMany({
+    where: { companyId: company.id, type: { in: ['implantacao', 'mensalidade'] } },
+    select: PAYMENT_SELECT,
+    orderBy: getPaymentOrderBy(),
+  })
+  const financialState = deriveFinancialActivationState(company.status, payments)
+  if (!financialState.financiallyComplete) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: 'financial_activation_required',
+        error: 'O preenchimento dos dados será liberado após a confirmação da implantação e da primeira mensalidade.',
+      },
+      { status: 409 }
+    )
   }
 
   const body = await req.json().catch(() => ({}))

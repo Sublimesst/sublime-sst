@@ -11,6 +11,8 @@
 import type { Prisma } from '@prisma/client'
 import { deriveContratacaoState, type PaymentStatus, type DerivedState } from './checkoutState'
 
+export type { PaymentStatus, DerivedState }
+
 export const ALLOWED_ASAAS_HOSTS = new Set(['www.asaas.com', 'asaas.com', 'sandbox.asaas.com'])
 
 // Campos mínimos que qualquer chamador (rota, Server Component) deve

@@ -33,18 +33,19 @@ vi.mock('@/lib/mailer', () => ({
   notifySubscriptionFailed: vi.fn(async () => {}),
 }))
 
+// Sucesso por padrão — os testes de falha usam mockImplementationOnce/
+// mockReturnValueOnce, que revertem sozinhos ao valor padrão no teste seguinte.
 vi.mock('@/lib/checkoutSession', () => ({
   CHECKOUT_SESSION_COOKIE: 'sublime_checkout_continuation',
   CHECKOUT_SESSION_MAX_AGE_SECONDS: 7 * 24 * 60 * 60,
-  issueCheckoutSessionToken: vi.fn(() => {
-    throw new Error('SESSION_SECRET/ADMIN_SECRET não configurado no servidor.')
-  }),
+  issueCheckoutSessionToken: vi.fn(() => 'mock-session-token.mock-signature'),
 }))
 
 const { POST } = await import('./route')
 const { prisma } = await import('@/lib/prisma')
 const { createSubscription, createImplantacaoCharge, configurePaymentCallback } = await import('@/lib/asaas')
 const { syncFirstSubscriptionPayment } = await import('@/lib/subscriptionSync')
+const { issueCheckoutSessionToken } = await import('@/lib/checkoutSession')
 
 function registerRequest() {
   const body = {
@@ -92,33 +93,81 @@ beforeEach(() => {
   // padrão aqui evita que um teste de falha "vaze" para o próximo.
   vi.mocked(configurePaymentCallback).mockResolvedValue({ outcome: 'configured' } as any)
   vi.mocked(syncFirstSubscriptionPayment).mockResolvedValue({ outcome: 'synced', paymentId: 'payment_mock_1', asaasId: 'pay_mensalidade_mock_1' } as any)
+  vi.mocked(issueCheckoutSessionToken).mockReturnValue('mock-session-token.mock-signature')
 })
 
-describe('POST /api/leads/register — sessão de continuação não pode quebrar o cadastro', () => {
-  it('falha ao emitir o cookie NÃO retorna 500 e preserva o JSON/checkoutUrl originais', async () => {
+describe('POST /api/leads/register — continuationReady', () => {
+  it('1) cookie emitido com sucesso → continuationReady=true', async () => {
     const res = await POST(registerRequest())
     const body = await res.json()
+    expect(body.data.continuationReady).toBe(true)
+    expect(res.cookies.get('sublime_checkout_continuation')).toBeDefined()
+  })
 
+  it('2) falha em issueCheckoutSessionToken → continuationReady=false, sem 500, sem callback', async () => {
+    vi.mocked(issueCheckoutSessionToken).mockImplementationOnce(() => {
+      throw new Error('SESSION_SECRET/ADMIN_SECRET não configurado no servidor.')
+    })
+    const res = await POST(registerRequest())
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.data.continuationReady).toBe(false)
+    expect(res.cookies.get('sublime_checkout_continuation')).toBeUndefined()
+    expect(configurePaymentCallback).not.toHaveBeenCalled()
+  })
+
+  it('3) falha na aplicação real de cookies.set → continuationReady=false, sem 500, sem callback (guarda defensiva: a implementação real de ResponseCookies do Next.js hoje percent-encoda em vez de lançar para qualquer valor — testado diretamente forçando o throw na ÚNICA chamada real para provar que o catch degrada corretamente, sem resposta parcial)', async () => {
+    const { NextResponse } = await import('next/server')
+    const cookiesSpy = vi.spyOn(NextResponse.prototype, 'cookies', 'get').mockReturnValue({
+      set: () => { throw new Error('cookies.set falhou (simulado)') },
+    } as any)
+    try {
+      const res = await POST(registerRequest())
+      const body = await res.json()
+      expect(res.status).toBe(200)
+      expect(body.data.continuationReady).toBe(false)
+      expect(body.data.checkoutUrl).toBe('https://www.asaas.com/i/mock-abc')
+      expect(configurePaymentCallback).not.toHaveBeenCalled()
+    } finally {
+      cookiesSpy.mockRestore()
+    }
+  })
+
+  it('4) continuationReady=false preserva checkoutUrl e demais campos públicos', async () => {
+    vi.mocked(issueCheckoutSessionToken).mockImplementationOnce(() => { throw new Error('sem secret') })
+    const res = await POST(registerRequest())
+    const body = await res.json()
     expect(res.status).toBe(200)
     expect(body.success).toBe(true)
     expect(body.data.checkoutUrl).toBe('https://www.asaas.com/i/mock-abc')
     expect(body.data.companyId).toBe('company_mock_1')
   })
 
-  it('falha ao emitir o cookie não recria cobrança nem assinatura (cada uma chamada exatamente 1x)', async () => {
+  it('5) continuationReady=false não chama nenhum callback', async () => {
+    vi.mocked(issueCheckoutSessionToken).mockImplementationOnce(() => { throw new Error('sem secret') })
+    await POST(registerRequest())
+    expect(configurePaymentCallback).not.toHaveBeenCalled()
+  })
+
+  it('9) nenhum token, cookie, ou asaasId aparece no corpo do JSON', async () => {
+    const res = await POST(registerRequest())
+    const raw = JSON.stringify(await res.json())
+    expect(raw).not.toContain('mock-session-token')
+    expect(raw).not.toContain('pay_mock_123')
+    expect(raw).not.toContain('pay_mensalidade_mock_1')
+    expect(raw.toLowerCase()).not.toContain('sublime_checkout_continuation')
+  })
+
+  it('cobrança e assinatura não são recriadas por causa do cookie (falha ou sucesso)', async () => {
+    vi.mocked(issueCheckoutSessionToken).mockImplementationOnce(() => { throw new Error('sem secret') })
     await POST(registerRequest())
     expect(createImplantacaoCharge).toHaveBeenCalledTimes(1)
     expect(createSubscription).toHaveBeenCalledTimes(1)
   })
-
-  it('não define o cookie de sessão quando a emissão falha', async () => {
-    const res = await POST(registerRequest())
-    expect(res.cookies.get('sublime_checkout_continuation')).toBeUndefined()
-  })
 })
 
-describe('POST /api/leads/register — callback de continuação (Etapa 2B.1)', () => {
-  it('sucesso: configura callback na implantação e na primeira mensalidade', async () => {
+describe('POST /api/leads/register — callback de continuação (Etapa 2B.1/2B.2)', () => {
+  it('6+7) continuationReady=true tenta callback da implantação e, com mensalidade sincronizada, da mensalidade', async () => {
     await POST(registerRequest())
     expect(configurePaymentCallback).toHaveBeenCalledTimes(2)
     expect(configurePaymentCallback).toHaveBeenNthCalledWith(1, 'pay_mock_123', 'https://www.sublimesst.com/cadastro/continuar')
@@ -133,12 +182,13 @@ describe('POST /api/leads/register — callback de continuação (Etapa 2B.1)', 
     expect(configurePaymentCallback).toHaveBeenNthCalledWith(2, 'pay_mensalidade_mock_1', 'https://www.sublimesst.com/cadastro/continuar')
   })
 
-  it('falha ao configurar qualquer callback nunca derruba o cadastro (200 + checkoutUrl preservado)', async () => {
+  it('8) falha de qualquer callback nunca altera a resposta 200 nem checkoutUrl', async () => {
     vi.mocked(configurePaymentCallback).mockRejectedValue(new Error('Asaas indisponível'))
     const res = await POST(registerRequest())
     const body = await res.json()
     expect(res.status).toBe(200)
     expect(body.data.checkoutUrl).toBe('https://www.asaas.com/i/mock-abc')
+    expect(body.data.continuationReady).toBe(true)
   })
 
   it('mensalidade ainda não sincronizada (not_found) → configura somente a implantação', async () => {

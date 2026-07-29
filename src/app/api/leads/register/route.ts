@@ -234,7 +234,7 @@ export async function POST(req: NextRequest) {
       ?? 'unknown'
     const clientUa = req.headers.get('user-agent') ?? 'unknown'
 
-    let company
+    let company: Awaited<ReturnType<typeof prisma.company.create>>
     try {
       company = await prisma.company.create({
         data: {
@@ -286,7 +286,7 @@ export async function POST(req: NextRequest) {
     // A Company (id acima) já existe no banco neste ponto — se a cobrança
     // falhar aqui, fica uma Company sem Payment. Logamos o companyId pra dar
     // pra investigar/retomar manualmente; o cliente recebe mensagem específica.
-    let charge
+    let charge: Awaited<ReturnType<typeof createImplantacaoCharge>>
     try {
       charge = await createImplantacaoCharge({
         customerId: customer.id,
@@ -378,59 +378,90 @@ export async function POST(req: NextRequest) {
       data: { status: 'registered', ...(partner ? { partnerId: partner.id } : {}) },
     })
 
-    // Callback de continuação (Etapa 2B.1) — best-effort sobre cobranças já
-    // criadas, nunca cria cobrança nova, nunca mexe na assinatura. Só roda
-    // em Produção com configuração validada (ver getCheckoutContinuationCallbackUrl);
-    // qualquer falha aqui é só log, nunca afeta a resposta do cadastro.
-    const callbackUrlResult = getCheckoutContinuationCallbackUrl()
-    if (callbackUrlResult.outcome === 'available') {
-      try {
-        const result = await configurePaymentCallback(charge.id, callbackUrlResult.url)
-        console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=implantacao outcome=${result.outcome}`)
-      } catch {
-        console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=implantacao`)
-      }
-
-      if (mensalidadeAsaasId) {
-        try {
-          const result = await configurePaymentCallback(mensalidadeAsaasId, callbackUrlResult.url)
-          console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=mensalidade outcome=${result.outcome}`)
-        } catch {
-          console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=mensalidade`)
-        }
-      } else {
-        console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${company.id} tipo=mensalidade motivo=nao_sincronizada`)
-      }
-    }
-
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        companyId:        company.id,
-        checkoutUrl:      charge.invoiceUrl,
-        isMock:           isAsaasMock,
-        isPromo,
-        planType,
-        implantacaoValor: implantacaoValorReais,
-        mensalidadeValor: company.mensalidadeValor,
-        subscriptionCreated,
-        ...(subscriptionCreated ? {} : { subscriptionFailureNotified }),
-      },
-    })
     // Sessão de continuação é um extra de conveniência — se falhar (ex.: secret
     // ausente), o cadastro já está 100% completo (Company/cobrança/assinatura
     // persistidas) e a resposta ao cliente não pode virar erro por causa disso.
-    try {
-      response.cookies.set(CHECKOUT_SESSION_COOKIE, issueCheckoutSessionToken(company.id), {
-        httpOnly: true,
-        secure:   process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path:     '/',
-        maxAge:   CHECKOUT_SESSION_MAX_AGE_SECONDS,
-      })
-    } catch (cookieErr) {
-      console.error(`[LEADS/REGISTER] evento=checkout_session_falhou companyId=${company.id} tipoErro=${cookieErr instanceof Error ? cookieErr.constructor.name : typeof cookieErr}`)
+    // Resposta otimista real (sem dry-run): tenta aplicar o cookie NA PRÓPRIA
+    // resposta que será devolvida; só se essa aplicação específica funcionar
+    // é que `continuationReady` vira true e os callbacks (abaixo) são
+    // tentados — nunca numa resposta descartável separada.
+    const buildResponseBody = (continuationReady: boolean) => {
+      return {
+        success: true,
+        data: {
+          companyId:        company.id,
+          checkoutUrl:      charge.invoiceUrl,
+          isMock:           isAsaasMock,
+          isPromo,
+          planType,
+          implantacaoValor: implantacaoValorReais,
+          mensalidadeValor: company.mensalidadeValor,
+          subscriptionCreated,
+          ...(subscriptionCreated ? {} : { subscriptionFailureNotified }),
+          continuationReady,
+        },
+      }
     }
+
+    let checkoutToken: string | null = null
+    try {
+      checkoutToken = issueCheckoutSessionToken(company.id)
+    } catch (err) {
+      console.error(`[LEADS/REGISTER] evento=checkout_session_falhou companyId=${company.id} tipoErro=${err instanceof Error ? err.constructor.name : typeof err}`)
+    }
+
+    let continuationReady = false
+    let response: NextResponse | undefined
+    if (checkoutToken) {
+      try {
+        const optimisticResponse = NextResponse.json(buildResponseBody(true))
+        optimisticResponse.cookies.set(CHECKOUT_SESSION_COOKIE, checkoutToken, {
+          httpOnly: true,
+          secure:   process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path:     '/',
+          maxAge:   CHECKOUT_SESSION_MAX_AGE_SECONDS,
+        })
+        response = optimisticResponse
+        continuationReady = true
+      } catch (cookieErr) {
+        console.error(`[LEADS/REGISTER] evento=checkout_session_falhou companyId=${company.id} tipoErro=${cookieErr instanceof Error ? cookieErr.constructor.name : typeof cookieErr}`)
+      }
+    }
+    if (!response) {
+      // Sem token ou cookies.set falhou — descarta qualquer resposta parcial
+      // e devolve uma nova, limpa, com continuationReady:false.
+      response = NextResponse.json(buildResponseBody(false))
+    }
+
+    // Callback de continuação (Etapa 2B.1/2B.2) — best-effort sobre cobranças
+    // já criadas, nunca cria cobrança nova, nunca mexe na assinatura. Só roda
+    // em Produção com configuração validada E somente depois que o cookie já
+    // foi aplicado de verdade na resposta real (continuationReady=true) —
+    // nunca configura um retorno para uma página cuja sessão não foi emitida.
+    if (continuationReady) {
+      const callbackUrlResult = getCheckoutContinuationCallbackUrl()
+      if (callbackUrlResult.outcome === 'available') {
+        try {
+          const result = await configurePaymentCallback(charge.id, callbackUrlResult.url)
+          console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=implantacao outcome=${result.outcome}`)
+        } catch {
+          console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=implantacao`)
+        }
+
+        if (mensalidadeAsaasId) {
+          try {
+            const result = await configurePaymentCallback(mensalidadeAsaasId, callbackUrlResult.url)
+            console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=mensalidade outcome=${result.outcome}`)
+          } catch {
+            console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=mensalidade`)
+          }
+        } else {
+          console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${company.id} tipo=mensalidade motivo=nao_sincronizada`)
+        }
+      }
+    }
+
     return response
   } catch (err) {
     if (err instanceof z.ZodError) {

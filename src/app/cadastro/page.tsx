@@ -7,6 +7,7 @@ import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import { maskPhone, maskCEP, maskCurrencyBRL } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { LTCAT_ADDON_PRICE_CENTS } from '@/lib/pricing'
+import { decideRegistrationRedirect, type RegistrationRedirectDecision } from '@/lib/registrationRedirect'
 
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
@@ -31,7 +32,7 @@ export default function CadastroPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-  const [asaasUrl, setAsaasUrl] = useState<string | null>(null)
+  const [redirectDecision, setRedirectDecision] = useState<RegistrationRedirectDecision | null>(null)
 
   useEffect(() => {
     track('registration_page_viewed')
@@ -130,14 +131,22 @@ export default function CadastroPage() {
       const data = await res.json()
       if (data.success) {
         track('registration_completed')
-        // Em modo mock (ASAAS_API_KEY não configurada) a URL de cobrança é falsa —
-        // redirecionar levava a "cobrança não existe" no Asaas real. Não redireciona.
-        const checkoutUrl = data.data?.isMock ? null : (data.data?.checkoutUrl || null)
-        setAsaasUrl(checkoutUrl)
+        // continuationReady ausente (resposta antiga/bundle antigo) é tratado
+        // como false pela própria função — cai no fluxo legado automaticamente.
+        const decision = decideRegistrationRedirect({
+          continuationReady: data.data?.continuationReady,
+          checkoutUrl:       data.data?.checkoutUrl,
+          isMock:            data.data?.isMock,
+        })
+        setRedirectDecision(decision)
         setSubmitted(true)
-        if (checkoutUrl) {
+        if (decision.kind === 'continuation') {
+          // Mesma origem, sem token/companyId na URL — o cookie de sessão já
+          // foi aplicado na resposta deste POST.
+          setTimeout(() => { window.location.assign(decision.url) }, 300)
+        } else if (decision.kind === 'checkout') {
           track('asaas_checkout_clicked')
-          setTimeout(() => { window.location.href = checkoutUrl }, 1500)
+          setTimeout(() => { window.location.href = decision.url }, 1500)
         }
       } else {
         setErrors({ generic: data.error ?? 'Não foi possível concluir o cadastro. Tente novamente ou fale conosco pelo WhatsApp.' })
@@ -158,15 +167,17 @@ export default function CadastroPage() {
             <div className="text-5xl mb-4">🎉</div>
             <h2 className="font-display text-2xl text-gray-900 mb-3">Cadastro enviado!</h2>
             <p className="text-[15px] text-gray-500 mb-6">
-              {asaasUrl
-                ? 'Você será redirecionado para o pagamento seguro da taxa de implantação.'
-                : 'Seus dados foram registrados. Nossa equipe entrará em contato em breve.'}
+              {redirectDecision?.kind === 'continuation'
+                ? 'Cadastro concluído. Preparando as etapas de pagamento.'
+                : redirectDecision?.kind === 'checkout'
+                  ? 'Você será redirecionado para o pagamento seguro da taxa de implantação.'
+                  : 'Seus dados foram registrados. Nossa equipe entrará em contato em breve.'}
             </p>
             <div className="bg-gray-50 rounded-[12px] p-4 mb-6 text-[13px] text-gray-500">
               📧 contato@sublimesst.com<br />
               📱 (21) 99724-8630
             </div>
-            {!asaasUrl && (
+            {redirectDecision?.kind === 'unavailable' && (
               <p className="text-[12px] text-amber-700 bg-amber-50 p-3 rounded-[8px]">
                 O link de pagamento não está disponível neste momento. Seu cadastro foi registrado
                 e nossa equipe entrará em contato pelo WhatsApp para concluir o pagamento da implantação.

@@ -1,9 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash, timingSafeEqual } from 'crypto'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { sendWelcomeEmail, notifyPaymentConfirmed, notifyPaymentOverdue, notifyContractPdfFailed } from '@/lib/mailer'
 import { generateContractPdf } from '@/lib/contractPdf'
 import { CONTRACT_VERSION } from '@/lib/pricing'
+import { safeCheckoutUrl } from '@/lib/paymentPresentation'
+
+// Backfill atômico de URL (P0): cada campo é protegido pela própria condição
+// de nulidade no where — nunca por uma leitura anterior — então duas
+// atualizações concorrentes (ex.: esta e um evento simultâneo) nunca se
+// sobrescrevem. Usado tanto após conflito de criação (P2002) quanto no ramo
+// de Payment já existente. Nunca apaga um valor já presente; nunca chama a
+// Asaas. Se validInvoiceUrl estiver ausente, não faz nenhuma atualização.
+async function backfillPaymentUrls(paymentId: string, validInvoiceUrl: string | null): Promise<void> {
+  if (!validInvoiceUrl) return
+  // Promise.all (não await sequencial): as duas chamadas disparam juntas, então
+  // a falha de uma nunca impede a outra de ser tentada contra o banco.
+  await Promise.all([
+    prisma.payment.updateMany({
+      where: { id: paymentId, checkoutUrl: null },
+      data: { checkoutUrl: validInvoiceUrl },
+    }),
+    prisma.payment.updateMany({
+      where: { id: paymentId, invoiceUrl: null },
+      data: { invoiceUrl: validInvoiceUrl },
+    }),
+  ])
+}
+
+// P2002 (asaasId @unique): quando o create colide com uma criação concorrente
+// que já venceu a corrida, busca o registro vencedor por asaasId (select
+// mínimo, sem dado pessoal) e confirma companyId/type antes de aplicar o
+// backfill atômico — nunca cria outro Payment, nunca loga id/URL.
+async function backfillAfterCreateConflict(params: {
+  asaasId: string
+  companyId: string
+  type: string
+  validInvoiceUrl: string | null
+}): Promise<void> {
+  const winner = await prisma.payment.findFirst({
+    where: { asaasId: params.asaasId },
+    select: { id: true, companyId: true, type: true },
+  })
+  if (!winner) {
+    console.error('[WEBHOOK] Conflito de criação (P2002) sem registro vencedor localizável por asaasId')
+    return
+  }
+  if (winner.companyId !== params.companyId || winner.type !== params.type) {
+    console.error('[WEBHOOK] Conflito de criação (P2002) com divergência de integridade — backfill ignorado')
+    return
+  }
+  await backfillPaymentUrls(winner.id, params.validInvoiceUrl)
+}
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get('asaas-access-token') ?? ''
@@ -25,6 +74,10 @@ export async function POST(req: NextRequest) {
   const { event, payment } = body
 
   if (event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_RECEIVED') {
+    // Validado ANTES de persistir (P0 checkoutUrl) — aceita só https + host
+    // oficial Asaas; nunca inventa URL, nunca chama a Asaas para obter isso.
+    const validInvoiceUrl = safeCheckoutUrl(payment.invoiceUrl) ?? null
+
     let dbPayment = await prisma.payment.findFirst({
       where: { asaasId: payment.id },
       include: { company: { include: { lead: true } } },
@@ -62,6 +115,8 @@ export async function POST(req: NextRequest) {
             status:            'confirmed',
             paidAt:            new Date(),
             billingType:       payment.billingType ?? null,
+            checkoutUrl:       validInvoiceUrl,
+            invoiceUrl:        validInvoiceUrl,
           },
         })
         dbPayment = await prisma.payment.findUniqueOrThrow({
@@ -69,6 +124,20 @@ export async function POST(req: NextRequest) {
           include: { company: { include: { lead: true } } },
         })
       } catch (err) {
+        // Só um conflito real de unicidade (2ª entrega concorrente) é
+        // idempotente. Qualquer outro erro de create é relançado sem
+        // mascarar como sucesso — o handler não tem try/catch externo, então
+        // isso vira um 500 padrão do Next.js (sem detalhe interno exposto) e
+        // permite o Asaas reentregar o evento.
+        const isUniqueConflict = err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+        if (!isUniqueConflict) throw err
+
+        await backfillAfterCreateConflict({
+          asaasId:         payment.id,
+          companyId:       resolvedCompany.id,
+          type:            'mensalidade',
+          validInvoiceUrl,
+        }).catch(backfillErr => console.error('[WEBHOOK] Falha ao aplicar backfill pós-conflito (P2002):', backfillErr))
         return NextResponse.json({ ok: true, note: 'already processed (race)' })
       }
     } else {
@@ -83,6 +152,12 @@ export async function POST(req: NextRequest) {
           billingType: payment.billingType ?? null,
         },
       })
+      // Backfill (P0): atômico por campo (ver backfillPaymentUrls), independente
+      // da transição de status acima — roda mesmo numa reentrega, pra recuperar
+      // um registro legado que nunca teve URL preenchida.
+      await backfillPaymentUrls(dbPayment.id, validInvoiceUrl).catch(backfillErr =>
+        console.error('[WEBHOOK] Falha ao aplicar backfill em Payment existente:', backfillErr)
+      )
       if (transition.count === 0) {
         return NextResponse.json({ ok: true, note: 'already processed' })
       }
@@ -226,6 +301,10 @@ export async function POST(req: NextRequest) {
   if (event === 'PAYMENT_OVERDUE' || event === 'PAYMENT_REFUNDED') {
     // Inadimplência de MENSALIDADE reflete no pipeline da empresa + avisa a equipe
     if (event === 'PAYMENT_OVERDUE') {
+      // Validado ANTES de persistir (P0 checkoutUrl) — mesma regra do bloco
+      // CONFIRMED/RECEIVED acima.
+      const validInvoiceUrl = safeCheckoutUrl(payment.invoiceUrl) ?? null
+
       let dbPayment = await prisma.payment.findFirst({
         where: { asaasId: payment.id },
         include: { company: true },
@@ -265,6 +344,8 @@ export async function POST(req: NextRequest) {
               status:            'overdue',
               dueDate:           payment.dueDate ? new Date(payment.dueDate) : null,
               billingType:       payment.billingType ?? null,
+              checkoutUrl:       validInvoiceUrl,
+              invoiceUrl:        validInvoiceUrl,
             },
           })
           dbPayment = await prisma.payment.findUniqueOrThrow({
@@ -272,6 +353,17 @@ export async function POST(req: NextRequest) {
             include: { company: true },
           })
         } catch (err) {
+          // Só um conflito real de unicidade (2ª entrega concorrente) é
+          // idempotente — mesma regra do bloco CONFIRMED/RECEIVED acima.
+          const isUniqueConflict = err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+          if (!isUniqueConflict) throw err
+
+          await backfillAfterCreateConflict({
+            asaasId:         payment.id,
+            companyId:       resolvedCompany.id,
+            type:            'mensalidade',
+            validInvoiceUrl,
+          }).catch(backfillErr => console.error('[WEBHOOK] Falha ao aplicar backfill pós-conflito (P2002):', backfillErr))
           return NextResponse.json({ ok: true, note: 'already processed (race)' })
         }
       } else {
@@ -279,6 +371,11 @@ export async function POST(req: NextRequest) {
           where: { id: dbPayment.id, status: { not: 'overdue' } },
           data: { status: 'overdue' },
         })
+        // Backfill (P0): atômico por campo (ver backfillPaymentUrls) — mesma
+        // regra do bloco CONFIRMED/RECEIVED acima.
+        await backfillPaymentUrls(dbPayment.id, validInvoiceUrl).catch(backfillErr =>
+          console.error('[WEBHOOK] Falha ao aplicar backfill em Payment existente:', backfillErr)
+        )
       }
 
       if (dbPayment.type === 'mensalidade') {

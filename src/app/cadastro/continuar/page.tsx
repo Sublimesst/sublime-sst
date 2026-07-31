@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, Clock, AlertTriangle, ExternalLink } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
+import { shouldShowPaymentButton } from './paymentCta'
 
 const POLL_INTERVAL_MS = 5000
 const MAX_POLL_ATTEMPTS = 12
@@ -173,16 +174,8 @@ function TemporaryErrorCard() {
 function StatusCard({ data }: { data: StatusData }) {
   return (
     <div className="space-y-4">
-      <PaymentRow
-        label="Implantação"
-        payment={data.implantacao}
-        showButton={data.showsCommonPaymentButton && data.step === 'step1'}
-      />
-      <PaymentRow
-        label="Mensalidade"
-        payment={data.mensalidade}
-        showButton={data.showsCommonPaymentButton && data.step === 'step2'}
-      />
+      <PaymentRow label="Implantação" payment={data.implantacao} />
+      <PaymentRow label="Mensalidade" payment={data.mensalidade} />
 
       {data.step === 'preparing' && (
         <InfoBanner text="Sua implantação foi confirmada. Estamos preparando a cobrança da primeira mensalidade." />
@@ -206,14 +199,13 @@ function StatusCard({ data }: { data: StatusData }) {
 function PaymentRow({
   label,
   payment,
-  showButton,
 }: {
   label: string
   payment: StatusData['implantacao']
-  showButton: boolean
 }) {
   if (!payment) return null
 
+  const showButton = shouldShowPaymentButton(payment)
   const isConfirmed = payment.status === 'confirmed'
   const isIssue = payment.status === 'overdue' || payment.status === 'refunded' || payment.status === 'disputed'
 
@@ -234,7 +226,7 @@ function PaymentRow({
           </div>
         </div>
 
-        {showButton && payment.checkoutUrl && (
+        {showButton && (
           <a
             href={payment.checkoutUrl}
             target="_blank"

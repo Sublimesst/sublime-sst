@@ -4,6 +4,7 @@
   "paymentIdImplantacao": "<Payment.id do tipo implantacao>",
   "paymentIdMensalidade": "<Payment.id do tipo mensalidade>",
   "cancellationRequestId": "<CancellationRequest.id>",
+  "eligibilityAssessmentId": "<EligibilityAssessment.id vinculado ao Lead>",
   "expectedPartnerId": "<Partner.id do parceiro a preservar>",
   "cnpjSha256": "<sha256(cnpj.trim().toLowerCase()) em hex, 64 caracteres>",
   "emailSha256": "<sha256(email.trim().toLowerCase()) em hex, 64 caracteres>"

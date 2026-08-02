@@ -1,0 +1,10 @@
+{
+  "companyId": "<Company.id exato — cuid interno, não CNPJ/e-mail>",
+  "leadId": "<Lead.id exato>",
+  "paymentIdImplantacao": "<Payment.id do tipo implantacao>",
+  "paymentIdMensalidade": "<Payment.id do tipo mensalidade>",
+  "cancellationRequestId": "<CancellationRequest.id>",
+  "expectedPartnerId": "<Partner.id do parceiro a preservar>",
+  "cnpjSha256": "<sha256(cnpj.trim().toLowerCase()) em hex, 64 caracteres>",
+  "emailSha256": "<sha256(email.trim().toLowerCase()) em hex, 64 caracteres>"
+}

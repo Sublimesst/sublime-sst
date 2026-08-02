@@ -33,6 +33,10 @@ Thumbs.db
 # Prisma
 prisma/migrations/
 
+# Scripts admin — configuração local com IDs/hashes de alvo específicos de
+# produção (ex.: limpeza controlada de contratação de teste). Nunca versionar.
+scripts/admin/*.config.local.json
+
 # Typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -43,6 +43,7 @@ export interface CleanupTarget {
   paymentIdImplantacao: string
   paymentIdMensalidade: string
   cancellationRequestId: string
+  eligibilityAssessmentId: string
   expectedPartnerId: string
   cnpjSha256: string
   emailSha256: string
@@ -50,7 +51,7 @@ export interface CleanupTarget {
 
 const REQUIRED_TARGET_FIELDS: Array<keyof CleanupTarget> = [
   'companyId', 'leadId', 'paymentIdImplantacao', 'paymentIdMensalidade',
-  'cancellationRequestId', 'expectedPartnerId', 'cnpjSha256', 'emailSha256',
+  'cancellationRequestId', 'eligibilityAssessmentId', 'expectedPartnerId', 'cnpjSha256', 'emailSha256',
 ]
 
 // Campos que identificam registros distintos — nunca podem coincidir entre
@@ -58,7 +59,8 @@ const REQUIRED_TARGET_FIELDS: Array<keyof CleanupTarget> = [
 // config local). Hashes (cnpjSha256/emailSha256) ficam de fora de propósito:
 // não são identificadores de registro.
 const ID_FIELDS_FOR_DISTINCTNESS: Array<keyof CleanupTarget> = [
-  'companyId', 'leadId', 'expectedPartnerId', 'paymentIdImplantacao', 'paymentIdMensalidade', 'cancellationRequestId',
+  'companyId', 'leadId', 'expectedPartnerId', 'paymentIdImplantacao', 'paymentIdMensalidade',
+  'cancellationRequestId', 'eligibilityAssessmentId',
 ]
 
 // Valida a FORMA da config antes de qualquer consulta ao banco — arquivo
@@ -142,6 +144,12 @@ export interface CleanupPrismaClient {
   cancellationRequest: {
     findMany: (args: any) => Promise<any[]>
   }
+  eligibilityAssessment: {
+    findMany: (args: any) => Promise<any[]>
+  }
+  contactRequest: {
+    count: (args: any) => Promise<number>
+  }
   commission: { count: (args: any) => Promise<number> }
   onboardingData: { count: (args: any) => Promise<number> }
   clientSession: { count: (args: any) => Promise<number> }
@@ -153,10 +161,18 @@ export interface CleanupPrismaClient {
   $transaction: (fn: (tx: CleanupTxClient) => Promise<void>) => Promise<void>
 }
 
+// ContactRequest só aparece aqui como `count` (leitura) — NUNCA delete/update.
+// Ver runCleanupTransaction para o porquê da revalidação atômica.
 export interface CleanupTxClient {
+  // Tagged template apenas — Prisma parametriza os valores interpolados
+  // automaticamente (nunca concatenação de string). Nunca usar
+  // $queryRawUnsafe/$executeRawUnsafe.
+  $queryRaw: <T = unknown>(strings: TemplateStringsArray, ...values: unknown[]) => Promise<T>
   payment: { deleteMany: (args: any) => Promise<{ count: number }> }
   cancellationRequest: { deleteMany: (args: any) => Promise<{ count: number }> }
   company: { deleteMany: (args: any) => Promise<{ count: number }> }
+  eligibilityAssessment: { deleteMany: (args: any) => Promise<{ count: number }> }
+  contactRequest: { count: (args: any) => Promise<number> }
   lead: { deleteMany: (args: any) => Promise<{ count: number }> }
 }
 
@@ -169,6 +185,8 @@ export interface CollectPreconditionsResult {
   otherLeadsCount: number
   partnerWillHaveNoLinkedRecordsAfterCleanup: boolean
   warnings: string[]
+  eligibilityAssessmentCount: number
+  contactRequestCount: number
 }
 
 // Reúne TODAS as precondições da limpeza. Somente leitura — nunca chama
@@ -238,6 +256,33 @@ export async function collectPreconditions(
     ok: leads[0]?.partnerId === target.expectedPartnerId,
   })
 
+  // eligibility_assessments.leadId → leads.id é RESTRICT no banco real — sem
+  // esta precondição e sem o delete correspondente na transação, o delete do
+  // Lead falha por FK (já ocorreu uma vez; a transação inteira reverteu).
+  // Nunca loga o conteúdo da avaliação (cnae/reasons/etc.), só contagem/ID.
+  const eligibilityAssessments = await db.eligibilityAssessment.findMany({ where: { leadId: target.leadId } })
+  preconditions.push({
+    label: 'Exatamente 1 EligibilityAssessment vinculado ao Lead',
+    ok: eligibilityAssessments.length === 1,
+    detail: `contagem atual: ${eligibilityAssessments.length}`,
+  })
+  preconditions.push({
+    label: 'ID do EligibilityAssessment bate com o esperado',
+    ok: eligibilityAssessments.length === 1 && eligibilityAssessments[0].id === target.eligibilityAssessmentId,
+  })
+
+  // contact_requests.leadId → leads.id é ON DELETE SET NULL no banco real —
+  // não bloquearia o delete do Lead, mas apagaria silenciosamente o vínculo
+  // de um ContactRequest fora do escopo desta limpeza. Por isso é bloqueante
+  // aqui mesmo não sendo uma restrição de FK: este script nunca deve alterar
+  // (nem indiretamente) uma tabela fora do alvo exato.
+  const contactRequestCount = await db.contactRequest.count({ where: { leadId: target.leadId } })
+  preconditions.push({
+    label: 'ContactRequest vinculado ao Lead = 0',
+    ok: contactRequestCount === 0,
+    detail: `contagem atual: ${contactRequestCount}`,
+  })
+
   const partner = await db.partner.findUnique({ where: { id: target.expectedPartnerId } })
   preconditions.push({ label: 'Parceiro existe e está active', ok: partner?.status === 'active' })
 
@@ -266,6 +311,8 @@ export async function collectPreconditions(
     otherLeadsCount: partnerOtherLeads,
     partnerWillHaveNoLinkedRecordsAfterCleanup,
     warnings,
+    eligibilityAssessmentCount: eligibilityAssessments.length,
+    contactRequestCount,
   }
 }
 
@@ -273,10 +320,34 @@ export async function collectPreconditions(
 // dry-run. Cada delete usa companyId/id exatos, nunca deleteMany amplo por
 // partnerId/cnpj/e-mail. Partner NUNCA aparece em nenhum delete (a interface
 // CleanupTxClient nem declara partner.deleteMany).
+//
+// Atomicidade contra ContactRequest concorrente: um simples re-count de
+// ContactRequest antes do delete do Lead reduziria a janela, mas não a
+// eliminaria — count e delete continuam sendo comandos separados, e um INSERT
+// concorrente ainda poderia caber entre os dois. A solução é bloquear a
+// LINHA do Lead com `SELECT ... FOR UPDATE` como a PRIMEIRA operação desta
+// transação: no Postgres, o INSERT de um ContactRequest referenciando este
+// leadId precisa validar a FK, o que exige um lock FOR KEY SHARE na linha do
+// Lead — e FOR KEY SHARE conflita com FOR UPDATE. Ou seja, qualquer INSERT
+// concorrente de ContactRequest para este Lead fica bloqueado (em espera) até
+// esta transação commitar ou reverter. Isso significa que, uma vez adquirido
+// o lock, a contagem de ContactRequest feita mais adiante NESTA MESMA
+// transação permanece válida até o delete do Lead: nenhuma nova referência
+// pode ter sido inserida e commitada nesse intervalo.
 export async function runCleanupTransaction(db: CleanupPrismaClient, target: CleanupTarget): Promise<void> {
   const targetPaymentIds: readonly string[] = [target.paymentIdImplantacao, target.paymentIdMensalidade]
 
   await db.$transaction(async (tx) => {
+    // 1. Lock do Lead — sempre a primeira operação. Query 100% parametrizada
+    // via tagged template (Prisma escapa ${target.leadId}); nunca
+    // concatenação de string, nunca $queryRawUnsafe.
+    const lockedLeads = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM "leads" WHERE id = ${target.leadId} FOR UPDATE
+    `
+    if (lockedLeads.length !== 1) {
+      throw new Error(`Esperava bloquear 1 Lead, encontrou ${lockedLeads.length} — abortando transação.`)
+    }
+
     const paymentsDeleted = await tx.payment.deleteMany({
       where: { companyId: target.companyId, id: { in: targetPaymentIds } },
     })
@@ -294,6 +365,29 @@ export async function runCleanupTransaction(db: CleanupPrismaClient, target: Cle
     const companyDeleted = await tx.company.deleteMany({ where: { id: target.companyId } })
     if (companyDeleted.count !== 1) {
       throw new Error(`Esperava excluir 1 Company, excluiu ${companyDeleted.count} — abortando transação.`)
+    }
+
+    // eligibility_assessments.leadId → leads.id é RESTRICT: precisa ser
+    // excluído antes do Lead, senão o passo seguinte falha por FK (como já
+    // ocorreu numa tentativa anterior, revertida integralmente pela própria
+    // transação). where usa id + leadId simultaneamente — nunca um delete
+    // amplo só por leadId.
+    const assessmentDeleted = await tx.eligibilityAssessment.deleteMany({
+      where: { id: target.eligibilityAssessmentId, leadId: target.leadId },
+    })
+    if (assessmentDeleted.count !== 1) {
+      throw new Error(`Esperava excluir 1 EligibilityAssessment, excluiu ${assessmentDeleted.count} — abortando transação.`)
+    }
+
+    // Revalidação atômica (ver nota de atomicidade acima): com o Lead já
+    // bloqueado desde o início desta transação, esta contagem permanece
+    // válida até o delete do Lead logo abaixo. Nunca delete/update em
+    // ContactRequest — só leitura.
+    const contactRequestsStillLinked = await tx.contactRequest.count({ where: { leadId: target.leadId } })
+    if (contactRequestsStillLinked !== 0) {
+      throw new Error(
+        `ContactRequest vinculado ao Lead surgiu durante a transação (${contactRequestsStillLinked}) — abortando antes de excluir o Lead.`
+      )
     }
 
     const leadDeleted = await tx.lead.deleteMany({ where: { id: target.leadId } })
@@ -330,7 +424,8 @@ export function validateExecuteGuards(
 
 export async function dryRun(db: CleanupPrismaClient, target: CleanupTarget): Promise<void> {
   console.log('=== MODO DRY-RUN (nenhuma escrita será feita) ===')
-  const { preconditions, allOk, warnings } = await collectPreconditions(db, target)
+  const { preconditions, allOk, warnings, eligibilityAssessmentCount, contactRequestCount } =
+    await collectPreconditions(db, target)
   for (const p of preconditions) {
     console.log(`${p.ok ? 'OK    ' : 'FALHOU'} — ${p.label}${p.detail ? ' (' + p.detail + ')' : ''}`)
   }
@@ -339,7 +434,13 @@ export async function dryRun(db: CleanupPrismaClient, target: CleanupTarget): Pr
   }
 
   const companyFound = preconditions.find(p => p.label.startsWith('Company existe'))?.ok ?? false
+  const eligibilityAssessmentIdMatches =
+    preconditions.find(p => p.label === 'ID do EligibilityAssessment bate com o esperado')?.ok ?? false
   console.log(`\nCompany alvo encontrada: ${companyFound ? 'sim' : 'não'}`)
+  console.log(`EligibilityAssessment esperado encontrado: ${eligibilityAssessmentIdMatches ? 'sim' : 'não'}`)
+  console.log(`Total de EligibilityAssessments do Lead: ${eligibilityAssessmentCount}`)
+  console.log(`ContactRequests vinculados ao Lead: ${contactRequestCount}`)
+  console.log(`ContactRequest zero: ${contactRequestCount === 0 ? 'aprovado' : 'reprovado'}`)
   console.log(`Precondições aprovadas: ${allOk ? 'sim' : 'não'}`)
 
   if (!allOk) {
@@ -352,6 +453,7 @@ export async function dryRun(db: CleanupPrismaClient, target: CleanupTarget): Pr
   console.log(`- Payment (mensalidade): ${maskId(target.paymentIdMensalidade)}`)
   console.log(`- CancellationRequest: ${maskId(target.cancellationRequestId)}`)
   console.log(`- Company: ${maskId(target.companyId)}`)
+  console.log(`- EligibilityAssessment: ${maskId(target.eligibilityAssessmentId)}`)
   console.log(`- Lead: ${maskId(target.leadId)}`)
   console.log(`\nParceiro preservado (nunca incluído em nenhum delete): ${maskId(target.expectedPartnerId)}`)
   console.log('Nenhuma escrita foi realizada neste modo.')
@@ -384,6 +486,8 @@ export async function execute(
   const targetPaymentIds: readonly string[] = [target.paymentIdImplantacao, target.paymentIdMensalidade]
   const paymentsAfter = (await db.payment.findMany({ where: { id: { in: targetPaymentIds } } })).length
   const cancellationAfter = (await db.cancellationRequest.findMany({ where: { id: target.cancellationRequestId } })).length
+  const eligibilityAssessmentAfter = (await db.eligibilityAssessment.findMany({ where: { id: target.eligibilityAssessmentId } })).length
+  const contactRequestAfter = await db.contactRequest.count({ where: { leadId: target.leadId } })
   const partnerAfter = await db.partner.findUnique({ where: { id: target.expectedPartnerId } })
   const partnerCompaniesAfter = await db.company.count({ where: { partnerId: target.expectedPartnerId } })
   const partnerLeadsAfter = await db.lead.count({ where: { partnerId: target.expectedPartnerId } })
@@ -392,6 +496,8 @@ export async function execute(
   console.log(`Lead antigo = ${leadAfter} (esperado 0)`)
   console.log(`Payments antigos = ${paymentsAfter} (esperado 0)`)
   console.log(`CancellationRequest antiga = ${cancellationAfter} (esperado 0)`)
+  console.log(`EligibilityAssessment antigo = ${eligibilityAssessmentAfter} (esperado 0)`)
+  console.log(`ContactRequest do Lead = ${contactRequestAfter} (esperado 0)`)
   console.log(`Parceiro status = ${partnerAfter?.status} (esperado active)`)
   console.log(`Outras Companies do parceiro preservadas = ${partnerCompaniesAfter}`)
   console.log(`Outros Leads do parceiro preservados = ${partnerLeadsAfter}`)

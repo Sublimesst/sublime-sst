@@ -160,13 +160,24 @@ export interface CleanupTxClient {
   lead: { deleteMany: (args: any) => Promise<{ count: number }> }
 }
 
+export interface CollectPreconditionsResult {
+  preconditions: Precondition[]
+  allOk: boolean
+  // Informativo (não bloqueia allOk) — ver nota abaixo de
+  // "Parceiro possui outros registros".
+  otherCompaniesCount: number
+  otherLeadsCount: number
+  partnerWillHaveNoLinkedRecordsAfterCleanup: boolean
+  warnings: string[]
+}
+
 // Reúne TODAS as precondições da limpeza. Somente leitura — nunca chama
 // nenhum método de escrita. Usada tanto no dry-run quanto, revalidada, dentro
 // do fluxo de execução real.
 export async function collectPreconditions(
   db: CleanupPrismaClient,
   target: CleanupTarget
-): Promise<{ preconditions: Precondition[]; allOk: boolean }> {
+): Promise<CollectPreconditionsResult> {
   const preconditions: Precondition[] = []
   const targetPaymentIds: readonly string[] = [target.paymentIdImplantacao, target.paymentIdMensalidade]
 
@@ -230,19 +241,32 @@ export async function collectPreconditions(
   const partner = await db.partner.findUnique({ where: { id: target.expectedPartnerId } })
   preconditions.push({ label: 'Parceiro existe e está active', ok: partner?.status === 'active' })
 
+  // Informativo, NÃO bloqueante: o parceiro pode legitimamente ficar sem
+  // nenhuma Company/Lead vinculado após esta limpeza (ex.: quando a Company/
+  // Lead alvo é o único registro do parceiro) — isso não impede o parceiro de
+  // seguir active, não afeta login nem código de indicação, e Partner nunca é
+  // excluído por este script. Exigir "outros registros" aqui seria uma
+  // precondição a mais do que o sistema realmente exige.
   const partnerOtherCompanies = await db.company.count({
     where: { partnerId: target.expectedPartnerId, id: { not: target.companyId } },
   })
   const partnerOtherLeads = await db.lead.count({
     where: { partnerId: target.expectedPartnerId, id: { not: target.leadId } },
   })
-  preconditions.push({
-    label: 'Parceiro possui outros registros preservados (fora do escopo desta limpeza)',
-    ok: partnerOtherCompanies > 0 || partnerOtherLeads > 0,
-    detail: `outrasCompanies=${partnerOtherCompanies} outrosLeads=${partnerOtherLeads}`,
-  })
+  const partnerWillHaveNoLinkedRecordsAfterCleanup = partnerOtherCompanies === 0 && partnerOtherLeads === 0
+  const warnings: string[] = []
+  if (partnerWillHaveNoLinkedRecordsAfterCleanup) {
+    warnings.push('O parceiro permanecerá ativo, mas ficará sem Companies ou Leads vinculados após a limpeza.')
+  }
 
-  return { preconditions, allOk: preconditions.every(p => p.ok) }
+  return {
+    preconditions,
+    allOk: preconditions.every(p => p.ok),
+    otherCompaniesCount: partnerOtherCompanies,
+    otherLeadsCount: partnerOtherLeads,
+    partnerWillHaveNoLinkedRecordsAfterCleanup,
+    warnings,
+  }
 }
 
 // Transação real de exclusão — só chamada pelo fluxo de execução, nunca pelo
@@ -306,9 +330,12 @@ export function validateExecuteGuards(
 
 export async function dryRun(db: CleanupPrismaClient, target: CleanupTarget): Promise<void> {
   console.log('=== MODO DRY-RUN (nenhuma escrita será feita) ===')
-  const { preconditions, allOk } = await collectPreconditions(db, target)
+  const { preconditions, allOk, warnings } = await collectPreconditions(db, target)
   for (const p of preconditions) {
     console.log(`${p.ok ? 'OK    ' : 'FALHOU'} — ${p.label}${p.detail ? ' (' + p.detail + ')' : ''}`)
+  }
+  for (const warning of warnings) {
+    console.log(`AVISO — ${warning}`)
   }
 
   const companyFound = preconditions.find(p => p.label.startsWith('Company existe'))?.ok ?? false

@@ -61,23 +61,28 @@ function goodLead(overrides: Partial<Record<string, unknown>> = {}) {
   return { id: TARGET.leadId, partnerId: TARGET.expectedPartnerId, ...overrides }
 }
 
-// Stub mínimo — implementa só a interface CleanupPrismaClient. O `db` de
-// leitura (usado no dry-run e na revalidação de precondições) NÃO TEM nenhum
-// método de escrita — se o código sob teste tentar chamar um, o teste falha
-// com "is not a function", provando estruturalmente que dry-run nunca escreve.
-function buildReadOnlyDb(state: {
+// Estado sintético compartilhado por fullyValidState()/buildReadOnlyDb() —
+// partner é explicitamente nulável para permitir o teste "Partner ausente"
+// sem recorrer a any/cast inseguro.
+interface SyntheticState {
   company?: any
   payments?: any[]
   cancellationRequests?: any[]
   lead?: any
-  partner?: any
+  partner: { id: string; status: string } | null
   zeroCounts?: Partial<Record<
     'commission' | 'onboardingData' | 'clientSession' | 'document' | 'documentAccessLog' | 'implantacaoChecklist' | 'esocialLog',
     number
   >>
   partnerOtherCompanies?: number
   partnerOtherLeads?: number
-}): CleanupPrismaClient {
+}
+
+// Stub mínimo — implementa só a interface CleanupPrismaClient. O `db` de
+// leitura (usado no dry-run e na revalidação de precondições) NÃO TEM nenhum
+// método de escrita — se o código sob teste tentar chamar um, o teste falha
+// com "is not a function", provando estruturalmente que dry-run nunca escreve.
+function buildReadOnlyDb(state: SyntheticState): CleanupPrismaClient {
   const zero = {
     commission: 0, onboardingData: 0, clientSession: 0, document: 0,
     documentAccessLog: 0, implantacaoChecklist: 0, esocialLog: 0,
@@ -118,7 +123,7 @@ function buildReadOnlyDb(state: {
   } as unknown as CleanupPrismaClient
 }
 
-function fullyValidState() {
+function fullyValidState(): SyntheticState {
   return {
     company: goodCompany(),
     payments: goodPayments(),
@@ -401,13 +406,64 @@ describe('collectPreconditions — aborta em qualquer divergência', () => {
     expect(preconditions.find(p => p.label.includes('CNPJ confere'))?.ok).toBe(false)
   })
 
-  it('Lead de outra contratação (partnerId diferente) não conta como "outros registros preservados" — parceiro sem nenhum outro registro também aborta', async () => {
+  it('Partner ativo com ZERO outras Companies/Leads → allOk continua true, aviso operacional é produzido, Partner não é tocado', async () => {
     const state = fullyValidState()
     state.partnerOtherCompanies = 0
     state.partnerOtherLeads = 0
+    const db = buildReadOnlyDb(state)
+    const result = await collectPreconditions(db, TARGET)
+    expect(result.allOk).toBe(true)
+    expect(result.otherCompaniesCount).toBe(0)
+    expect(result.otherLeadsCount).toBe(0)
+    expect(result.partnerWillHaveNoLinkedRecordsAfterCleanup).toBe(true)
+    expect(result.warnings).toEqual([
+      'O parceiro permanecerá ativo, mas ficará sem Companies ou Leads vinculados após a limpeza.',
+    ])
+    expect(db.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('Partner ativo com outra Company além da alvo → allOk true, sem aviso de "ficará vazio"', async () => {
+    const state = fullyValidState()
+    state.partnerOtherCompanies = 1
+    state.partnerOtherLeads = 0
+    const result = await collectPreconditions(buildReadOnlyDb(state), TARGET)
+    expect(result.allOk).toBe(true)
+    expect(result.partnerWillHaveNoLinkedRecordsAfterCleanup).toBe(false)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('Partner ativo com outro Lead além do alvo → allOk true, sem aviso de "ficará vazio"', async () => {
+    const state = fullyValidState()
+    state.partnerOtherCompanies = 0
+    state.partnerOtherLeads = 1
+    const result = await collectPreconditions(buildReadOnlyDb(state), TARGET)
+    expect(result.allOk).toBe(true)
+    expect(result.partnerWillHaveNoLinkedRecordsAfterCleanup).toBe(false)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('Partner ausente → aborta', async () => {
+    const state = fullyValidState()
+    state.partner = null
     const { allOk, preconditions } = await collectPreconditions(buildReadOnlyDb(state), TARGET)
     expect(allOk).toBe(false)
-    expect(preconditions.find(p => p.label.includes('outros registros preservados'))?.ok).toBe(false)
+    expect(preconditions.find(p => p.label === 'Parceiro existe e está active')?.ok).toBe(false)
+  })
+
+  it('Partner inactive → aborta', async () => {
+    const state = fullyValidState()
+    state.partner = { id: TARGET.expectedPartnerId, status: 'inactive' }
+    const { allOk, preconditions } = await collectPreconditions(buildReadOnlyDb(state), TARGET)
+    expect(allOk).toBe(false)
+    expect(preconditions.find(p => p.label === 'Parceiro existe e está active')?.ok).toBe(false)
+  })
+
+  it('Lead vinculado a um Partner divergente do esperado → aborta', async () => {
+    const state = fullyValidState()
+    state.lead = goodLead({ partnerId: 'partner_outro_qualquer' })
+    const { allOk, preconditions } = await collectPreconditions(buildReadOnlyDb(state), TARGET)
+    expect(allOk).toBe(false)
+    expect(preconditions.find(p => p.label.includes('Lead.partnerId corresponde'))?.ok).toBe(false)
   })
 
   it('nunca chama nenhum método de escrita (db somente-leitura não tem deleteMany/$transaction usável)', async () => {
@@ -433,6 +489,27 @@ describe('dryRun — nunca escreve, mesmo com estado válido', () => {
     expect(logged).not.toContain(FAKE_CNPJ)
     expect(logged).not.toContain(FAKE_EMAIL)
     expect(logged).toContain('Nenhuma escrita foi realizada')
+  })
+
+  it('com zero outras Companies/Leads do parceiro: NÃO reprova o dry-run, exibe aviso mascarado, continua sem escrita', async () => {
+    const state = fullyValidState()
+    state.partnerOtherCompanies = 0
+    state.partnerOtherLeads = 0
+    const db = buildReadOnlyDb(state)
+    await dryRun(db, TARGET)
+    const logged = consoleLogSpy.mock.calls.flat().join('\n')
+    expect(logged).toContain('Precondições aprovadas: sim')
+    expect(logged).toContain('O parceiro permanecerá ativo, mas ficará sem Companies ou Leads vinculados após a limpeza.')
+    expect(logged).not.toContain(TARGET.companyId)
+    expect(logged).not.toContain(TARGET.expectedPartnerId)
+    expect(db.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('com outra Company/Lead do parceiro presentes: não exibe o aviso de "ficará vazio"', async () => {
+    const db = buildReadOnlyDb(fullyValidState())
+    await dryRun(db, TARGET)
+    const logged = consoleLogSpy.mock.calls.flat().join('\n')
+    expect(logged).not.toContain('ficará sem Companies ou Leads vinculados')
   })
 
   it('com divergência, aborta e não lista registros a remover', async () => {

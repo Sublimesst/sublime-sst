@@ -5,13 +5,22 @@
 // Não recebe companyId nem token na URL: a identificação vem exclusivamente
 // do cookie de sessão de continuação, lido pelo endpoint /api/contratacao/status.
 // Nunca cria cobrança — só exibe o checkoutUrl já persistido (se validado).
+//
+// Etapa 2B.3 (MVP de retorno/continuidade): o callback do Asaas
+// (autoRedirect) é best-effort e pode falhar por configuração de ambiente —
+// esta página nunca depende dele para funcionar. Três camadas independentes
+// garantem que o cliente sempre consiga ver o estado atualizado mesmo sem
+// nenhum redirecionamento automático: (1) polling normal de até 60s, (2)
+// nova consulta ao focar a aba/voltar a ficar visível, (3) botão manual
+// "Já paguei". Nenhuma delas cria registro ou chama a Asaas diretamente do
+// navegador — todas usam o mesmo GET /api/contratacao/status somente leitura.
 // ═══════════════════════════════════════════════════════════
 
-import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Clock, AlertTriangle, ExternalLink } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { CheckCircle2, Clock, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
-import { shouldShowPaymentButton } from './paymentCta'
+import { shouldShowPaymentButton, getPaymentStepLabel, getIntermediateStatusMessage, createSingleShotGuard } from './paymentCta'
 
 const POLL_INTERVAL_MS = 5000
 const MAX_POLL_ATTEMPTS = 12
@@ -43,55 +52,83 @@ function formatBRL(cents: number) {
 
 export default function ContinuarCadastroPage() {
   const [state, setState] = useState<FetchState>({ kind: 'loading' })
+  const [manualChecking, setManualChecking] = useState(false)
   const attemptsRef = useRef(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Guarda contra chamadas concorrentes: polling, foco/visibilidade e o botão
+  // manual podem disparar ao mesmo tempo (ex.: usuário clica "Já paguei" no
+  // exato momento em que a aba recupera o foco) — só uma consulta por vez.
+  const isFetchingRef = useRef(false)
+  const cancelledRef = useRef(false)
 
-  useEffect(() => {
-    let cancelled = false
+  const fetchStatus = useCallback(async (options: { manual?: boolean } = {}) => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
+    if (options.manual) setManualChecking(true)
 
-    async function fetchStatus() {
-      try {
-        const res = await fetch('/api/contratacao/status', { cache: 'no-store' })
-        if (cancelled) return
+    try {
+      const res = await fetch('/api/contratacao/status', { cache: 'no-store' })
+      if (cancelledRef.current) return
 
-        if (res.status === 401 || res.status === 404) {
-          setState({ kind: 'session-expired' })
-          return
-        }
-        if (res.status === 403) {
-          const body = await res.json().catch(() => null)
-          setState(body?.code === 'company_cancelled' ? { kind: 'cancelled' } : { kind: 'session-expired' })
-          return
-        }
-        if (!res.ok) {
-          setState({ kind: 'temporary-error' })
-          return
-        }
-
-        const json = await res.json()
-        if (!json.success) {
-          setState({ kind: 'temporary-error' })
-          return
-        }
-
-        setState({ kind: 'ok', data: json.data })
-        attemptsRef.current += 1
-
-        const isDefinitive = DEFINITIVE_STEPS.has(json.data.step)
-        if (!isDefinitive && attemptsRef.current < MAX_POLL_ATTEMPTS) {
-          timerRef.current = setTimeout(fetchStatus, POLL_INTERVAL_MS)
-        }
-      } catch {
-        if (!cancelled) setState({ kind: 'temporary-error' })
+      if (res.status === 401 || res.status === 404) {
+        setState({ kind: 'session-expired' })
+        return
       }
-    }
+      if (res.status === 403) {
+        const body = await res.json().catch(() => null)
+        setState(body?.code === 'company_cancelled' ? { kind: 'cancelled' } : { kind: 'session-expired' })
+        return
+      }
+      if (!res.ok) {
+        setState({ kind: 'temporary-error' })
+        return
+      }
 
-    fetchStatus()
-    return () => {
-      cancelled = true
-      if (timerRef.current) clearTimeout(timerRef.current)
+      const json = await res.json()
+      if (!json.success) {
+        setState({ kind: 'temporary-error' })
+        return
+      }
+
+      setState({ kind: 'ok', data: json.data })
+      attemptsRef.current += 1
+
+      const isDefinitive = DEFINITIVE_STEPS.has(json.data.step)
+      if (!isDefinitive && attemptsRef.current < MAX_POLL_ATTEMPTS) {
+        if (timerRef.current) clearTimeout(timerRef.current)
+        timerRef.current = setTimeout(() => fetchStatus(), POLL_INTERVAL_MS)
+      }
+    } catch {
+      if (!cancelledRef.current) setState({ kind: 'temporary-error' })
+    } finally {
+      isFetchingRef.current = false
+      if (options.manual) setManualChecking(false)
     }
   }, [])
+
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchStatus()
+
+    // Retomada ao voltar para a aba: cobre o caso comum de o polling inicial
+    // (até 60s) já ter parado quando o cliente termina de pagar no checkout
+    // em outra aba e só depois volta para esta. Nunca reinicia o polling
+    // agressivo — é só uma consulta avulsa por evento, protegida pelo mesmo
+    // isFetchingRef usado pelo polling e pelo botão manual.
+    function onFocus() { fetchStatus() }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') fetchStatus()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      cancelledRef.current = true
+      if (timerRef.current) clearTimeout(timerRef.current)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [fetchStatus])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,7 +142,13 @@ export default function ContinuarCadastroPage() {
           {state.kind === 'session-expired' && <SessionExpiredCard />}
           {state.kind === 'cancelled' && <CancelledCard />}
           {state.kind === 'temporary-error' && <TemporaryErrorCard />}
-          {state.kind === 'ok' && <StatusCard data={state.data} />}
+          {state.kind === 'ok' && (
+            <StatusCard
+              data={state.data}
+              manualChecking={manualChecking}
+              onManualCheck={() => fetchStatus({ manual: true })}
+            />
+          )}
         </div>
       </main>
       <WhatsAppButton />
@@ -171,11 +214,21 @@ function TemporaryErrorCard() {
   )
 }
 
-function StatusCard({ data }: { data: StatusData }) {
+function StatusCard({
+  data,
+  manualChecking,
+  onManualCheck,
+}: {
+  data: StatusData
+  manualChecking: boolean
+  onManualCheck: () => void
+}) {
+  const intermediateMessage = getIntermediateStatusMessage(data.implantacao?.status, data.mensalidade?.status)
+
   return (
     <div className="space-y-4">
-      <PaymentRow label="Implantação" payment={data.implantacao} />
-      <PaymentRow label="Mensalidade" payment={data.mensalidade} />
+      <PaymentRow label="Implantação" payment={data.implantacao} otherStatus={data.mensalidade?.status} />
+      <PaymentRow label="Mensalidade" payment={data.mensalidade} otherStatus={data.implantacao?.status} />
 
       {data.step === 'preparing' && (
         <InfoBanner text="Sua implantação foi confirmada. Estamos preparando a cobrança da primeira mensalidade." />
@@ -192,6 +245,25 @@ function StatusCard({ data }: { data: StatusData }) {
           text="Identificamos uma pendência no seu pagamento. Fale com a gente pelo WhatsApp para regularizar."
         />
       )}
+      {intermediateMessage && <InfoBanner text={intermediateMessage} />}
+
+      {!data.financiallyComplete && (
+        <button
+          type="button"
+          onClick={onManualCheck}
+          disabled={manualChecking}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {manualChecking ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Verificando...
+            </>
+          ) : (
+            'Já paguei — verificar status'
+          )}
+        </button>
+      )}
     </div>
   )
 }
@@ -199,10 +271,14 @@ function StatusCard({ data }: { data: StatusData }) {
 function PaymentRow({
   label,
   payment,
+  otherStatus,
 }: {
-  label: string
+  label: 'Implantação' | 'Mensalidade'
   payment: StatusData['implantacao']
+  otherStatus: string | null | undefined
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
   if (!payment) return null
 
   const showButton = shouldShowPaymentButton(payment)
@@ -227,16 +303,118 @@ function PaymentRow({
         </div>
 
         {showButton && (
-          <a
-            href={payment.checkoutUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
             Pagar
             <ExternalLink className="h-4 w-4" />
-          </a>
+          </button>
         )}
+      </div>
+
+      {confirmOpen && payment.checkoutUrl && (
+        <PaymentConfirmModal
+          label={label}
+          amount={payment.amount}
+          checkoutUrl={payment.checkoutUrl}
+          stepLabel={getPaymentStepLabel(otherStatus)}
+          onCancel={() => setConfirmOpen(false)}
+          onContinue={() => setConfirmOpen(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function PaymentConfirmModal({
+  label,
+  amount,
+  checkoutUrl,
+  stepLabel,
+  onCancel,
+  onContinue,
+}: {
+  label: 'Implantação' | 'Mensalidade'
+  amount: number
+  checkoutUrl: string
+  stepLabel: string
+  onCancel: () => void
+  onContinue: () => void
+}) {
+  // Guarda síncrona de disparo único: vive DENTRO do modal (não do PaymentRow)
+  // para resetar sozinha a cada reabertura legítima — o modal desmonta ao
+  // fechar (Cancelar ou Continuar) e remonta do zero na próxima vez que
+  // "Pagar" é clicado, criando uma instância nova do guard automaticamente.
+  // Inicialização preguiçosa (sem useEffect): só cria o guard uma vez, na
+  // primeira renderização deste modal.
+  const guardRef = useRef<ReturnType<typeof createSingleShotGuard> | null>(null)
+  if (!guardRef.current) guardRef.current = createSingleShotGuard()
+  const [opening, setOpening] = useState(false)
+
+  function handleContinue() {
+    if (!guardRef.current!.tryConsume()) return
+    setOpening(true)
+    // noopener,noreferrer no window.open é o equivalente programático do
+    // rel="noopener noreferrer" de um <a> — a aba nova nunca tem acesso a
+    // window.opener. A URL já veio validada pelo backend (safeCheckoutUrl);
+    // nunca é construída/concatenada aqui.
+    window.open(checkoutUrl, '_blank', 'noopener,noreferrer')
+    onContinue()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="payment-confirm-title"
+    >
+      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+        <h2 id="payment-confirm-title" className="text-lg font-semibold text-gray-900">
+          Você será direcionado ao ambiente seguro do Asaas
+        </h2>
+
+        <dl className="mt-4 space-y-1 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-gray-500">Pagamento</dt>
+            <dd className="font-medium text-gray-900">{label}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-gray-500">Valor</dt>
+            <dd className="font-medium text-gray-900">{formatBRL(amount)}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-gray-500">Etapa</dt>
+            <dd className="font-medium text-gray-900">{stepLabel}</dd>
+          </div>
+        </dl>
+
+        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm text-gray-600">
+          <li>O pagamento será aberto em uma nova aba.</li>
+          <li>Esta página da Sublime deve permanecer aberta.</li>
+          <li>Depois de pagar, volte para esta página — o status atualiza automaticamente.</li>
+          <li>Se ainda existir outro pagamento pendente, ele também precisará ser concluído para liberar o onboarding.</li>
+        </ul>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={opening}
+            className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Continuar para o pagamento
+          </button>
+        </div>
       </div>
     </div>
   )

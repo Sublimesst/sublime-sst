@@ -122,6 +122,20 @@ async function respondForExistingCompany(company: ExistingCompany, leadId: strin
   return idempotentResponse(finalCompany)
 }
 
+// Log do resultado de configurePaymentCallback distinguindo sucesso de falha
+// pelo NOME do evento (não só por um campo dentro da linha) — evento_configurado
+// só é logado quando o outcome realmente foi 'configured'; qualquer outro
+// outcome ('error' ou 'skipped_mock') vira evento_configuracao_falhou com o
+// outcome anexado. Nunca recebe nem loga paymentId, checkoutUrl/invoiceUrl,
+// API key ou dado pessoal — só companyId, tipo e o outcome/motivo seguro.
+function logCallbackOutcome(companyId: string, tipo: 'implantacao' | 'mensalidade', outcome: string) {
+  if (outcome === 'configured') {
+    console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${companyId} tipo=${tipo}`)
+  } else {
+    console.error(`[LEADS/REGISTER] evento=callback_configuracao_falhou companyId=${companyId} tipo=${tipo} outcome=${outcome}`)
+  }
+}
+
 export async function POST(req: NextRequest) {
   const limit = Number(process.env.RATE_LIMIT_REGISTER ?? 5)
   if (!rateLimit(req, limit)) return rateLimitResponse()
@@ -444,21 +458,31 @@ export async function POST(req: NextRequest) {
       if (callbackUrlResult.outcome === 'available') {
         try {
           const result = await configurePaymentCallback(charge.id, callbackUrlResult.url)
-          console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=implantacao outcome=${result.outcome}`)
+          logCallbackOutcome(company.id, 'implantacao', result.outcome)
         } catch {
-          console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=implantacao`)
+          // configurePaymentCallback nunca lança (sempre devolve outcome
+          // estruturado) — este catch é só defesa extra, nunca deve ser
+          // alcançado na prática; nunca serializa o erro capturado.
+          logCallbackOutcome(company.id, 'implantacao', 'error')
         }
 
         if (mensalidadeAsaasId) {
           try {
             const result = await configurePaymentCallback(mensalidadeAsaasId, callbackUrlResult.url)
-            console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${company.id} tipo=mensalidade outcome=${result.outcome}`)
+            logCallbackOutcome(company.id, 'mensalidade', result.outcome)
           } catch {
-            console.error(`[LEADS/REGISTER] evento=callback_falhou companyId=${company.id} tipo=mensalidade`)
+            logCallbackOutcome(company.id, 'mensalidade', 'error')
           }
         } else {
           console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${company.id} tipo=mensalidade motivo=nao_sincronizada`)
         }
+      } else {
+        // Gate de ambiente/config não liberou o callback — nunca loga a chave,
+        // a URL de checkout/invoice nem o paymentId, só o motivo diagnóstico
+        // (um dos outcomes de getCheckoutContinuationCallbackUrl) para permitir
+        // diferenciar a causa em produção sem expor segredo algum.
+        console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${company.id} tipo=implantacao motivo=${callbackUrlResult.outcome}`)
+        console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${company.id} tipo=mensalidade motivo=${callbackUrlResult.outcome}`)
       }
     }
 

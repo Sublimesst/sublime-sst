@@ -304,12 +304,10 @@ export const isAsaasMock = IS_MOCK
 // esta função nunca lança, só devolve um resultado estruturado.
 
 const CALLBACK_URL = 'https://www.sublimesst.com/cadastro/continuar'
-const CALLBACK_EXPECTED_ASAAS_BASE_URL = 'https://api.asaas.com/v3'
-const CALLBACK_EXPECTED_APP_BASE_URL = 'https://www.sublimesst.com'
-
-function normalizeBaseUrl(raw: string | undefined): string {
-  return (raw ?? '').trim().replace(/\/+$/, '')
-}
+const CALLBACK_PATH = '/cadastro/continuar'
+const CALLBACK_OFFICIAL_HOSTS = new Set(['sublimesst.com', 'www.sublimesst.com'])
+const ASAAS_PROD_HOSTNAME = 'api.asaas.com'
+const ASAAS_PROD_PATH = '/v3'
 
 // Valida a forma da URL final antes de ela ir para qualquer payload — defesa
 // extra mesmo sendo hoje uma constante fixa (protege uma futura edição
@@ -321,9 +319,50 @@ function isValidCallbackUrl(url: string): boolean {
     if (parsed.hostname !== 'www.sublimesst.com') return false
     if (parsed.username !== '' || parsed.password !== '') return false
     if (parsed.port !== '') return false
-    if (parsed.pathname !== '/cadastro/continuar') return false
+    if (parsed.pathname !== CALLBACK_PATH) return false
     if (parsed.search !== '' || parsed.hash !== '') return false
     return true
+  } catch {
+    return false
+  }
+}
+
+// Parsing real via URL (nunca contains/startsWith — um domínio parecido tipo
+// "sublimesst.com.evil.tld" ou "www.sublimesst.com@evil.tld" nunca passa aqui,
+// só igualdade exata de hostname). trim() absorve espaços acidentais na env
+// var; barra final é tolerada via pathname normalizado.
+function isOfficialAppBaseUrl(raw: string | undefined): boolean {
+  const trimmed = (raw ?? '').trim()
+  if (!trimmed) return false
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'https:') return false
+    if (parsed.username !== '' || parsed.password !== '') return false
+    if (parsed.port !== '') return false
+    if (parsed.search !== '' || parsed.hash !== '') return false
+    if (!CALLBACK_OFFICIAL_HOSTS.has(parsed.hostname.toLowerCase())) return false
+    const path = parsed.pathname.replace(/\/+$/, '')
+    return path === ''
+  } catch {
+    return false
+  }
+}
+
+// Mesma lógica de parsing real para a base da API — só aceita a forma exata
+// da API de Produção (https://api.asaas.com/v3, com ou sem barra final),
+// nunca sandbox.asaas.com nem qualquer variação por substring.
+function isOfficialAsaasBaseUrl(raw: string | undefined): boolean {
+  const trimmed = (raw ?? '').trim()
+  if (!trimmed) return false
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'https:') return false
+    if (parsed.username !== '' || parsed.password !== '') return false
+    if (parsed.port !== '') return false
+    if (parsed.search !== '' || parsed.hash !== '') return false
+    if (parsed.hostname.toLowerCase() !== ASAAS_PROD_HOSTNAME) return false
+    const path = parsed.pathname.replace(/\/+$/, '')
+    return path === ASAAS_PROD_PATH
   } catch {
     return false
   }
@@ -332,25 +371,30 @@ function isValidCallbackUrl(url: string): boolean {
 export type CheckoutCallbackUrlResult =
   | { outcome: 'available'; url: string }
   | { outcome: 'skipped_environment' }
-  | { outcome: 'invalid_config' }
+  | { outcome: 'missing_asaas_api_key' }
+  | { outcome: 'invalid_asaas_base_url' }
+  | { outcome: 'invalid_public_base_url' }
 
 // Só devolve uma URL fora do modo mock/teste e só em Produção (VERCEL_ENV),
-// com ASAAS_BASE_URL/NEXT_PUBLIC_BASE_URL exatamente iguais ao esperado e
-// ASAAS_API_KEY presente. Preview e qualquer outro ambiente: sempre
-// 'skipped_environment' — nunca reaproveita a base pública para o callback
-// fora de Produção, para nunca configurar por engano um retorno para o
-// domínio de Produção a partir de um teste em Preview.
+// com ASAAS_BASE_URL/NEXT_PUBLIC_BASE_URL representando exatamente os hosts
+// oficiais (parsing real via URL, nunca contains/startsWith) e ASAAS_API_KEY
+// presente. Preview e qualquer outro ambiente: sempre 'skipped_environment' —
+// nunca reaproveita a base pública para o callback fora de Produção, para
+// nunca configurar por engano um retorno para o domínio de Produção a partir
+// de um teste em Preview. A successUrl devolvida é sempre a constante
+// canônica com www — independente de a env var oficial estar com ou sem www.
 export function getCheckoutContinuationCallbackUrl(): CheckoutCallbackUrlResult {
   if (process.env.VERCEL_ENV !== 'production') {
     return { outcome: 'skipped_environment' }
   }
-
-  const asaasBaseOk = normalizeBaseUrl(process.env.ASAAS_BASE_URL) === CALLBACK_EXPECTED_ASAAS_BASE_URL
-  const appBaseOk    = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL) === CALLBACK_EXPECTED_APP_BASE_URL
-  const apiKeyOk      = !!process.env.ASAAS_API_KEY
-
-  if (!asaasBaseOk || !appBaseOk || !apiKeyOk || !isValidCallbackUrl(CALLBACK_URL)) {
-    return { outcome: 'invalid_config' }
+  if (!process.env.ASAAS_API_KEY) {
+    return { outcome: 'missing_asaas_api_key' }
+  }
+  if (!isOfficialAsaasBaseUrl(process.env.ASAAS_BASE_URL)) {
+    return { outcome: 'invalid_asaas_base_url' }
+  }
+  if (!isOfficialAppBaseUrl(process.env.NEXT_PUBLIC_BASE_URL) || !isValidCallbackUrl(CALLBACK_URL)) {
+    return { outcome: 'invalid_public_base_url' }
   }
 
   return { outcome: 'available', url: CALLBACK_URL }

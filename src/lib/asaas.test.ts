@@ -38,22 +38,91 @@ describe('getCheckoutContinuationCallbackUrl', () => {
     expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'skipped_environment' })
   })
 
-  it('NEXT_PUBLIC_BASE_URL incorreta → invalid_config', async () => {
-    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://sublimesst.com' }) // sem www
+  it('domínio oficial SEM www (apex) → available, successUrl continua a canônica com www', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://sublimesst.com' })
     const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
-    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_config' })
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({
+      outcome: 'available',
+      url: 'https://www.sublimesst.com/cadastro/continuar',
+    })
   })
 
-  it('ASAAS_BASE_URL incorreta (sandbox em produção) → invalid_config', async () => {
+  it('NEXT_PUBLIC_BASE_URL com barra final é normalizada → available', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://www.sublimesst.com/' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl().outcome).toBe('available')
+  })
+
+  it('NEXT_PUBLIC_BASE_URL com espaços é normalizada (trim) → available', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: '  https://www.sublimesst.com  ' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl().outcome).toBe('available')
+  })
+
+  it('NEXT_PUBLIC_BASE_URL http (não https) → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'http://www.sublimesst.com' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('domínio parecido/malicioso (substring) nunca é aceito → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://sublimesst.com.evil.tld' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('domínio malicioso com userinfo (host@evil) nunca é aceito → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://www.sublimesst.com@evil.tld' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('javascript: nunca é aceito → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'javascript:alert(1)' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('porta inesperada (:444) nunca é aceita → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://www.sublimesst.com:444' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('domínio parecido por prefixo (evil-sublimesst.com) nunca é aceito → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://evil-sublimesst.com' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('domínio parecido com www + sufixo malicioso (www.sublimesst.com.evil.example) nunca é aceito → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://www.sublimesst.com.evil.example' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('userinfo malicioso com domínio .example (www.sublimesst.com@evil.example) nunca é aceito → invalid_public_base_url', async () => {
+    setProdEnv({ NEXT_PUBLIC_BASE_URL: 'https://www.sublimesst.com@evil.example' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_public_base_url' })
+  })
+
+  it('ASAAS_BASE_URL incorreta (sandbox em produção) → invalid_asaas_base_url', async () => {
     setProdEnv({ ASAAS_BASE_URL: 'https://sandbox.asaas.com/api/v3' })
     const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
-    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_config' })
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_asaas_base_url' })
   })
 
-  it('ASAAS_API_KEY ausente → invalid_config', async () => {
+  it('ASAAS_BASE_URL de Produção com barra final → available', async () => {
+    setProdEnv({ ASAAS_BASE_URL: 'https://api.asaas.com/v3/' })
+    const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
+    expect(getCheckoutContinuationCallbackUrl().outcome).toBe('available')
+  })
+
+  it('ASAAS_API_KEY ausente → missing_asaas_api_key', async () => {
     setProdEnv({ ASAAS_API_KEY: '' })
     const { getCheckoutContinuationCallbackUrl } = await import('./asaas')
-    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'invalid_config' })
+    expect(getCheckoutContinuationCallbackUrl()).toEqual({ outcome: 'missing_asaas_api_key' })
   })
 })
 

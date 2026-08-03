@@ -43,7 +43,7 @@ vi.mock('@/lib/checkoutSession', () => ({
 
 const { POST } = await import('./route')
 const { prisma } = await import('@/lib/prisma')
-const { createSubscription, createImplantacaoCharge, configurePaymentCallback } = await import('@/lib/asaas')
+const { createSubscription, createImplantacaoCharge, configurePaymentCallback, getCheckoutContinuationCallbackUrl } = await import('@/lib/asaas')
 const { syncFirstSubscriptionPayment } = await import('@/lib/subscriptionSync')
 const { issueCheckoutSessionToken } = await import('@/lib/checkoutSession')
 
@@ -210,5 +210,85 @@ describe('POST /api/leads/register — callback de continuação (Etapa 2B.1/2B.
     await POST(registerRequest())
     expect(createImplantacaoCharge).toHaveBeenCalledTimes(1)
     expect(createSubscription).toHaveBeenCalledTimes(1)
+  })
+})
+
+// IDs de mock usados nas asserções "não aparece nenhum ID completo" abaixo —
+// nunca IDs reais, só os mesmos fixtures já usados no resto deste arquivo.
+const MOCK_ID_PATTERN = /pay_mock_123|pay_mensalidade_mock_1|cus_mock_123|sub_mock_123|asaas\.com/
+
+describe('POST /api/leads/register — callback: reasons e logs seguros (Etapa 2B.3)', () => {
+  it('A) gate indisponível (invalid_public_base_url) → configurePaymentCallback nunca é chamado', async () => {
+    vi.mocked(getCheckoutContinuationCallbackUrl).mockReturnValueOnce({ outcome: 'invalid_public_base_url' } as any)
+    const res = await POST(registerRequest())
+    expect(res.status).toBe(200)
+    expect(configurePaymentCallback).not.toHaveBeenCalled()
+  })
+
+  it('A) gate indisponível → log callback_pulado traz só tipo + motivo, nenhum segredo ou ID completo', async () => {
+    vi.mocked(getCheckoutContinuationCallbackUrl).mockReturnValueOnce({ outcome: 'invalid_public_base_url' } as any)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await POST(registerRequest())
+
+    const puladoLogs = errSpy.mock.calls.map(c => String(c[0])).filter(l => l.includes('evento=callback_pulado'))
+    expect(puladoLogs).toHaveLength(2)
+    expect(puladoLogs.some(l => l.includes('tipo=implantacao') && l.includes('motivo=invalid_public_base_url'))).toBe(true)
+    expect(puladoLogs.some(l => l.includes('tipo=mensalidade') && l.includes('motivo=invalid_public_base_url'))).toBe(true)
+    for (const line of puladoLogs) expect(line).not.toMatch(MOCK_ID_PATTERN)
+
+    errSpy.mockRestore()
+  })
+
+  it('B) callback aplicado com sucesso → evento callback_configurado (implantação e mensalidade), outcome correto', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await POST(registerRequest())
+
+    const lines = errSpy.mock.calls.map(c => String(c[0]))
+    expect(lines.some(l => l.includes('evento=callback_configurado') && l.includes('tipo=implantacao'))).toBe(true)
+    expect(lines.some(l => l.includes('evento=callback_configurado') && l.includes('tipo=mensalidade'))).toBe(true)
+    expect(lines.some(l => l.includes('callback_configuracao_falhou'))).toBe(false)
+    for (const line of lines) expect(line).not.toMatch(MOCK_ID_PATTERN)
+
+    errSpy.mockRestore()
+  })
+
+  it('C) callback retorna outcome de erro → evento callback_configuracao_falhou, cadastro segue 200/success, nada sensível no log', async () => {
+    vi.mocked(configurePaymentCallback).mockResolvedValue({ outcome: 'error' } as any)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const res = await POST(registerRequest())
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.data.checkoutUrl).toBe('https://www.asaas.com/i/mock-abc')
+
+    const lines = errSpy.mock.calls.map(c => String(c[0]))
+    const falhouLines = lines.filter(l => l.includes('evento=callback_configuracao_falhou'))
+    expect(falhouLines).toHaveLength(2)
+    expect(falhouLines.some(l => l.includes('tipo=implantacao') && l.includes('outcome=error'))).toBe(true)
+    expect(falhouLines.some(l => l.includes('tipo=mensalidade') && l.includes('outcome=error'))).toBe(true)
+    expect(lines.some(l => l.includes('evento=callback_configurado'))).toBe(false)
+    for (const line of lines) expect(line).not.toMatch(MOCK_ID_PATTERN)
+
+    errSpy.mockRestore()
+  })
+
+  it('C) rejeição (throw) de configurePaymentCallback também vira callback_configuracao_falhou, nunca serializa o erro cru', async () => {
+    vi.mocked(configurePaymentCallback).mockRejectedValueOnce(new Error('Asaas indisponível — detalhe de payload que nunca pode vazar'))
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const res = await POST(registerRequest())
+    expect(res.status).toBe(200)
+
+    const lines = errSpy.mock.calls.map(c => String(c[0]))
+    const falhouImplantacao = lines.find(l => l.includes('evento=callback_configuracao_falhou') && l.includes('tipo=implantacao'))
+    expect(falhouImplantacao).toBeDefined()
+    expect(falhouImplantacao).not.toContain('detalhe de payload')
+    for (const line of lines) expect(line).not.toMatch(MOCK_ID_PATTERN)
+
+    errSpy.mockRestore()
   })
 })

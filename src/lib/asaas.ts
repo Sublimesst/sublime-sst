@@ -44,11 +44,17 @@ interface AsaasCustomer {
   mobilePhone: string
 }
 
+// Fonte única dos billingTypes aceitos pela API e já usados pelo projeto na
+// criação de cobranças/assinatura — reutilizada também na validação do GET
+// antes do PUT de callback, nunca duplicada em uma lista paralela.
+export type AsaasBillingType = 'BOLETO' | 'PIX' | 'CREDIT_CARD' | 'UNDEFINED'
+
 export interface AsaasCharge {
   id: string
   status: string
   value: number
   dueDate: string
+  billingType?: string
   invoiceUrl: string
   bankSlipUrl?: string
   pixQrCodeId?: string
@@ -68,7 +74,7 @@ interface CreateChargeParams {
   value: number
   dueDate: string
   description: string
-  billingType?: 'BOLETO' | 'PIX' | 'CREDIT_CARD' | 'UNDEFINED'
+  billingType?: AsaasBillingType
   externalReference?: string
 }
 
@@ -117,6 +123,22 @@ function mockSubscription(value: number): AsaasSubscription {
   }
 }
 
+// Erro estruturado da Asaas — preserva a MESMA `.message` que o `Error` genérico
+// de antes (nenhum chamador existente que só lê `.message` percebe diferença),
+// mas expõe `httpStatus`/`body` como propriedades para quem precisa reagir de
+// forma estruturada (hoje só configurePaymentCallback) sem ter que reanalisar
+// a string da mensagem.
+class AsaasApiError extends Error {
+  readonly httpStatus: number
+  readonly body: unknown
+  constructor(httpStatus: number, body: unknown) {
+    super(`Asaas API error ${httpStatus}: ${JSON.stringify(body)}`)
+    this.name = 'AsaasApiError'
+    this.httpStatus = httpStatus
+    this.body = body
+  }
+}
+
 // ── ASAAS API CALLS ───────────────────────────────────────────
 async function asaasFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${ASAAS_BASE_URL}${path}`, {
@@ -129,7 +151,7 @@ async function asaasFetch<T>(path: string, options: RequestInit = {}): Promise<T
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(`Asaas API error ${res.status}: ${JSON.stringify(err)}`)
+    throw new AsaasApiError(res.status, err)
   }
   return res.json()
 }
@@ -243,7 +265,7 @@ export async function getCharge(chargeId: string): Promise<AsaasCharge> {
   if (IS_MOCK) {
     return mockCharge(190)
   }
-  return asaasFetch<AsaasCharge>(`/payments/${chargeId}`)
+  return asaasFetch<AsaasCharge>(`/payments/${encodeURIComponent(chargeId)}`)
 }
 
 // Lista as cobranças já geradas por uma assinatura (GET /subscriptions/{id}/payments).
@@ -400,26 +422,149 @@ export function getCheckoutContinuationCallbackUrl(): CheckoutCallbackUrlResult 
   return { outcome: 'available', url: CALLBACK_URL }
 }
 
+export type InvalidChargeDataReason = 'invalid_billing_type' | 'invalid_value' | 'invalid_due_date'
+
 export type ConfigureCallbackResult =
   | { outcome: 'configured' }
   | { outcome: 'skipped_mock' }
-  | { outcome: 'error' }
+  | { outcome: 'skipped_invalid_status' }
+  | { outcome: 'skipped_invalid_charge_data'; reason: InvalidChargeDataReason }
+  | { outcome: 'error'; httpStatus?: number; errorCode?: string }
 
-// PUT /payments/{paymentId} — payload mínimo, só o callback. Nunca altera
-// valor, vencimento, billingType ou descrição da cobrança já existente.
-// Nunca lança: quem chama nunca precisa de try/catch para não quebrar.
+// Só atualiza cobranças ainda "em aberto" — nunca uma já CONFIRMED, RECEIVED,
+// REFUNDED, DELETED, CANCELLED ou qualquer status desconhecido/futuro.
+const CALLBACK_UPDATABLE_STATUSES = new Set(['PENDING', 'OVERDUE'])
+
+const VALID_BILLING_TYPES: ReadonlySet<string> = new Set<AsaasBillingType>(['BOLETO', 'PIX', 'CREDIT_CARD', 'UNDEFINED'])
+
+const DUE_DATE_FORMAT = /^\d{4}-\d{2}-\d{2}$/
+
+// Confirma que a string (já validada pelo formato YYYY-MM-DD) representa uma
+// data de calendário real — ex.: rejeita 2026-02-30, mês 13, dia 0. Usa
+// Date.UTC só para essa checagem de existência, nunca para reformatar ou
+// converter timezone; a string original é sempre a reenviada, nunca este Date.
+function isRealCalendarDate(dateStr: string): boolean {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (month < 1 || month > 12) return false
+  if (day < 1 || day > 31) return false
+  const d = new Date(Date.UTC(year, month - 1, day))
+  return d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day
+}
+
+// Valida billingType/value/dueDate exatamente como vieram do GET — nunca
+// aceita ausente/vazio/fora da allowlist, nunca converte string numérica,
+// nunca aceita NaN/Infinity/zero/negativo, nunca aceita formato de data
+// diferente de YYYY-MM-DD nem data inexistente. Não corrige nem aplica
+// default — só aprova ou reprova o valor exatamente como recebido.
+function validateChargeDataForCallbackUpdate(
+  charge: AsaasCharge
+): { valid: true } | { valid: false; reason: InvalidChargeDataReason } {
+  if (typeof charge.billingType !== 'string' || charge.billingType.length === 0 || !VALID_BILLING_TYPES.has(charge.billingType)) {
+    return { valid: false, reason: 'invalid_billing_type' }
+  }
+  if (typeof charge.value !== 'number' || !Number.isFinite(charge.value) || charge.value <= 0) {
+    return { valid: false, reason: 'invalid_value' }
+  }
+  if (typeof charge.dueDate !== 'string' || !DUE_DATE_FORMAT.test(charge.dueDate) || !isRealCalendarDate(charge.dueDate)) {
+    return { valid: false, reason: 'invalid_due_date' }
+  }
+  return { valid: true }
+}
+
+const MAX_ERROR_CODE_LENGTH = 60
+
+// Codepoints Unicode reconhecidos como quebra de linha por diversas
+// ferramentas de processamento de texto/log (NEXT LINE, LINE SEPARATOR,
+// PARAGRAPH SEPARATOR) alem dos controles ASCII/DEL — nenhum deles pode
+// sobreviver no errorCode, ou um log poderia ser forjado como se fosse
+// multilinha em visualizadores Unicode-aware. Constantes numericas, nunca
+// escapes de unicode como texto na fonte.
+const UNICODE_NEXT_LINE = 133
+const UNICODE_LINE_SEPARATOR = 8232
+const UNICODE_PARAGRAPH_SEPARATOR = 8233
+
+// Remove qualquer caractere de controle ASCII (codigo <= 0x1f, inclui CR/LF/TAB),
+// o DEL (0x7f) e os 3 separadores de linha Unicode acima, substituindo cada um
+// por um espaco simples. Usa comparacao numerica de codePoint, nunca uma
+// classe de regex com escapes de unicode incorporados na fonte.
+function stripAsciiControlChars(input: string): string {
+  let out = ''
+  for (const ch of input) {
+    const code = ch.codePointAt(0) ?? 0
+    const isControlOrLineSeparator =
+      code <= 0x1f ||
+      code === 0x7f ||
+      code === UNICODE_NEXT_LINE ||
+      code === UNICODE_LINE_SEPARATOR ||
+      code === UNICODE_PARAGRAPH_SEPARATOR
+    out += isControlOrLineSeparator ? ' ' : ch
+  }
+  return out
+}
+
+// Extrai só o primeiro `errors[0].code` do corpo de erro da Asaas — nunca a
+// `description` (pode conter texto arbitrário da API), nunca o corpo inteiro.
+// Remove qualquer caractere de controle (nunca deixa \r/\n/\t chegarem ao
+// log — proteção contra log injection), normaliza espaços repetidos, corta em
+// 60 caracteres. Sempre uma string curta de uma linha só, ou undefined;
+// nunca lança.
+function sanitizeAsaasErrorCode(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object') return undefined
+  const errors = (body as { errors?: unknown }).errors
+  if (!Array.isArray(errors) || errors.length === 0) return undefined
+  const first = errors[0]
+  if (!first || typeof first !== 'object') return undefined
+  const code = (first as { code?: unknown }).code
+  if (typeof code !== 'string') return undefined
+
+  const sanitized = stripAsciiControlChars(code)
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (sanitized.length === 0) return undefined
+  return sanitized.slice(0, MAX_ERROR_CODE_LENGTH)
+}
+
+// PUT /payments/{paymentId} — atualiza SOMENTE o callback de uma cobrança já
+// existente. A Asaas exige billingType/value/dueDate no payload de PUT
+// (payload anterior enviava só `callback` e por isso falhava sempre); os três
+// campos vêm SEMPRE de um GET feito imediatamente antes, na própria Asaas —
+// nunca do banco local, nunca de valor fornecido por quem chama — para nunca
+// reenviar algo desatualizado ou divergente do que já está persistido na
+// cobrança real, e são validados antes de ir para o payload (nunca reenviados
+// crus). Nunca cria cobrança, nunca mexe em customer/subscription, nunca
+// altera valor/vencimento/forma de pagamento/status. Nunca lança: quem chama
+// nunca precisa de try/catch para não quebrar; falha aqui é só um resultado
+// estruturado, best-effort (nunca desfaz cadastro/Company/cobrança).
 export async function configurePaymentCallback(paymentId: string, successUrl: string): Promise<ConfigureCallbackResult> {
   if (IS_MOCK) return { outcome: 'skipped_mock' }
 
   try {
+    const current = await getCharge(paymentId)
+
+    if (!CALLBACK_UPDATABLE_STATUSES.has(current.status)) {
+      return { outcome: 'skipped_invalid_status' }
+    }
+
+    const dataCheck = validateChargeDataForCallbackUpdate(current)
+    if (!dataCheck.valid) {
+      return { outcome: 'skipped_invalid_charge_data', reason: dataCheck.reason }
+    }
+
     await asaasFetch(`/payments/${encodeURIComponent(paymentId)}`, {
       method: 'PUT',
       body: JSON.stringify({
+        billingType: current.billingType,
+        value: current.value,
+        dueDate: current.dueDate,
         callback: { successUrl, autoRedirect: true },
       }),
     })
     return { outcome: 'configured' }
-  } catch {
+  } catch (err) {
+    if (err instanceof AsaasApiError) {
+      return { outcome: 'error', httpStatus: err.httpStatus, errorCode: sanitizeAsaasErrorCode(err.body) }
+    }
     return { outcome: 'error' }
   }
 }

@@ -291,4 +291,81 @@ describe('POST /api/leads/register — callback: reasons e logs seguros (Etapa 2
 
     errSpy.mockRestore()
   })
+
+  it('D) outcome error com httpStatus/errorCode sanitizados → log inclui só esses campos seguros', async () => {
+    vi.mocked(configurePaymentCallback).mockResolvedValue({ outcome: 'error', httpStatus: 400, errorCode: 'invalid_action' } as any)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await POST(registerRequest())
+
+    const lines = errSpy.mock.calls.map(c => String(c[0]))
+    const falhouLines = lines.filter(l => l.includes('evento=callback_configuracao_falhou'))
+    expect(falhouLines.length).toBe(2)
+    expect(falhouLines.every(l => l.includes('httpStatus=400') && l.includes('errorCode=invalid_action'))).toBe(true)
+    for (const line of lines) expect(line).not.toMatch(MOCK_ID_PATTERN)
+
+    errSpy.mockRestore()
+  })
+
+  it('D) skipped_invalid_status → evento callback_pulado, nunca tratado como falha', async () => {
+    vi.mocked(configurePaymentCallback).mockResolvedValue({ outcome: 'skipped_invalid_status' } as any)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const res = await POST(registerRequest())
+    expect(res.status).toBe(200)
+
+    const lines = errSpy.mock.calls.map(c => String(c[0]))
+    expect(lines.some(l => l.includes('evento=callback_pulado') && l.includes('motivo=status_invalido'))).toBe(true)
+    expect(lines.some(l => l.includes('callback_configuracao_falhou'))).toBe(false)
+    expect(lines.some(l => l.includes('evento=callback_configurado'))).toBe(false)
+
+    errSpy.mockRestore()
+  })
+
+  it('D) skipped_invalid_charge_data → continua best-effort, cadastro segue bem-sucedido, log só com tipo/outcome/reason', async () => {
+    vi.mocked(configurePaymentCallback).mockResolvedValue({ outcome: 'skipped_invalid_charge_data', reason: 'invalid_value' } as any)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const res = await POST(registerRequest())
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.data.checkoutUrl).toBe('https://www.asaas.com/i/mock-abc')
+
+    const lines = errSpy.mock.calls.map(c => String(c[0]))
+    const puladoLines = lines.filter(l => l.includes('evento=callback_pulado') && l.includes('motivo=invalid_value'))
+    expect(puladoLines.length).toBe(2) // implantacao + mensalidade
+    expect(lines.some(l => l.includes('callback_configuracao_falhou'))).toBe(false)
+    expect(lines.some(l => l.includes('evento=callback_configurado'))).toBe(false)
+    // nenhum valor inválido (o "dado" em si) aparece — só o nome curto da reason
+    for (const line of lines) {
+      expect(line).not.toMatch(/-?\d+(\.\d+)?e[+-]?\d+|NaN|Infinity/i)
+      expect(line).not.toMatch(MOCK_ID_PATTERN)
+    }
+
+    errSpy.mockRestore()
+  })
+
+  it('D) log da route recebe somente o errorCode já sanitizado (nenhum separador Unicode sobrevive)', async () => {
+    // Simula o retorno já sanitizado de configurePaymentCallback (como a
+    // implementação real sempre devolve) — a route nunca sanitiza de novo,
+    // só encaminha o valor que já recebeu já limpo.
+    vi.mocked(configurePaymentCallback).mockResolvedValue({ outcome: 'error', httpStatus: 400, errorCode: 'invalid action' } as any)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await POST(registerRequest())
+
+    const lines = errSpy.mock.calls.map(c => String(c[0]))
+    const falhouLines = lines.filter(l => l.includes('evento=callback_configuracao_falhou'))
+    expect(falhouLines.length).toBe(2)
+    expect(falhouLines.every(l => l.includes('errorCode=invalid action'))).toBe(true)
+    const forbiddenCodes = [9, 10, 13, 133, 8232, 8233]
+    for (const line of lines) {
+      const hasForbidden = Array.from(line).some(ch => forbiddenCodes.includes(ch.codePointAt(0) ?? -1))
+      expect(hasForbidden).toBe(false)
+    }
+
+    errSpy.mockRestore()
+  })
 })

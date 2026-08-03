@@ -35,6 +35,17 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       payments: { where: { type: 'implantacao' }, take: 1 },
       cancellationRequests: { orderBy: { createdAt: 'desc' } },
       partner: { select: { id: true, name: true, office: true, code: true } },
+      onboardingData: {
+        select: {
+          numFuncionarios: true,
+          cargos: true,
+          turnoTrabalho: true,
+          dataUltimoPcmso: true,
+          possuiPgr: true,
+          observacoes: true,
+          submittedAt: true,
+        },
+      },
     },
   })
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })

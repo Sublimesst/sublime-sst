@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock, configurePaymentCallback, getCheckoutContinuationCallbackUrl } from '@/lib/asaas'
+import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock, configurePaymentCallback, getCheckoutContinuationCallbackUrl, type ConfigureCallbackResult } from '@/lib/asaas'
 import { syncFirstSubscriptionPayment } from '@/lib/subscriptionSync'
 import { issueCheckoutSessionToken, CHECKOUT_SESSION_COOKIE, CHECKOUT_SESSION_MAX_AGE_SECONDS } from '@/lib/checkoutSession'
 import { notifySubscriptionFailed } from '@/lib/mailer'
@@ -124,16 +124,34 @@ async function respondForExistingCompany(company: ExistingCompany, leadId: strin
 
 // Log do resultado de configurePaymentCallback distinguindo sucesso de falha
 // pelo NOME do evento (não só por um campo dentro da linha) — evento_configurado
-// só é logado quando o outcome realmente foi 'configured'; qualquer outro
-// outcome ('error' ou 'skipped_mock') vira evento_configuracao_falhou com o
-// outcome anexado. Nunca recebe nem loga paymentId, checkoutUrl/invoiceUrl,
-// API key ou dado pessoal — só companyId, tipo e o outcome/motivo seguro.
-function logCallbackOutcome(companyId: string, tipo: 'implantacao' | 'mensalidade', outcome: string) {
-  if (outcome === 'configured') {
+// só é logado quando o outcome realmente foi 'configured'; um bloqueio
+// deliberado (status incompatível, ou billingType/value/dueDate inválidos
+// vindos do GET) vira callback_pulado, nunca "falha"; qualquer erro de fato
+// vira callback_configuracao_falhou com httpStatus/errorCode sanitizados
+// quando disponíveis. Nunca recebe nem loga paymentId, checkoutUrl/invoiceUrl,
+// API key, dado pessoal, ou o valor inválido de billingType/value/dueDate —
+// só companyId, tipo e os campos seguros do outcome (nunca o dado em si).
+function logCallbackOutcome(companyId: string, tipo: 'implantacao' | 'mensalidade', result: ConfigureCallbackResult) {
+  if (result.outcome === 'configured') {
     console.error(`[LEADS/REGISTER] evento=callback_configurado companyId=${companyId} tipo=${tipo}`)
-  } else {
-    console.error(`[LEADS/REGISTER] evento=callback_configuracao_falhou companyId=${companyId} tipo=${tipo} outcome=${outcome}`)
+    return
   }
+  if (result.outcome === 'skipped_invalid_status') {
+    console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${companyId} tipo=${tipo} motivo=status_invalido`)
+    return
+  }
+  if (result.outcome === 'skipped_invalid_charge_data') {
+    console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${companyId} tipo=${tipo} motivo=${result.reason}`)
+    return
+  }
+  if (result.outcome === 'skipped_mock') {
+    console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${companyId} tipo=${tipo} motivo=skipped_mock`)
+    return
+  }
+  const parts = [`evento=callback_configuracao_falhou`, `companyId=${companyId}`, `tipo=${tipo}`, `outcome=error`]
+  if (result.httpStatus !== undefined) parts.push(`httpStatus=${result.httpStatus}`)
+  if (result.errorCode !== undefined) parts.push(`errorCode=${result.errorCode}`)
+  console.error(`[LEADS/REGISTER] ${parts.join(' ')}`)
 }
 
 export async function POST(req: NextRequest) {
@@ -458,20 +476,20 @@ export async function POST(req: NextRequest) {
       if (callbackUrlResult.outcome === 'available') {
         try {
           const result = await configurePaymentCallback(charge.id, callbackUrlResult.url)
-          logCallbackOutcome(company.id, 'implantacao', result.outcome)
+          logCallbackOutcome(company.id, 'implantacao', result)
         } catch {
           // configurePaymentCallback nunca lança (sempre devolve outcome
           // estruturado) — este catch é só defesa extra, nunca deve ser
           // alcançado na prática; nunca serializa o erro capturado.
-          logCallbackOutcome(company.id, 'implantacao', 'error')
+          logCallbackOutcome(company.id, 'implantacao', { outcome: 'error' })
         }
 
         if (mensalidadeAsaasId) {
           try {
             const result = await configurePaymentCallback(mensalidadeAsaasId, callbackUrlResult.url)
-            logCallbackOutcome(company.id, 'mensalidade', result.outcome)
+            logCallbackOutcome(company.id, 'mensalidade', result)
           } catch {
-            logCallbackOutcome(company.id, 'mensalidade', 'error')
+            logCallbackOutcome(company.id, 'mensalidade', { outcome: 'error' })
           }
         } else {
           console.error(`[LEADS/REGISTER] evento=callback_pulado companyId=${company.id} tipo=mensalidade motivo=nao_sincronizada`)

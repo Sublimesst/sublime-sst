@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Upload, Ban } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { formatDate, maskCurrencyBRL } from '@/lib/utils'
 import { PRICING, faixaKeyFromCount } from '@/lib/pricing'
+import { formatOptionalText, formatPossuiPgr, employeeCountDiverges } from './onboardingDisplay'
 
 const DOCUMENTO_TIPOS = [
   { value: 'pgr',        label: 'PGR' },
@@ -69,6 +70,16 @@ interface EsocialLog {
   createdAt: string
 }
 
+interface OnboardingDataView {
+  numFuncionarios: number
+  cargos?: string | null
+  turnoTrabalho?: string | null
+  dataUltimoPcmso?: string | null
+  possuiPgr: boolean
+  observacoes?: string | null
+  submittedAt: string
+}
+
 interface Company {
   id: string
   razaoSocial: string
@@ -94,6 +105,7 @@ interface Company {
   asaasCustomerId?: string | null
   asaasSubscriptionId?: string | null
   subscriptionStatus?: string | null
+  onboardingData?: OnboardingDataView | null
 }
 
 const ITEM_STATUSES = [
@@ -354,6 +366,63 @@ export default function EmpresaDetailPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Dados enviados pelo cliente (onboarding) */}
+      <div className="bg-white rounded-[12px] border border-gray-200 p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[14px] font-semibold text-gray-800">Dados enviados pelo cliente</p>
+          {company.onboardingData ? (
+            <span className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✅ Preenchido</span>
+          ) : (
+            <span className="text-[11px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">⏳ Pendente</span>
+          )}
+        </div>
+
+        {company.onboardingData ? (
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-[13px]">
+            <div className="col-span-2">
+              <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Enviado em</span>
+              {formatDate(company.onboardingData.submittedAt)}
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Funcionários informados no onboarding</span>
+              {company.onboardingData.numFuncionarios}
+              {employeeCountDiverges(company.numFuncionarios, company.onboardingData.numFuncionarios) && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  ⚠️ A quantidade informada no onboarding difere do cadastro inicial.
+                  {' '}(Cadastro inicial: {company.numFuncionarios} · Onboarding: {company.onboardingData.numFuncionarios})
+                </p>
+              )}
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Turno de trabalho</span>
+              {formatOptionalText(company.onboardingData.turnoTrabalho)}
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Cargos</span>
+              {formatOptionalText(company.onboardingData.cargos)}
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Já possui PGR?</span>
+              {formatPossuiPgr(company.onboardingData.possuiPgr)}
+            </div>
+
+            <div className="col-span-2">
+              <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Data do último PCMSO (informado pelo cliente)</span>
+              {formatOptionalText(company.onboardingData.dataUltimoPcmso)}
+            </div>
+
+            <div className="col-span-2">
+              <span className="text-gray-400 block text-[11px] uppercase tracking-wide">Observações</span>
+              <p className="whitespace-pre-wrap break-words">{formatOptionalText(company.onboardingData.observacoes)}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-[12px] text-gray-400 py-2">Cliente ainda não preencheu o onboarding.</p>
+        )}
       </div>
 
       {/* Assinatura Asaas */}

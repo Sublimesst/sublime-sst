@@ -25,7 +25,6 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 - Reconciliação por webhook
 - Comissão de parceiro incide somente sobre mensalidade (implantação não gera comissão)
 - Portal Cliente via magic link (login, dashboard, onboarding)
-- Painel Admin com dados do onboarding
 - Company do teste atingiu estágio `in_production`
 - Fluxo financeiro sem duplicidade confirmada
 
@@ -35,6 +34,7 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 - Contrato e PDF: conteúdo, imutabilidade, aceite eletrônico e formatação — **prioridade P0**
 - Fluxo completo de documentos pendente de teste controlado
+- Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
 
 ---
 
@@ -58,5 +58,4 @@ antes de qualquer novo cliente real.
 
 - Variáveis de ambiente: gerenciadas na Vercel e no `.env.local` local (não commitado)
 - Banco: Supabase PostgreSQL (configuração via variáveis de ambiente — não hardcoded)
-- Crons: agendados em `vercel.json`, protegidos por header de autenticação
-- RLS: habilitado no Supabase
+- Crons: agendados em `vercel.json`

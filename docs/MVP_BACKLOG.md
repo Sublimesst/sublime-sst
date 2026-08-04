@@ -73,10 +73,10 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 - Exportação CSV/Excel dos dados do Admin
   — **Estado:** pendente
 
-- Validação de dados e limites de arquivos no upload
+- Melhorias de UX do upload, mensagens de erro e conveniência operacional
   — **Estado:** pendente
 
-- Revisão jurídica de `/privacidade` e `/termos`; remover aviso de rascunho após aprovação
+- Revisão comercial, operacional e de coerência de `/privacidade` e `/termos`; remover aviso de rascunho somente após aprovação interna
   — **Estado:** pendente · Dependência: aprovação humana
 
 ---

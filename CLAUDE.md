@@ -68,7 +68,7 @@ Nunca executar sem autorização:
 - Sempre oferecer dois caminhos: teste digital ou orçamento personalizado
 - Nunca afirmar obrigatoriedade universal — usar "conforme aplicabilidade" ou "após análise do perfil"
 - Não alterar catálogo de CNAEs sem validação humana
-- Não automatizar contratação sem aprovação humana
+- Não ampliar nem abrir publicamente o fluxo de contratação automatizada sem aprovação explícita e conclusão dos bloqueadores P0
 - Não publicar segredos nem inventar dados jurídicos
 - Preços e valores: consultar o código de pricing e o contrato vigente — não copiar para documentos de memória
 

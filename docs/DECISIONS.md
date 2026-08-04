@@ -80,7 +80,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 **Repositório Git é a fonte técnica oficial.**
 - Status: implantada
 - Motivo: rastreabilidade, versionamento e auditoria
-- Regra: em caso de divergência entre documentos e código, o código prevalece
+- Regra: em caso de divergência, o código atual e as evidências atuais de Produção prevalecem sobre documentos
 
 **Uma tarefa funcional por branch; nova branch usa nova sessão principal do Claude Code.**
 - Status: implantada

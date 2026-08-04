@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash, timingSafeEqual } from 'crypto'
+import { timingSafeEqual } from 'crypto'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { sendWelcomeEmail, notifyPaymentConfirmed, notifyPaymentOverdue, notifyContractPdfFailed } from '@/lib/mailer'
 import { generateContractPdf } from '@/lib/contractPdf'
+import { persistContractPdf, isContractPersisted } from '@/lib/contractPersistence'
 import { CONTRACT_VERSION } from '@/lib/pricing'
 import { safeCheckoutUrl } from '@/lib/paymentPresentation'
 
@@ -240,8 +241,17 @@ export async function POST(req: NextRequest) {
       const co = dbPayment.company
       const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://sublimesst.com'}/cliente/login`
 
+      // Resolvidos uma única vez e reaproveitados tanto na geração do PDF
+      // quanto na identidade de persistência (storageKey) — nunca uma 2ª
+      // leitura de `new Date()`, que quebraria o determinismo entre tentativas.
+      const resolvedContractVersion = co.contractVersion ?? CONTRACT_VERSION
+      const resolvedContractAcceptedAt = co.contractAcceptedAt ?? new Date()
+
       let contractPdf: Buffer | undefined
       try {
+        // Único ponto de geração do PDF nesta execução — o mesmo Buffer é
+        // reaproveitado abaixo para persistência (hash incluso) e para o
+        // anexo do e-mail; nunca é regenerado.
         contractPdf = await generateContractPdf({
           razaoSocial:          co.razaoSocial,
           cnpj:                 co.cnpj,
@@ -255,17 +265,39 @@ export async function POST(req: NextRequest) {
           planType:             co.planType ?? 'essencial',
           implantacaoValor:     co.implantacaoValor,
           implantacaoPromo:     co.implantacaoPromo,
-          contractAcceptedAt:   co.contractAcceptedAt ?? new Date(),
+          contractAcceptedAt:   resolvedContractAcceptedAt,
           contractAcceptanceIp: co.contractAcceptanceIp ?? 'não registrado',
           contractAcceptanceUa: co.contractAcceptanceUa,
-          contractVersion:      co.contractVersion ?? CONTRACT_VERSION,
+          contractVersion:      resolvedContractVersion,
         })
-        if (contractPdf) {
-          const hash = createHash('sha256').update(contractPdf).digest('hex')
-          await prisma.company.update({
-            where: { id: co.id },
-            data: { contractHash: hash },
-          }).catch(err => console.error('[WEBHOOK] Falha ao salvar contractHash:', err))
+
+        const persistResult = await persistContractPdf({
+          companyId:          co.id,
+          contractVersion:    resolvedContractVersion,
+          contractAcceptedAt: resolvedContractAcceptedAt,
+          pdfBuffer:          contractPdf,
+        })
+
+        if (isContractPersisted(persistResult)) {
+          console.error(`[WEBHOOK] Contrato persistido — companyId=${co.id} outcome=${persistResult.outcome} storageKey=${persistResult.storageKey}`)
+        } else {
+          // Resiliente de propósito: o pagamento já está confirmado e não
+          // pode ser desfeito por falha de persistência do contrato. Loga só
+          // o outcome estruturado (nunca CPF/CNPJ/e-mail/IP/bytes) e avisa a
+          // equipe pelo mesmo canal já usado para falha de geração do PDF.
+          const persistFailureReason = persistResult.outcome === 'error' ? persistResult.reason : persistResult.outcome
+          console.error(`[WEBHOOK] Persistência do contrato não concluída — companyId=${co.id} outcome=${persistResult.outcome}`)
+          await notifyContractPdfFailed({
+            companyId:    co.id,
+            companyName:  co.razaoSocial,
+            errorName:    'ContractPersistenceFailed',
+            errorMessage: persistFailureReason,
+          }).catch(notifyErr => console.error('[WEBHOOK] Falha ao notificar equipe sobre PDF do contrato:', notifyErr))
+          // Nunca anexa ao e-mail um PDF que não foi confirmado como
+          // persistido íntegro — evita o cliente receber, por e-mail, uma
+          // versão divergente da que ficará (ou não) ancorada no portal.
+          // O e-mail de boas-vindas continua sendo enviado, só sem anexo.
+          contractPdf = undefined
         }
       } catch (err) {
         // Resiliente de propósito: o pagamento já está confirmado e não pode

@@ -32,7 +32,12 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 ## Em andamento (não validado em Produção)
 
-- Contrato e PDF: conteúdo, imutabilidade, aceite eletrônico e formatação — **prioridade P0**
+- Contrato e PDF — **prioridade P0**:
+  - Eixo C (persistência e recuperação do PDF): **concluído**, mergeado pela PR #16
+  - Conteúdo MVP 1.0: **congelado documentalmente** em `docs/CONTRACT_MVP_V1.md` — ainda não implementado
+  - Eixo A (fonte única `/termos` × PDF): pendente
+  - Eixo B (comprovante e arquitetura do aceite): pendente
+  - Eixo D (formatação e paginação do PDF): pendente
 - Fluxo completo de documentos pendente de teste controlado
 - Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
 
@@ -40,8 +45,10 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 ## Próximo passo prioritário
 
-Concluir conteúdo, imutabilidade, aceite eletrônico e formatação do contrato/PDF
-antes de qualquer novo cliente real.
+Implementar o Eixo A (fonte única entre `/termos` e o PDF) a partir do
+conteúdo já congelado em `docs/CONTRACT_MVP_V1.md`, seguido dos Eixos B e D.
+Novo cliente real continua bloqueado até a conclusão dos quatro eixos do
+bloqueador Contrato e PDF.
 
 ---
 

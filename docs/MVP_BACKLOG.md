@@ -9,14 +9,27 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Contrato
 
-- **Estado:** pendente
+- **Estado:** parcialmente concluído
+- **Concluído:**
+  - Persistência idempotente e recuperável do PDF do contrato (Eixo C — PR #16)
+  - Decisões comerciais do MVP 1.0 aprovadas (vigência, cancelamento, promoções — `docs/DECISIONS.md`)
+  - Conteúdo do contrato MVP 1.0 aprovado e congelado documentalmente (`docs/CONTRACT_MVP_V1.md`)
+  - Validação técnica de SST do conteúdo concluída
+- **Pendente:**
+  - Fonte única de conteúdo entre `/termos` e o PDF (Eixo A)
+  - Atualização de `/termos` para o conteúdo MVP 1.0 aprovado
+  - Geração do PDF com o contrato integral (16 cláusulas), não um extrato parcial
+  - Atualização do comprovante de aceite eletrônico conforme `docs/CONTRACT_MVP_V1.md` (Eixo B)
+  - Layout, formatação e paginação do PDF (Eixo D)
+  - Testes automatizados de correspondência entre `/termos` e o PDF
+  - Validação ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/portal)
 - **Critério de aceite:**
   - Conteúdo comercial e operacional alinhado com o produto atual
   - Correspondência verificada com `/termos`
   - Mecanismo de imutabilidade do aceite implementado
   - PDF legível gerado automaticamente
   - Comprovante eletrônico persistido
-- **Dependências:** definição do escopo do produto Sublime Digital
+- **Dependências:** `docs/CONTRACT_MVP_V1.md` (conteúdo já aprovado, aguardando implementação)
 - **Bloqueia novo cliente:** sim
 
 ### Documentos do cliente

@@ -75,6 +75,83 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ---
 
+## Contrato Sublime Digital — Conteúdo MVP 1.0
+
+**O conteúdo do Contrato Sublime Digital MVP 1.0 está aprovado e congelado
+documentalmente em `docs/CONTRACT_MVP_V1.md`.**
+- Status: aprovado, **ainda não implementado** em `/termos` nem em
+  `src/lib/contractPdf.ts`
+- Motivo: destravar as implementações futuras dos Eixos A, B e D com uma
+  única especificação de referência, evitando decisões de conteúdo tomadas
+  ad-hoc durante a implementação técnica
+- Fonte: `docs/CONTRACT_MVP_V1.md`
+
+**A validação técnica de SST do conteúdo MVP 1.0 foi concluída e aprovada
+pela responsável de SST.**
+- Status: implantada (validação); implementação do conteúdo pendente
+- Motivo: garantir que o conteúdo reflita corretamente o escopo real dos
+  planos Essencial e Premium antes de qualquer implementação
+- Fonte: `docs/CONTRACT_MVP_V1.md`
+
+**A revisão jurídica formal do conteúdo MVP 1.0 por advogado externo
+permanece futura e não bloqueia o congelamento nem a implementação do
+conteúdo.**
+- Status: ainda não realizada — risco reconhecido
+- Motivo: agilidade para o MVP, consistente com a decisão já registrada
+  acima ("Contrato do MVP seguirá inicialmente sem revisão formal de
+  advogado")
+- Fonte: `docs/CONTRACT_MVP_V1.md`, Seção 17 (cláusulas sensíveis
+  priorizadas para essa revisão futura)
+
+**O modelo comercial de vigência, cancelamento e promoções do MVP 1.0 está
+aprovado, substituindo expressamente o modelo atualmente publicado em
+`src/lib/contractPdf.ts` e `/digital`.**
+- Status: aprovado, ainda não implementado
+- **Regras anteriores expressamente superadas por esta decisão:**
+  - compromisso mínimo de 6 (seis) mensalidades, contado a partir da entrega
+    dos documentos de implantação;
+  - aviso prévio de 60 (sessenta) dias para rescisão entre o 7º e o 12º mês
+    de vigência;
+  - aviso prévio de 30 (trinta) dias para rescisão após a primeira
+    renovação.
+- **Nova regra oficial, que passa a valer no lugar das anteriores:**
+  - vigência inicial mínima de 12 (doze) meses, contados a partir da
+    ativação (não da entrega de documentos);
+  - preço do período inicial pago em 12 (doze) cobranças mensais
+    sucessivas;
+  - qualquer cancelamento solicitado durante a vigência inicial é tratado
+    como aviso de não renovação e produz efeito ao final do 12º mês, sem
+    eliminar as parcelas restantes;
+  - renovação automática por prazo indeterminado após o período inicial;
+  - aviso prévio único de 90 (noventa) dias, aplicável somente aos pedidos
+    feitos após a renovação por prazo indeterminado;
+  - nenhuma multa adicional e nenhum novo período de fidelidade a cada
+    renovação
+- Motivo: o modelo anterior fragmentava o prazo de aviso em três regras
+  diferentes (30/60 dias) e amarrava o início da permanência mínima à
+  entrega de documentos, não à ativação — o novo modelo unifica isso em uma
+  única regra, mais previsível para o CONTRATANTE e mais simples de
+  implementar
+- Fonte: `docs/CONTRACT_MVP_V1.md`, Seções 1 a 4
+
+**O escopo e os limites dos planos Digital Essencial e Digital Premium
+(incluindo LTCAT do Premium) estão aprovados no nível de conteúdo.**
+- Status: aprovado, ainda não implementado
+- Motivo: alinhar o texto contratual ao escopo técnico real entregue pela
+  operação, incluindo exclusões e condicionantes que hoje não constam do
+  contrato publicado
+- Fonte: `docs/CONTRACT_MVP_V1.md`, Seções 6 a 14
+
+**O formato do comprovante de aceite eletrônico do MVP 1.0 está aprovado,
+corrigindo o comprovante atualmente gerado pelo PDF.**
+- Status: aprovado, ainda não implementado
+- Motivo: separar claramente o registro do aceite (anterior ao pagamento) do
+  estado financeiro da contratação, e remover do comprovante qualquer
+  linguagem de recibo ou de prova legal absoluta
+- Fonte: `docs/CONTRACT_MVP_V1.md`, Seção 15
+
+---
+
 ## Governança técnica
 
 **Repositório Git é a fonte técnica oficial.**

@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { Prisma } from '@prisma/client'
+import { generateContractPdf } from '@/lib/contractPdf'
+import { persistContractPdf } from '@/lib/contractPersistence'
+import type { PersistContractResult } from '@/lib/contractPersistence'
 
 const WEBHOOK_SECRET = 'test-webhook-secret-nao-real-0123456789'
 process.env.ASAAS_WEBHOOK_TOKEN = WEBHOOK_SECRET
@@ -40,9 +43,28 @@ vi.mock('@/lib/contractPdf', () => ({
   generateContractPdf: vi.fn(async () => undefined),
 }))
 
+// Mock parcial: persistContractPdf é substituído (controlado por teste),
+// mas isContractPersisted continua sendo a implementação REAL — os testes
+// de controle do anexo validam a classificação de verdade usada em
+// produção, não uma reimplementação paralela dela neste arquivo.
+vi.mock('@/lib/contractPersistence', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/contractPersistence')>('@/lib/contractPersistence')
+  return {
+    ...actual,
+    persistContractPdf: vi.fn(),
+  }
+})
+
 const { POST } = await import('./route')
 const { prisma } = await import('@/lib/prisma')
-const { notifyPaymentConfirmed, notifyPaymentOverdue } = await import('@/lib/mailer')
+const { sendWelcomeEmail, notifyPaymentConfirmed, notifyPaymentOverdue, notifyContractPdfFailed } = await import('@/lib/mailer')
+// generateContractPdf e persistContractPdf usam import estático (topo do
+// arquivo) em vez de `await import(...)` — mesmo padrão já usado em
+// subscriptionSync.test.ts: o vi.mock() abaixo é hoisted pelo Vitest para
+// antes de qualquer import (estático ou dinâmico), então a referência
+// estática já resolve para a versão mockada, sem precisar de top-level
+// await (que o tsconfig atual não suporta — ver TS1378 nas 3 linhas acima,
+// pré-existentes e fora do escopo desta correção).
 
 function webhookRequest(body: Record<string, unknown>) {
   return new NextRequest('https://www.sublimesst.com/api/webhooks/asaas', {
@@ -87,6 +109,28 @@ function dbPaymentFixture(overrides: Partial<{ id: string; type: string; status:
     id: 'payment_1', type: 'mensalidade', status: 'pending', amount: 19900, companyId: 'company_1', checkoutUrl: null,
     company: COMPANY,
     ...overrides,
+  }
+}
+
+// Empresa/Payment sintéticos para alcançar o ramo implantacao+pending (único
+// que gera/persiste o PDF do contrato) — nenhum teste pré-existente neste
+// arquivo passava por este ramo. Todos os campos são dados fictícios.
+const IMPLANTACAO_PENDING_COMPANY = {
+  id: 'company_pdf', razaoSocial: 'Empresa PDF Teste', cnpj: '98765432000188',
+  responsavel: 'Responsável Teste', email: 'contrato-teste@example.com',
+  endereco: 'Rua Sintética, 100', cidade: 'Rio de Janeiro', estado: 'RJ', cep: '20000-000',
+  numFuncionarios: 4, planType: 'essencial', implantacaoValor: 19900, implantacaoPromo: false,
+  contractAcceptedAt: new Date('2026-07-20T14:33:02.123Z'),
+  contractAcceptanceIp: '203.0.113.10', contractAcceptanceUa: 'vitest-agent',
+  contractVersion: '2026-07-04',
+  partnerId: null, status: 'pending',
+}
+
+function implantacaoPendingPaymentFixture() {
+  return {
+    id: 'payment_pdf', type: 'implantacao', status: 'pending', amount: 19900,
+    companyId: IMPLANTACAO_PENDING_COMPANY.id, checkoutUrl: null,
+    company: IMPLANTACAO_PENDING_COMPANY,
   }
 }
 
@@ -494,5 +538,84 @@ describe('POST /api/webhooks/asaas — checkoutUrl da mensalidade (P0)', () => {
 
       errorSpy.mockRestore()
     })
+  })
+})
+
+describe('POST /api/webhooks/asaas — persistência do contrato e controle do anexo de e-mail (P1)', () => {
+  const FAKE_PDF = Buffer.from('PDF-SINTETICO-PARA-TESTE')
+
+  const successOutcomes: PersistContractResult[] = [
+    { outcome: 'created', documentId: 'doc-1', storageKey: 'contrato/company_pdf/2026-07-04/k', hash: 'hash-fake' },
+    { outcome: 'already_persisted', documentId: 'doc-1', storageKey: 'contrato/company_pdf/2026-07-04/k', hash: 'hash-fake' },
+    { outcome: 'document_recovered', documentId: 'doc-1', storageKey: 'contrato/company_pdf/2026-07-04/k', hash: 'hash-fake' },
+  ]
+
+  const failureOutcomes: PersistContractResult[] = [
+    { outcome: 'company_hash_mismatch', storageKey: 'contrato/company_pdf/2026-07-04/k', hash: 'hash-fake' },
+    { outcome: 'storage_bytes_mismatch', storageKey: 'contrato/company_pdf/2026-07-04/k', hash: 'hash-fake' },
+    { outcome: 'orphan_document', documentId: 'doc-orfao', storageKey: 'contrato/company_pdf/2026-07-04/k' },
+    { outcome: 'error', reason: 'PrismaClientKnownRequestError' },
+  ]
+
+  function mockImplantacaoBranch(persistResult: PersistContractResult) {
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(implantacaoPendingPaymentFixture() as any)
+    vi.mocked(generateContractPdf).mockResolvedValue(FAKE_PDF)
+    vi.mocked(persistContractPdf).mockResolvedValue(persistResult)
+  }
+
+  function postImplantacaoConfirmed() {
+    return POST(webhookRequest({
+      event: 'PAYMENT_CONFIRMED',
+      payment: { id: 'pay_implantacao', value: 199, externalReference: IMPLANTACAO_PENDING_COMPANY.id },
+    }))
+  }
+
+  it.each(successOutcomes)('outcome $outcome — welcome e-mail enviado COM o mesmo Buffer persistido, sem notificação de falha', async persistResult => {
+    mockImplantacaoBranch(persistResult)
+
+    const res = await postImplantacaoConfirmed()
+
+    expect(res.status).toBe(200)
+    expect(sendWelcomeEmail).toHaveBeenCalledTimes(1)
+    const emailArgs = vi.mocked(sendWelcomeEmail).mock.calls[0][0] as any
+    expect(emailArgs.contractPdf).toBe(FAKE_PDF) // mesmo Buffer, nunca regenerado
+    expect(notifyContractPdfFailed).not.toHaveBeenCalled()
+  })
+
+  it.each(failureOutcomes)('outcome $outcome — welcome e-mail enviado SEM anexo, notificação de falha acionada', async persistResult => {
+    mockImplantacaoBranch(persistResult)
+
+    const res = await postImplantacaoConfirmed()
+
+    expect(res.status).toBe(200)
+    expect(sendWelcomeEmail).toHaveBeenCalledTimes(1)
+    const emailArgs = vi.mocked(sendWelcomeEmail).mock.calls[0][0] as any
+    expect(emailArgs.contractPdf).toBeUndefined() // nunca anexa PDF não persistido/divergente
+    expect(notifyContractPdfFailed).toHaveBeenCalledTimes(1)
+  })
+
+  it('falha de persistência do contrato nunca retorna erro ao Asaas nem desfaz a transição de Payment.status', async () => {
+    mockImplantacaoBranch({ outcome: 'error', reason: 'PrismaClientInitializationError' })
+
+    const res = await postImplantacaoConfirmed()
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body).toEqual({ ok: true })
+    // A transição pending→confirmed do Payment (updateMany) já ocorreu antes
+    // deste bloco no fluxo normal do handler — não é revertida nem repetida
+    // por causa da falha de persistência do contrato.
+    expect(prisma.payment.updateMany).toHaveBeenCalledTimes(1)
+  })
+
+  it('geração do PDF ocorre uma única vez por execução, independentemente do outcome da persistência', async () => {
+    mockImplantacaoBranch({ outcome: 'storage_bytes_mismatch', storageKey: 'k', hash: 'h' })
+
+    await postImplantacaoConfirmed()
+
+    expect(generateContractPdf).toHaveBeenCalledTimes(1)
+    expect(persistContractPdf).toHaveBeenCalledTimes(1)
+    const persistArgs = vi.mocked(persistContractPdf).mock.calls[0][0]
+    expect(persistArgs.pdfBuffer).toBe(FAKE_PDF) // mesmo Buffer da geração, nunca regenerado
   })
 })

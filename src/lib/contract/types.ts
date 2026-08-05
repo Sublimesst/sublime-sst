@@ -6,19 +6,31 @@
 // Um bloco de conteúdo dentro de uma cláusula — parágrafo corrido ou lista
 // com marcadores. Cobre tanto o texto de `/termos` quanto o do PDF sem
 // forçar nenhum dos dois a um formato de renderização específico.
+//
+// `readonly` em todos os níveis (aqui e em ContractClause/ContractContent)
+// para que o conteúdo publicado seja imutável já na tipagem — o runtime
+// reforça isso com Object.freeze profundo em content.ts.
 export type ContractBlock =
-  | { type: 'paragrafo'; texto: string }
-  | { type: 'lista'; titulo?: string; itens: string[] }
+  | { readonly type: 'paragrafo'; readonly texto: string }
+  | { readonly type: 'lista'; readonly titulo?: string; readonly itens: readonly string[] }
 
 export interface ContractClause {
-  numero: number
-  titulo: string
-  blocos: ContractBlock[]
+  readonly numero: number
+  readonly titulo: string
+  // Array em si não é tipado `readonly ContractBlock[]` de propósito: o
+  // renderizador de PDF (src/lib/contractPdf.ts, fora do escopo desta
+  // revisão) declara seu parâmetro como `ContractBlock[]` mutável, e
+  // `readonly T[]` não é atribuível a `T[]` em TypeScript. A imutabilidade
+  // real deste array é garantida em runtime por Object.freeze (ver
+  // freezeContractContent em content.ts), não pela tipagem do array —
+  // os elementos (ContractBlock) e o conteúdo de `itens` continuam
+  // readonly em ambos os níveis.
+  readonly blocos: ContractBlock[]
 }
 
 export interface ContractContent {
-  version: string
-  clausulas: ContractClause[]
+  readonly version: string
+  readonly clausulas: readonly ContractClause[]
 }
 
 // Plano e faixa — mesmas chaves usadas em `pricing.ts` (nunca redefinidas

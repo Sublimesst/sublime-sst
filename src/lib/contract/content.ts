@@ -4,10 +4,12 @@
 // textos mantidos independentemente.
 //
 // Cada versão é IMUTÁVEL após publicada: uma alteração de conteúdo
-// aprovada sempre cria uma nova entrada (nova CONTRACT_VERSION),
-// nunca edita uma já existente — necessário para que contratos já
-// aceitos continuem sendo regenerados com o texto que o cliente
-// efetivamente aceitou (ver src/lib/contractPersistence.ts, Eixo C).
+// aprovada sempre cria uma nova entrada (nova CONTRACT_VERSION), nunca
+// edita uma já existente — necessário para que /termos e o PDF de uma
+// contratação antiga continuem exibindo o mesmo texto que estava vigente
+// em `/termos` na data do aceite (ver src/lib/contractPersistence.ts,
+// Eixo C, para o artefato de PDF já persistido — este arquivo não é
+// esse artefato, é a fonte de texto que o alimenta).
 //
 // Sem preços: valores monetários vêm exclusivamente de pricing.ts,
 // nunca fixados neste arquivo (docs/CONTRACT_MVP_V1.md, Seção 18).
@@ -58,12 +60,41 @@ function clause(numero: number, titulo: string, texto: string): ContractClause {
   return { numero, titulo, blocos: linesToBlocks(texto) }
 }
 
+// Congela profundamente um ContractContent — o conteúdo publicado nunca
+// deve poder ser mutado por um chamador (ex.: `content.clausulas.push(...)`
+// ou `blocos[0].texto = '...'` silenciosamente alterando o texto que
+// /termos e o PDF exibem). Congela, em ordem: cada array de itens de
+// lista, cada bloco, o array de blocos de cada cláusula, cada cláusula,
+// o array de cláusulas e por fim o próprio objeto de conteúdo — sem
+// dependências novas, só Object.freeze nativo.
+function freezeContractContent(content: ContractContent): ContractContent {
+  for (const clausula of content.clausulas) {
+    for (const bloco of clausula.blocos) {
+      if (bloco.type === 'lista') {
+        Object.freeze(bloco.itens)
+      }
+      Object.freeze(bloco)
+    }
+    Object.freeze(clausula.blocos)
+    Object.freeze(clausula)
+  }
+  Object.freeze(content.clausulas)
+  return Object.freeze(content)
+}
+
 // ═══════════════════════════════════════════════════════════
-// VERSÃO 2026-07-04 — snapshot imutável do texto publicado até aqui
-// (estrutura antiga: compromisso mínimo de 6 mensalidades, avisos de
-// 30/60 dias, vigência iniciada na entrega de documentos). Preservada
-// apenas para regenerar, fielmente, o PDF de contratos aceitos sob
-// esta versão — nunca usada para novas contratações.
+// VERSÃO 2026-07-04 (estrutura antiga: compromisso mínimo de 6
+// mensalidades, avisos de 30/60 dias, vigência iniciada na entrega de
+// documentos) — nunca usada para novas contratações.
+//
+// A versão 2026-07-04 preserva o conteúdo integral publicado em /termos
+// naquela versão. Ela não reproduz o layout nem o extrato de sete
+// cláusulas gerado pelo PDF histórico (o gerador anterior a este Eixo A
+// só imprimia 7 das 16 cláusulas). O PDF persistido e seu hash
+// (Company.contractHash, src/lib/contractPersistence.ts) permanecem
+// como artefato histórico primário de qualquer contrato já aceito sob
+// esta versão — este array é apenas a fonte textual, usada somente se
+// esse PDF precisar ser regenerado a partir do texto de /termos.
 // ═══════════════════════════════════════════════════════════
 
 const CLAUSULAS_20260704: ContractClause[] = [
@@ -413,8 +444,8 @@ Foro: as partes elegem o foro da Comarca da Capital do Estado do Rio de Janeiro 
 // se fosse o conteúdo da nova versão, em vez de fazer getContractContent
 // falhar explicitamente por versão desconhecida (ver Eixo A, revisão).
 const CONTRACT_CONTENT_BY_VERSION: Readonly<Record<string, ContractContent>> = Object.freeze({
-  '2026-07-04': Object.freeze({ version: '2026-07-04', clausulas: CLAUSULAS_20260704 }),
-  '2026-08-05': Object.freeze({ version: '2026-08-05', clausulas: CLAUSULAS_20260805 }),
+  '2026-07-04': freezeContractContent({ version: '2026-07-04', clausulas: CLAUSULAS_20260704 }),
+  '2026-08-05': freezeContractContent({ version: '2026-08-05', clausulas: CLAUSULAS_20260805 }),
 })
 
 // ── API pública ──────────────────────────────────────────────

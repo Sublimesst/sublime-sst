@@ -21,7 +21,7 @@ const REGRAS_ANTIGAS = [
   '60 (sessenta) dias',
 ]
 
-function textoDaClausula(blocos: ContractBlock[]): string {
+function textoDaClausula(blocos: readonly ContractBlock[]): string {
   return blocos
     .map(b => (b.type === 'paragrafo' ? b.texto : [b.titulo, ...b.itens].filter(Boolean).join(' ')))
     .join(' ')
@@ -114,9 +114,12 @@ describe('fonte contratual única — versionamento e histórico', () => {
     expect(legado.version).toBe('2026-07-04')
     expect(legado.clausulas).toHaveLength(16)
     const texto = textoCompleto(legado.clausulas)
-    // A versão legada é o registro fiel do que foi de fato aceito por
-    // clientes sob ela — deve manter a regra antiga, nunca ser reescrita
-    // com o texto da versão vigente.
+    // A versão legada preserva o texto que /termos publicava naquela data
+    // — não é uma réplica bit a bit do PDF histórico (que só imprimia um
+    // extrato de 7 das 16 cláusulas; o artefato histórico primário é o
+    // PDF já persistido, com hash, em Company.contractHash). Aqui só se
+    // confirma que a regra antiga permanece, nunca reescrita com o texto
+    // da versão vigente.
     expect(texto).toContain('6 (seis) mensalidades mínimas')
   })
 
@@ -131,5 +134,55 @@ describe('fonte contratual única — versionamento e histórico', () => {
     const versoes = listContractVersions()
     expect(versoes).toContain('2026-07-04')
     expect(versoes).toContain(CONTRACT_VERSION)
+  })
+})
+
+describe('fonte contratual única — imutabilidade em runtime (Object.freeze profundo)', () => {
+  it('o objeto ContractContent retornado está congelado', () => {
+    const content = getCurrentContractContent()
+    expect(Object.isFrozen(content)).toBe(true)
+  })
+
+  it('o array de cláusulas está congelado', () => {
+    const { clausulas } = getCurrentContractContent()
+    expect(Object.isFrozen(clausulas)).toBe(true)
+  })
+
+  it('a primeira cláusula está congelada', () => {
+    const { clausulas } = getCurrentContractContent()
+    expect(Object.isFrozen(clausulas[0])).toBe(true)
+  })
+
+  it('o array de blocos da primeira cláusula está congelado', () => {
+    const { clausulas } = getCurrentContractContent()
+    expect(Object.isFrozen(clausulas[0].blocos)).toBe(true)
+  })
+
+  it('cada bloco de cada cláusula está congelado', () => {
+    const { clausulas } = getCurrentContractContent()
+    for (const clausula of clausulas) {
+      for (const bloco of clausula.blocos) {
+        expect(Object.isFrozen(bloco)).toBe(true)
+      }
+    }
+  })
+
+  it('o array de itens de ao menos uma lista está congelado', () => {
+    const { clausulas } = getCurrentContractContent()
+    const clausulaComLista = clausulas.find(c => c.blocos.some(b => b.type === 'lista'))
+    expect(clausulaComLista).toBeDefined()
+    const listaBloco = clausulaComLista?.blocos.find(b => b.type === 'lista')
+    expect(listaBloco?.type).toBe('lista')
+    if (listaBloco?.type === 'lista') {
+      expect(Object.isFrozen(listaBloco.itens)).toBe(true)
+    }
+  })
+
+  it('a versão legada (2026-07-04) também está profundamente congelada', () => {
+    const legado = getContractContent('2026-07-04')
+    expect(Object.isFrozen(legado)).toBe(true)
+    expect(Object.isFrozen(legado.clausulas)).toBe(true)
+    expect(Object.isFrozen(legado.clausulas[0])).toBe(true)
+    expect(Object.isFrozen(legado.clausulas[0].blocos)).toBe(true)
   })
 })

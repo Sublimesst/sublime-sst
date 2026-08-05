@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `0602de40a589751e0a9f2dd68b1231edcb8c2711`
-**Data aproximada de validação:** 2026-08-03
+**SHA:** `98d0d2090cb7b33bd29ea890965ede2b19f7de8e`
+**Data de validação:** 2026-08-05
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -27,6 +27,13 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 - Portal Cliente via magic link (login, dashboard, onboarding)
 - Company do teste atingiu estágio `in_production`
 - Fluxo financeiro sem duplicidade confirmada
+- Eixo A (fonte única `/termos` × PDF): **mergeado pela PR #18** — fonte
+  contratual única e versionada em `src/lib/contract/`, consumida por
+  `/termos` e pelo PDF; versão vigente `CONTRACT_VERSION = 2026-08-05`
+- `/termos`, `/digital` e `/elegibilidade` validados em Produção por smoke
+  test read-only (2026-08-05): HTTP 200 nas três rotas, versão 2026-08-05
+  publicada, 16 cláusulas presentes, ausência confirmada das regras antigas
+  críticas (6 mensalidades, avisos de 30/60 dias)
 
 ---
 
@@ -35,16 +42,19 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 - Contrato e PDF — **prioridade P0**:
   - Eixo C (persistência e recuperação do PDF): **concluído**, mergeado pela PR #16
   - Conteúdo MVP 1.0: **congelado documentalmente** em `docs/CONTRACT_MVP_V1.md`
-  - Eixo A (fonte única `/termos` × PDF): **concluído no código**, branch
-    `feat/contract-source-of-truth-eixo-a` — `/termos` e o PDF passam a
-    consumir as mesmas 16 cláusulas versionadas (`src/lib/contract/`),
-    `CONTRACT_VERSION` em `2026-08-05`, páginas `/digital` e
-    `/elegibilidade` alinhadas; ainda não mergeado na `main`
+  - Eixo A (fonte única `/termos` × PDF): **concluído e mergeado** (PR #18),
+    validado em Produção por smoke read-only
   - Eixo B (comprovante e arquitetura do aceite): pendente
   - Eixo D (formatação e paginação do PDF): pendente
+  - Snapshot histórico de mensalidade e faixa no PDF: pendente (hoje
+    recalculados de `pricing.ts`/dado atual, não de um valor congelado no
+    aceite)
   - Lógica financeira de cancelamento (regra de 12 meses aprovada em
     `docs/DECISIONS.md`): ainda não migrada — segue operando pela regra
     anterior de 6 mensalidades
+  - Validação ponta a ponta do fluxo completo com geração real de PDF em
+    Produção: ainda não exercitada (o smoke read-only não gera PDF, por
+    exigir evento real com efeitos persistentes)
 - Fluxo completo de documentos pendente de teste controlado
 - Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
 
@@ -52,10 +62,11 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 ## Próximo passo prioritário
 
-Revisar e mergear o Eixo A (branch `feat/contract-source-of-truth-eixo-a`),
-depois implementar a lógica financeira de cancelamento de 12 meses e os
-Eixos B e D. Novo cliente real continua bloqueado até a conclusão de todas
-essas pendências do bloqueador Contrato e PDF.
+O Eixo A está concluído e validado em Produção. A próxima prioridade entre
+lógica financeira de cancelamento (12 meses), Eixo B e Eixo D deve ser
+definida pela Administração de Desenvolvimento. Novo cliente real continua
+bloqueado até a conclusão de todas essas pendências do bloqueador Contrato
+e PDF.
 
 ---
 

@@ -351,7 +351,7 @@ export default function DigitalPage() {
             </div>
 
             <p className="text-[12px] text-gray-400 text-center">
-              Contrato anual com pagamento mensal e renovação automática. Compromisso mínimo de 6 mensalidades após entrega dos documentos.
+              Vigência inicial mínima de 12 meses a partir da ativação, com pagamento mensal. Após esse período, renovação automática por prazo indeterminado, com cancelamento mediante aviso prévio de 90 dias.
               Planos válidos exclusivamente para empresas GR1 com até 20 funcionários aprovadas no teste de elegibilidade.
             </p>
           </div>

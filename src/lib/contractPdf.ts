@@ -1,9 +1,14 @@
 // ═══════════════════════════════════════════════════════════
 // SUBLIME SST — Geração de PDF do Contrato (server-side)
-// Gera extrato personalizado por cliente + comprovante de aceite
+// Gera o contrato integral (16 cláusulas, fonte única em
+// src/lib/contract/content.ts) + comprovante de aceite.
+// Preços: exclusivamente de src/lib/pricing.ts — nunca fixados aqui.
 // ═══════════════════════════════════════════════════════════
 
 import PDFDocument from 'pdfkit'
+import { PRICING, getMonthlyPrice, faixaKeyFromCount, type PlanKey, type FaixaKey } from './pricing'
+import { getContractContent } from './contract/content'
+import type { ContractBlock } from './contract/types'
 
 // ── Constantes ───────────────────────────────────────────────
 
@@ -11,24 +16,14 @@ const BLUE  = '#003366'
 const TEAL  = '#1a9e8c'
 const GRAY  = '#555555'
 const LGRAY = '#94a3b8'
-const RED   = '#CC0000'
 const WHITE = '#ffffff'
 
-const MONTHLY_BRL: Record<string, Record<string, number>> = {
-  essencial: { '1-5': 199, '6-10': 320, '11-20': 490 },
-  premium:   { '1-5': 299, '6-10': 490, '11-20': 690 },
-}
-
-const PLAN_LABELS: Record<string, string> = {
-  essencial: 'Digital Essencial',
-  premium:   'Digital Premium',
-}
-
-function getRange(n: number): '1-5' | '6-10' | '11-20' {
-  if (n <= 5)  return '1-5'
-  if (n <= 10) return '6-10'
-  return '11-20'
-}
+// Termos fixos de vigência/renovação/aviso prévio (docs/CONTRACT_MVP_V1.md,
+// Seção 5) — não variam por cliente, por isso não vêm de nenhum dado
+// dinâmico nem de pricing.ts (não são valores monetários).
+const VIGENCIA_INICIAL = '12 (doze) meses, a partir da ativação'
+const RENOVACAO = 'Automática, por prazo indeterminado, após o período inicial'
+const AVISO_PREVIO = 'Durante a vigência inicial: qualquer solicitação produz efeito ao final do 12º mês (Cláusula 10ª). Após a renovação: 90 dias.'
 
 function brlR(reais: number) {
   return reais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -110,11 +105,15 @@ function rowLine(doc: PDFKit.PDFDocument, left: string, right: string, shade: bo
   doc.moveDown(0.4)
 }
 
-function bullet(doc: PDFKit.PDFDocument, text: string, color = '#1e293b') {
-  const x = doc.x
-  const y = doc.y
-  doc.fillColor(TEAL).font('Helvetica-Bold').fontSize(9).text('•', x, y, { continued: true, width: 12 })
-  doc.fillColor(color).font('Helvetica').fontSize(8.5).text(' ' + text, { lineGap: 1.5 })
+// Marcador e texto em uma única chamada de fluxo (sem x/y explícitos, sem
+// `continued`) — com dezenas de itens por cláusula, o padrão anterior de
+// duas chamadas com posição absoluta fazia o PDFKit repetir quebras de
+// página quase vazias em sequência (ver Eixo A: regressão corrigida antes
+// da entrega). `continued` permanece seguro apenas para trechos curtos e
+// pontuais, como em `bodyText` com aviso de autenticidade.
+function bullet(doc: PDFKit.PDFDocument, text: string) {
+  doc.fillColor('#1e293b').font('Helvetica').fontSize(8.5)
+    .text('•  ' + text, { lineGap: 1.5 })
   doc.moveDown(0.15)
 }
 
@@ -123,6 +122,21 @@ function pageFooter(doc: PDFKit.PDFDocument, version: string) {
   doc.fillColor(LGRAY).font('Helvetica').fontSize(7.5)
     .text(`Sublime SST · CNPJ 65.051.167/0001-27 · sublimesst.com · Versão do contrato: ${version}`,
       60, y, { align: 'center', width: doc.page.width - 120 })
+}
+
+// Renderiza os blocos (parágrafo/lista) de uma cláusula com os mesmos
+// helpers usados no restante do PDF — a mesma estrutura consumida por
+// /termos (src/app/termos/page.tsx), nunca um texto próprio duplicado.
+function renderBlocos(doc: PDFKit.PDFDocument, blocos: ContractBlock[]) {
+  for (const bloco of blocos) {
+    if (bloco.type === 'paragrafo') {
+      bodyText(doc, bloco.texto)
+    } else {
+      if (bloco.titulo) bodyText(doc, bloco.titulo)
+      for (const item of bloco.itens) bullet(doc, item)
+      doc.moveDown(0.1)
+    }
+  }
 }
 
 // ── GERAÇÃO PRINCIPAL ─────────────────────────────────────────
@@ -135,7 +149,7 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
       info: {
         Title: 'Contrato de Prestação de Serviços — Sublime Digital',
         Author: 'Sublime Seguranca e Saude Ocupacional Ltda',
-        Subject: `Contrato ${PLAN_LABELS[data.planType] ?? data.planType} — ${data.razaoSocial}`,
+        Subject: `Contrato ${PRICING[data.planType as PlanKey]?.name ?? data.planType} — ${data.razaoSocial}`,
         CreationDate: data.contractAcceptedAt,
       },
     })
@@ -145,12 +159,14 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     doc.on('end', () => resolve(Buffer.concat(chunks)))
     doc.on('error', reject)
 
-    const range = getRange(data.numFuncionarios)
-    const monthly = MONTHLY_BRL[data.planType]?.[range] ?? 0
-    const planLabel = PLAN_LABELS[data.planType] ?? data.planType
+    const planKey = data.planType as PlanKey
+    const range: FaixaKey = faixaKeyFromCount(data.numFuncionarios)
+    const monthly = getMonthlyPrice(planKey, range)
+    const planLabel = PRICING[planKey]?.name ?? data.planType
     const implantacaoReais = data.implantacaoValor / 100
+    const content = getContractContent(data.contractVersion)
 
-    // ── PÁGINA 1: Cabeçalho + Partes + Plano ─────────────────
+    // ── PÁGINA 1: Cabeçalho + Partes + Plano Contratado ──────
 
     header(doc)
 
@@ -183,72 +199,28 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     rowLine(doc, 'Faixa de funcionários', `${range} funcionários`, true)
     rowLine(doc, 'Mensalidade', brlR(monthly) + '/mês', false)
     rowLine(doc, data.implantacaoPromo ? 'Implantação (promocional)' : 'Implantação', brlR(implantacaoReais), true)
-    rowLine(doc, 'Vigência inicial', '12 (doze) meses — renovação automática', false)
-    rowLine(doc, 'Compromisso mínimo', '6 mensalidades após entrega do primeiro documento', true)
+    rowLine(doc, 'Vigência inicial', VIGENCIA_INICIAL, false)
+    rowLine(doc, 'Renovação', RENOVACAO, true)
 
-    // ── SERVIÇOS INCLUÍDOS ────────────────────────────────────
-    sectionTitle(doc, 'Serviços Incluídos na Implantação')
-    bullet(doc, 'Programa de Gerenciamento de Riscos (PGR) com Levantamento Preliminar de Perigos (LPP) — modelo GR1')
-    bullet(doc, 'Programa de Controle Médico de Saúde Ocupacional (PCMSO) — elaboração com médico coordenador')
-    bullet(doc, 'Declaração técnica preliminar de não identificação de agentes insalubres, com base nas informações declaradas no onboarding digital, dentro do escopo GR1 (não substitui laudo técnico pericial com vistoria presencial)')
-    bullet(doc, 'Ordens de Serviço por cargo (modelos padronizados)')
-    bullet(doc, 'Fichas de Controle de EPI por função (modelos padronizados)')
+    pageFooter(doc, content.version)
 
-    sectionTitle(doc, 'Serviços Incluídos na Gestão Mensal')
-    bullet(doc, 'Gestão dos eventos SST do eSocial (S-2210 · S-2220 · S-2240), condicionada ao envio tempestivo e completo de informações pelo CONTRATANTE')
-    bullet(doc, 'Monitoramento de vencimento de exames periódicos com notificação')
-    bullet(doc, 'Portal do cliente com repositório digital de documentos')
-    if (data.planType === 'premium') {
-      bullet(doc, 'PPP de novos funcionários incluído', TEAL)
-      bullet(doc, 'Abertura de CAT — até 1 ocorrência por mês (excedentes: R$ 100/ocorrência)', TEAL)
-      bullet(doc, 'Relatório analítico semestral', TEAL)
-      bullet(doc, 'Suporte via WhatsApp com resposta em até 24 horas úteis', TEAL)
-    } else {
-      bullet(doc, 'Suporte via e-mail com resposta em até 48 horas úteis')
-    }
-    bullet(doc, 'Escopo do suporte: esclarecimentos sobre documentos, portal, prazos e dúvidas de SST dentro do contrato — não inclui consultoria jurídica, defesa em fiscalização ou documentos fora do plano')
-
-    pageFooter(doc, data.contractVersion)
-
-    // ── PÁGINA 2: Cláusulas Principais ───────────────────────
+    // ── PÁGINAS SEGUINTES: Contrato Integral (16 cláusulas) ──
 
     doc.addPage()
     header(doc)
     doc.moveDown(0.8)
+    doc.fillColor(BLUE).font('Helvetica-Bold').fontSize(11)
+      .text('TERMOS E CONDIÇÕES', { align: 'center' })
+    doc.moveDown(0.6)
 
-    sectionTitle(doc, 'Cláusula 4ª — Remuneração, Mora e Reajuste')
-    bodyText(doc, 'A taxa de implantação é devida no ato da contratação, é condição para início dos serviços e não é reembolsável após o início dos trabalhos de elaboração dos documentos. A mensalidade é cobrada mensalmente via plataforma Asaas.')
-    bodyText(doc, 'Mora: atraso sujeita o CONTRATANTE a multa de 2% e juros de 1% ao mês (pro rata die). Atraso superior a 15 dias autoriza a suspensão do acesso ao portal e dos serviços até regularização; superior a 30 dias, o registro do débito nos serviços de proteção ao crédito e a rescisão por inadimplência.')
-    bodyText(doc, 'Reajuste: os valores serão reajustados anualmente, na data de aniversário do contrato, pela variação acumulada do IPCA/IBGE, ou índice oficial que venha a substituí-lo.')
+    for (const clausula of content.clausulas) {
+      sectionTitle(doc, `Cláusula ${clausula.numero}ª — ${clausula.titulo}`)
+      renderBlocos(doc, clausula.blocos)
+    }
 
-    sectionTitle(doc, 'Cláusula 5ª — Prazo, Vigência e Rescisão')
-    bodyText(doc, 'O contrato entra em vigor na data de confirmação do pagamento da taxa de implantação, com vigência inicial de 12 (doze) meses, renovando-se automaticamente por iguais períodos salvo manifestação contrária com antecedência mínima de 30 dias.')
-    bodyText(doc, 'A mensalidade será devida a partir da liberação do acesso ao portal e do início da análise técnica. Os prazos de entrega somente começam a contar após o envio completo das informações solicitadas no onboarding digital.')
-    bodyText(doc, 'Rescisão pelo CONTRATANTE: (i) entre o 1º e o 6º mês da entrega dos documentos: pagamento das mensalidades remanescentes para completar as 6 (seis) mensalidades mínimas; (ii) entre o 7º e o 12º mês: aviso prévio de 60 dias por escrito, pagando as mensalidades do período de aviso, sem multa adicional; (iii) após a primeira renovação: aviso prévio de 30 dias, sem multa.')
-    bodyText(doc, 'A CONTRATADA pode rescindir imediatamente por: (i) inadimplência superior a 30 dias; (ii) informações falsas ou omissão relevante; (iii) perda dos critérios de elegibilidade GR1 sem regularização no prazo acordado.')
+    pageFooter(doc, content.version)
 
-    sectionTitle(doc, 'Cláusula 10ª — Da Responsabilidade')
-    bodyText(doc, 'A CONTRATADA é responsável pela elaboração técnica dos documentos com base nas informações fornecidas pelo CONTRATANTE. Erros, omissões ou informações desatualizadas prestadas pelo CONTRATANTE eximem a CONTRATADA de responsabilidade por autuações, multas ou passivos trabalhistas.')
-    bodyText(doc, 'A declaração técnica de não identificação de agentes insalubres não substitui laudo técnico pericial com vistoria presencial, sendo obrigatória avaliação presencial em caso de exposição identificada, dúvida técnica ou determinação regulatória aplicável.')
-    bodyText(doc, 'A responsabilidade da CONTRATADA em caso de falha na prestação dos serviços limita-se ao valor das mensalidades pagas nos últimos 6 (seis) meses.')
-
-    sectionTitle(doc, 'Cláusula 11ª — LGPD')
-    bodyText(doc, 'O CONTRATANTE atua como Controlador e a CONTRATADA como Operadora dos dados pessoais tratados neste contrato, nos termos da Lei nº 13.709/2018 (LGPD). Os dados podem incluir dados de saúde ocupacional, classificados como dados sensíveis (art. 5º, II da LGPD).')
-    bodyText(doc, 'O CONTRATANTE declara possuir base legal adequada para compartilhamento dos dados de seus empregados e responsabiliza-se pela informação aos titulares quando aplicável. A CONTRATADA poderá compartilhar dados estritamente necessários com médico coordenador, clínicas parceiras, o eSocial e órgãos públicos competentes.')
-    bodyText(doc, 'Retenção: dados cadastrais e contratuais são mantidos pela vigência do contrato mais 5 anos e após eliminados ou anonimizados. Registros médicos ocupacionais (prontuários, ASOs e monitoramento vinculado ao PCMSO) são conservados pelo prazo da NR-7 — no mínimo 20 anos após o desligamento de cada trabalhador — sob responsabilidade do médico coordenador. Em caso de incidente de segurança relevante, a CONTRATADA notificará o CONTRATANTE e a ANPD no prazo legal.')
-
-    sectionTitle(doc, 'Cláusula 13ª — Ajuste de Faixa e Migração')
-    bodyText(doc, 'Caso o CONTRATANTE ultrapasse a faixa de funcionários do plano contratado, a mensalidade será ajustada para a faixa aplicável a partir do ciclo subsequente. Caso ultrapasse 20 funcionários, deverá migrar para Consultoria SST ou proposta personalizada no prazo de 30 dias.')
-
-    sectionTitle(doc, 'Cláusula 14ª — Registros Médicos e Encerramento')
-    bodyText(doc, 'Encerrado o contrato, os documentos emitidos deixam de ser atualizados e a CONTRATADA poderá formalizar a revogação da responsabilidade técnica sobre eles. Os registros médicos ocupacionais serão transferidos ao novo médico coordenador indicado pelo CONTRATANTE, mediante solicitação formal, em até 90 dias, em caráter confidencial; na ausência de solicitação, serão conservados pelo prazo legal da NR-7. Resultados de exames são protegidos por sigilo médico e comunicados ao CONTRATANTE apenas nos limites da legislação.')
-
-    sectionTitle(doc, 'Cláusula 16ª — Foro')
-    bodyText(doc, 'As partes elegem o foro da Comarca da Capital do Estado do Rio de Janeiro para dirimir quaisquer questões decorrentes deste contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.')
-
-    pageFooter(doc, data.contractVersion)
-
-    // ── PÁGINA 3: Comprovante de Aceite Eletrônico ─────────────
+    // ── PÁGINA FINAL: Comprovante de Aceite Eletrônico ────────
 
     doc.addPage()
     header(doc)
@@ -280,12 +252,14 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     labelValue(doc, 'Plano', planLabel)
     labelValue(doc, 'Faixa', `${range} funcionários`)
     labelValue(doc, 'Mensalidade', brlR(monthly) + '/mês')
-    labelValue(doc, 'Implantação paga', brlR(implantacaoReais) + (data.implantacaoPromo ? ' (promocional)' : ''))
-    labelValue(doc, 'Vigência', '12 meses com renovação automática')
-    labelValue(doc, 'Mínimo garantido', '6 mensalidades após entrega do 1º documento')
+    labelValue(doc, 'Implantação contratada', brlR(implantacaoReais) + (data.implantacaoPromo ? ' (promocional)' : ''))
+    labelValue(doc, 'Vigência inicial', VIGENCIA_INICIAL)
+    labelValue(doc, 'Renovação', RENOVACAO)
+    labelValue(doc, 'Aviso prévio', AVISO_PREVIO)
 
     sectionTitle(doc, 'Base Legal')
-    bodyText(doc, 'Este aceite eletrônico tem força vinculante nos termos do art. 10 da MP nº 2.200-2/2001 e dos arts. 7º e 10 da Lei nº 12.965/2014 (Marco Civil da Internet). O registro de IP, data/hora, user agent e versão do contrato constitui prova suficiente do aceite para todos os fins legais.')
+    bodyText(doc, 'O aceite eletrônico foi registrado antes da confirmação financeira da contratação. A ativação dos serviços permanece condicionada à confirmação dos pagamentos aplicáveis.')
+    bodyText(doc, 'As partes reconhecem o aceite eletrônico e os registros de integridade mantidos pela plataforma como meios de comprovação da manifestação de vontade, sem prejuízo de outros meios de prova admitidos pela legislação.')
     bodyText(doc, 'O texto integral do contrato está disponível permanentemente em sublimesst.com/termos. A versão aceita pelo CONTRATANTE é identificada pelo campo "Versão do contrato aceito" acima.')
 
     // Assinatura digital da CONTRATADA
@@ -306,7 +280,7 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     doc.font('Helvetica').text('consulte o portal do cliente em sublimesst.com/cliente/login com o e-mail cadastrado.')
     doc.moveDown(0)
 
-    pageFooter(doc, data.contractVersion)
+    pageFooter(doc, content.version)
 
     doc.end()
   })

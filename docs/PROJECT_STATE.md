@@ -34,10 +34,17 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 - Contrato e PDF — **prioridade P0**:
   - Eixo C (persistência e recuperação do PDF): **concluído**, mergeado pela PR #16
-  - Conteúdo MVP 1.0: **congelado documentalmente** em `docs/CONTRACT_MVP_V1.md` — ainda não implementado
-  - Eixo A (fonte única `/termos` × PDF): pendente
+  - Conteúdo MVP 1.0: **congelado documentalmente** em `docs/CONTRACT_MVP_V1.md`
+  - Eixo A (fonte única `/termos` × PDF): **concluído no código**, branch
+    `feat/contract-source-of-truth-eixo-a` — `/termos` e o PDF passam a
+    consumir as mesmas 16 cláusulas versionadas (`src/lib/contract/`),
+    `CONTRACT_VERSION` em `2026-08-05`, páginas `/digital` e
+    `/elegibilidade` alinhadas; ainda não mergeado na `main`
   - Eixo B (comprovante e arquitetura do aceite): pendente
   - Eixo D (formatação e paginação do PDF): pendente
+  - Lógica financeira de cancelamento (regra de 12 meses aprovada em
+    `docs/DECISIONS.md`): ainda não migrada — segue operando pela regra
+    anterior de 6 mensalidades
 - Fluxo completo de documentos pendente de teste controlado
 - Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
 
@@ -45,10 +52,10 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 ## Próximo passo prioritário
 
-Implementar o Eixo A (fonte única entre `/termos` e o PDF) a partir do
-conteúdo já congelado em `docs/CONTRACT_MVP_V1.md`, seguido dos Eixos B e D.
-Novo cliente real continua bloqueado até a conclusão dos quatro eixos do
-bloqueador Contrato e PDF.
+Revisar e mergear o Eixo A (branch `feat/contract-source-of-truth-eixo-a`),
+depois implementar a lógica financeira de cancelamento de 12 meses e os
+Eixos B e D. Novo cliente real continua bloqueado até a conclusão de todas
+essas pendências do bloqueador Contrato e PDF.
 
 ---
 

@@ -106,7 +106,10 @@ conteúdo.**
 **O modelo comercial de vigência, cancelamento e promoções do MVP 1.0 está
 aprovado, substituindo expressamente o modelo atualmente publicado em
 `src/lib/contractPdf.ts` e `/digital`.**
-- Status: aprovado, ainda não implementado
+- Status: aprovado; **texto contratual implementado** em `/termos`, no PDF e
+  em `/digital`/`/elegibilidade` (Eixo A); **lógica financeira de
+  cancelamento ainda não migrada** — continua operando pela regra anterior
+  de 6 mensalidades até tarefa própria
 - **Regras anteriores expressamente superadas por esta decisão:**
   - compromisso mínimo de 6 (seis) mensalidades, contado a partir da entrega
     dos documentos de implantação;
@@ -144,11 +147,33 @@ aprovado, substituindo expressamente o modelo atualmente publicado em
 
 **O formato do comprovante de aceite eletrônico do MVP 1.0 está aprovado,
 corrigindo o comprovante atualmente gerado pelo PDF.**
-- Status: aprovado, ainda não implementado
+- Status: aprovado; frases proibidas ("implantação paga", "prova suficiente
+  para todos os fins legais") já removidas do PDF pelo Eixo A; **arquitetura
+  completa do comprovante (quadro-resumo, LTCAT, demais adicionais) segue
+  pendente — Eixo B**
 - Motivo: separar claramente o registro do aceite (anterior ao pagamento) do
   estado financeiro da contratação, e remover do comprovante qualquer
   linguagem de recibo ou de prova legal absoluta
 - Fonte: `docs/CONTRACT_MVP_V1.md`, Seção 15
+
+**A fonte contratual é única, versionada por `CONTRACT_VERSION`
+(`src/lib/pricing.ts`), e reside em `src/lib/contract/` (Eixo A).**
+- Status: implementada no código (branch `feat/contract-source-of-truth-eixo-a`)
+- `/termos` e o PDF (`src/lib/contractPdf.ts`) consomem exatamente a mesma
+  estrutura de 16 cláusulas — nunca dois textos mantidos independentemente
+- Versão vigente: `2026-08-05`. Versões anteriores (`2026-07-04`) permanecem
+  imutáveis no código, preservadas apenas para regenerar o PDF de contratos
+  já aceitos sob elas — nunca reescritas
+- `pricing.ts` continua como fonte única de preços; `src/lib/contract/`
+  nunca fixa valor monetário
+- O PDF seleciona o conteúdo exclusivamente pela versão recebida da
+  contratação (`data.contractVersion`), nunca pela versão vigente do
+  código; versão ausente ou desconhecida faz a geração falhar
+  explicitamente, nunca cair silenciosamente na versão atual
+- Motivo: eliminar a divergência histórica entre `/termos` e o PDF e impedir
+  que uma alteração de conteúdo futura afete, mesmo que involuntariamente,
+  um contrato já aceito
+- Fonte: `src/lib/contract/content.ts`, `docs/CONTRACT_MVP_V1.md`
 
 ---
 

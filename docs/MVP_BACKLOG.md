@@ -15,13 +15,19 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Decisões comerciais do MVP 1.0 aprovadas (vigência, cancelamento, promoções — `docs/DECISIONS.md`)
   - Conteúdo do contrato MVP 1.0 aprovado e congelado documentalmente (`docs/CONTRACT_MVP_V1.md`)
   - Validação técnica de SST do conteúdo concluída
+  - Fonte única de conteúdo entre `/termos` e o PDF (Eixo A — branch `feat/contract-source-of-truth-eixo-a`)
+  - `/termos` consumindo a fonte única, com as 16 cláusulas do MVP 1.0
+  - PDF consumindo a mesma fonte única
+  - Contrato integral de 16 cláusulas no PDF, não mais um extrato parcial
+  - Versionamento `2026-08-05` (`CONTRACT_VERSION`), com a versão `2026-07-04` preservada imutável
+  - Remoção das regras públicas antigas (6 mensalidades, avisos de 30/60 dias) de `/termos`, do PDF, de `/digital` e de `/elegibilidade`
+  - Testes automatizados de correspondência do Eixo A (versão, cláusulas, ausência de frases proibidas, seleção de versão)
 - **Pendente:**
-  - Fonte única de conteúdo entre `/termos` e o PDF (Eixo A)
-  - Atualização de `/termos` para o conteúdo MVP 1.0 aprovado
-  - Geração do PDF com o contrato integral (16 cláusulas), não um extrato parcial
-  - Atualização do comprovante de aceite eletrônico conforme `docs/CONTRACT_MVP_V1.md` (Eixo B)
+  - Snapshot histórico de mensalidade e faixa no PDF (hoje recalculados de `pricing.ts`/dado atual, não de um valor congelado no aceite)
+  - Quadro-resumo completo no comprovante (Eixo B)
+  - LTCAT adicional e demais adicionais no comprovante (Eixo B)
+  - Lógica financeira de cancelamento migrada para a regra de 12 meses aprovada
   - Layout, formatação e paginação do PDF (Eixo D)
-  - Testes automatizados de correspondência entre `/termos` e o PDF
   - Validação ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/portal)
 - **Critério de aceite:**
   - Conteúdo comercial e operacional alinhado com o produto atual

@@ -786,7 +786,7 @@ function ElegibilidadeInner() {
                   </div>
 
                   <p className="text-[11px] text-gray-400 mb-5 mt-1 leading-relaxed">
-                    * Assinatura anual com renovação automática. Cancelamento disponível antes da data de renovação.
+                    * Vigência inicial mínima de 12 meses. Após esse período, cancelamento mediante aviso prévio de 90 dias.
                   </p>
 
                   {/* Add-on LTCAT — apenas Essencial, todas as empresas elegíveis qualificam */}

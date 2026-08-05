@@ -41,6 +41,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       'Content-Type': file.contentType,
       'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
       'Content-Length': String(file.buffer.length),
+      'Cache-Control': 'private, no-store, max-age=0',
+      'X-Content-Type-Options': 'nosniff',
     },
   })
 }

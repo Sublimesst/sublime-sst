@@ -104,6 +104,19 @@ describe('GET /api/admin/empresas/[id]/documents/[documentId]/download', () => {
     expect(res.headers.get('Content-Disposition')).toContain('PGR Empresa Teste.pdf')
   })
 
+  it('cabeçalhos anti-cache: Cache-Control e X-Content-Type-Options em um download válido', async () => {
+    const res = await GET(downloadRequest(), PARAMS)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store, max-age=0')
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    // cabeçalhos anteriores preservados junto com os novos
+    expect(res.headers.get('Content-Type')).toBe('application/pdf')
+    expect(res.headers.get('Content-Length')).toBe(String(Buffer.from('%PDF-1.4\nconteudo').length))
+    expect(res.headers.get('Content-Disposition')).toContain('PGR Empresa Teste.pdf')
+    const buf = Buffer.from(await res.arrayBuffer())
+    expect(buf.toString()).toBe('%PDF-1.4\nconteudo')
+  })
+
   it('nome de arquivo com CR/LF/aspas é sanitizado no header', async () => {
     vi.mocked(prisma.document.findFirst).mockResolvedValue({
       ...DOCUMENT_FIXTURE, nomeArquivo: 'a.pdf\r\nX-Injected: 1"',

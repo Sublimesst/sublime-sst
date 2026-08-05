@@ -89,6 +89,21 @@ describe('GET /api/cliente/documents/[id]/download', () => {
     expect(res.headers.get('Content-Disposition')).toContain('PGR.pdf')
   })
 
+  it('cabeçalhos anti-cache: Cache-Control e X-Content-Type-Options em um download válido', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY as any)
+    vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)
+    const res = await GET(downloadRequest(), PARAMS)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store, max-age=0')
+    expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    // cabeçalhos anteriores preservados junto com os novos
+    expect(res.headers.get('Content-Type')).toBe('application/pdf')
+    expect(res.headers.get('Content-Length')).toBe(String(Buffer.from('%PDF-1.4\nconteudo').length))
+    expect(res.headers.get('Content-Disposition')).toContain('PGR.pdf')
+    const buf = Buffer.from(await res.arrayBuffer())
+    expect(buf.toString()).toBe('%PDF-1.4\nconteudo')
+  })
+
   it('cria DocumentAccessLog com companyId, tipoDocumento e acao=download', async () => {
     vi.mocked(getClientSession).mockResolvedValue(COMPANY as any)
     vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)

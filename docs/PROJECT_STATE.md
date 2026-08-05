@@ -60,8 +60,9 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   extensão/MIME/assinatura, bloqueio de upload manual de `contrato`,
   compensação de storage, download administrativo, auditoria via
   `DocumentAccessLog`, isolamento por `Company`; testes das rotas e do
-  `DbStorageProvider`, TypeScript e build aprovados); validação controlada em
-  Produção ainda pendente; nenhum upload real realizado
+  `DbStorageProvider` aprovados; nenhum novo erro de TypeScript em relação à
+  baseline da main; build aprovado); validação controlada em Produção ainda
+  pendente; nenhum upload real realizado
 - Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
 
 ---

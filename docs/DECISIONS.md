@@ -201,7 +201,7 @@ significa que a revisão jurídica formal do contrato tenha sido realizada.**
 **Upload manual de documentos pelo Admin é permitido somente para arquivos PDF, até 10 MiB.**
 - Status: implementada no código; validação em Produção pendente
 - Motivo: reduzir superfície de risco do upload manual (tipo de arquivo, tamanho e conteúdo previsíveis) sem exigir infraestrutura adicional no MVP
-- Fonte: `src/lib/documentUpload.ts`, branch `fix/document-flow-mvp-closeout`
+- Fonte: `src/lib/documentUpload.ts`
 
 **Tipos documentais permitidos no upload manual: `pgr`, `pcmso`, `declaracao`, `os_epi` e `ltcat`.**
 - Status: implementada no código; validação em Produção pendente

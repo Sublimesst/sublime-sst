@@ -55,7 +55,13 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   - Validação ponta a ponta do fluxo completo com geração real de PDF em
     Produção: ainda não exercitada (o smoke read-only não gera PDF, por
     exigir evento real com efeitos persistentes)
-- Fluxo completo de documentos pendente de teste controlado
+- Fluxo de documentos: implementação técnica e validação automatizada
+  concluídas (upload administrativo restrito a PDF de até 10 MiB, validação de
+  extensão/MIME/assinatura, bloqueio de upload manual de `contrato`,
+  compensação de storage, download administrativo, auditoria via
+  `DocumentAccessLog`, isolamento por `Company`; testes das rotas e do
+  `DbStorageProvider`, TypeScript e build aprovados); validação controlada em
+  Produção ainda pendente; nenhum upload real realizado
 - Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
 
 ---

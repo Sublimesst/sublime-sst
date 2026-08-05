@@ -196,6 +196,35 @@ significa que a revisão jurídica formal do contrato tenha sido realizada.**
 
 ---
 
+## Política de upload administrativo de documentos no MVP
+
+**Upload manual de documentos pelo Admin é permitido somente para arquivos PDF, até 10 MiB.**
+- Status: implementada no código; validação em Produção pendente
+- Motivo: reduzir superfície de risco do upload manual (tipo de arquivo, tamanho e conteúdo previsíveis) sem exigir infraestrutura adicional no MVP
+- Fonte: `src/lib/documentUpload.ts`, branch `fix/document-flow-mvp-closeout`
+
+**Tipos documentais permitidos no upload manual: `pgr`, `pcmso`, `declaracao`, `os_epi` e `ltcat`.**
+- Status: implementada no código; validação em Produção pendente
+- Motivo: restringir o upload manual aos documentos técnicos de implantação; qualquer outro valor é rejeitado
+- Fonte: `src/lib/documentUpload.ts`
+
+**O tipo `contrato` é reservado ao fluxo automatizado de aceite e persistência do contrato — nunca aceito via upload manual do Admin.**
+- Status: implementada no código; validação em Produção pendente
+- Motivo: o contrato tem fluxo próprio de geração, hash e imutabilidade (`src/lib/contractPersistence.ts`); permitir upload manual desse tipo abriria uma via paralela para substituir um documento que deve ser gerado e persistido só automaticamente
+- Fonte: `src/lib/documentUpload.ts`, `src/lib/contractPersistence.ts`
+
+**Download administrativo de documento deve buscar por `id` e `companyId` combinados, e sempre registrar `DocumentAccessLog`.**
+- Status: implementada no código; validação em Produção pendente
+- Motivo: impedir que um id de documento correto de outra empresa seja acessível pelo Admin, e manter auditoria completa de todo download, administrativo ou do cliente
+- Fonte: `src/app/api/admin/empresas/[id]/documents/[documentId]/download/route.ts`
+
+**O armazenamento atual dos bytes dos documentos em tabela do PostgreSQL (`DbStorageObject`) é interino, não uma decisão definitiva de storage.**
+- Status: implementado (interino), sem prazo definido para substituição
+- Motivo: funciona local e em produção sem configuração externa; a troca futura de provider (ex. Supabase Storage) já é abstraída por `StorageProvider` e não deve exigir mudança nos callers
+- Fonte: `src/lib/storage/`
+
+---
+
 ## Governança técnica
 
 **Repositório Git é a fonte técnica oficial.**

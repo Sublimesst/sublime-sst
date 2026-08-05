@@ -41,7 +41,23 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Documentos do cliente
 
-- **Estado:** pendente
+- **Estado:** implementado no código; validação controlada em Produção pendente
+- **Implementado:**
+  - Upload administrativo funcional
+  - Upload restrito a PDF
+  - Tamanho máximo de 10 MiB
+  - Validação de extensão
+  - Validação de MIME
+  - Validação de assinatura PDF
+  - Bloqueio do upload manual do tipo `contrato` (reservado ao fluxo automatizado de aceite)
+  - Isolamento por `Company`
+  - Listagem e download no Portal do Cliente
+  - Download administrativo
+  - `DocumentAccessLog` para downloads (cliente e administrativo)
+  - Testes automatizados das rotas e do `DbStorageProvider`
+- **Pendente:**
+  - Integração à main e deployment
+  - Smoke test controlado em Produção
 - **Critério de aceite:**
   - Upload administrativo funcional
   - Isolamento por `Company`

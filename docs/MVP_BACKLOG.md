@@ -15,13 +15,14 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Decisões comerciais do MVP 1.0 aprovadas (vigência, cancelamento, promoções — `docs/DECISIONS.md`)
   - Conteúdo do contrato MVP 1.0 aprovado e congelado documentalmente (`docs/CONTRACT_MVP_V1.md`)
   - Validação técnica de SST do conteúdo concluída
-  - Fonte única de conteúdo entre `/termos` e o PDF (Eixo A — branch `feat/contract-source-of-truth-eixo-a`)
+  - Fonte única de conteúdo entre `/termos` e o PDF (Eixo A — PR #18, mergeado e validado em Produção)
   - `/termos` consumindo a fonte única, com as 16 cláusulas do MVP 1.0
   - PDF consumindo a mesma fonte única
   - Contrato integral de 16 cláusulas no PDF, não mais um extrato parcial
   - Versionamento `2026-08-05` (`CONTRACT_VERSION`), com a versão `2026-07-04` preservada imutável
   - Remoção das regras públicas antigas (6 mensalidades, avisos de 30/60 dias) de `/termos`, do PDF, de `/digital` e de `/elegibilidade`
   - Testes automatizados de correspondência do Eixo A (versão, cláusulas, ausência de frases proibidas, seleção de versão)
+  - Smoke test read-only em Produção (2026-08-05): `/termos`, `/digital` e `/elegibilidade` respondendo 200 com o conteúdo vigente; vigência de 12 meses e regras de cancelamento publicadas conforme aprovado
 - **Pendente:**
   - Snapshot histórico de mensalidade e faixa no PDF (hoje recalculados de `pricing.ts`/dado atual, não de um valor congelado no aceite)
   - Quadro-resumo completo no comprovante (Eixo B)
@@ -95,8 +96,10 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 - Melhorias de UX do upload, mensagens de erro e conveniência operacional
   — **Estado:** pendente
 
-- Revisão comercial, operacional e de coerência de `/privacidade` e `/termos`; remover aviso de rascunho somente após aprovação interna
-  — **Estado:** pendente · Dependência: aprovação humana
+- Revisão comercial, operacional e de coerência de `/privacidade` e `/termos`
+  — **Estado:** pendente. O aviso de revisão jurídica de `/termos` foi
+  autorizado para remoção e removido nesta correção pós-merge; isso não
+  substitui a revisão jurídica formal por advogado, que segue em Pós-MVP
 
 ---
 

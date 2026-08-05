@@ -79,8 +79,9 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 **O conteúdo do Contrato Sublime Digital MVP 1.0 está aprovado e congelado
 documentalmente em `docs/CONTRACT_MVP_V1.md`.**
-- Status: aprovado, **ainda não implementado** em `/termos` nem em
-  `src/lib/contractPdf.ts`
+- Status: aprovado e **implementado** em `/termos` e em
+  `src/lib/contractPdf.ts` pelo Eixo A — **mergeado pela PR #18** e
+  validado por smoke test read-only em Produção
 - Motivo: destravar as implementações futuras dos Eixos A, B e D com uma
   única especificação de referência, evitando decisões de conteúdo tomadas
   ad-hoc durante a implementação técnica
@@ -88,7 +89,8 @@ documentalmente em `docs/CONTRACT_MVP_V1.md`.**
 
 **A validação técnica de SST do conteúdo MVP 1.0 foi concluída e aprovada
 pela responsável de SST.**
-- Status: implantada (validação); implementação do conteúdo pendente
+- Status: implantada (validação) e implantada (implementação do conteúdo,
+  Eixo A — PR #18)
 - Motivo: garantir que o conteúdo reflita corretamente o escopo real dos
   planos Essencial e Premium antes de qualquer implementação
 - Fonte: `docs/CONTRACT_MVP_V1.md`
@@ -139,7 +141,9 @@ aprovado, substituindo expressamente o modelo atualmente publicado em
 
 **O escopo e os limites dos planos Digital Essencial e Digital Premium
 (incluindo LTCAT do Premium) estão aprovados no nível de conteúdo.**
-- Status: aprovado, ainda não implementado
+- Status: aprovado; **conteúdo implementado em `/termos` e no PDF pelo Eixo A**
+  (PR #18); **quadro-resumo e demais adicionais no comprovante seguem
+  pendentes — Eixo B**
 - Motivo: alinhar o texto contratual ao escopo técnico real entregue pela
   operação, incluindo exclusões e condicionantes que hoje não constam do
   contrato publicado
@@ -158,12 +162,17 @@ corrigindo o comprovante atualmente gerado pelo PDF.**
 
 **A fonte contratual é única, versionada por `CONTRACT_VERSION`
 (`src/lib/pricing.ts`), e reside em `src/lib/contract/` (Eixo A).**
-- Status: implementada no código (branch `feat/contract-source-of-truth-eixo-a`)
+- Status: implementada, **mergeada pela PR #18** em `main` e **validada em
+  Produção por smoke test read-only** (2026-08-05)
 - `/termos` e o PDF (`src/lib/contractPdf.ts`) consomem exatamente a mesma
   estrutura de 16 cláusulas — nunca dois textos mantidos independentemente
-- Versão vigente: `2026-08-05`. Versões anteriores (`2026-07-04`) permanecem
-  imutáveis no código, preservadas apenas para regenerar o PDF de contratos
-  já aceitos sob elas — nunca reescritas
+- Versão vigente: `2026-08-05`. A versão anterior (`2026-07-04`) permanece
+  imutável no código. **A versão 2026-07-04 preserva o texto então
+  publicado em `/termos`, mas não reproduz o antigo PDF de sete cláusulas.
+  O PDF persistido e seu hash (`Company.contractHash`,
+  `src/lib/contractPersistence.ts`) são o artefato histórico primário de
+  qualquer contrato já aceito** — o array de cláusulas em código nunca é
+  reescrito
 - `pricing.ts` continua como fonte única de preços; `src/lib/contract/`
   nunca fixa valor monetário
 - O PDF seleciona o conteúdo exclusivamente pela versão recebida da
@@ -174,6 +183,16 @@ corrigindo o comprovante atualmente gerado pelo PDF.**
   que uma alteração de conteúdo futura afete, mesmo que involuntariamente,
   um contrato já aceito
 - Fonte: `src/lib/contract/content.ts`, `docs/CONTRACT_MVP_V1.md`
+
+**A remoção do aviso visual de revisão jurídica da página `/termos` não
+significa que a revisão jurídica formal do contrato tenha sido realizada.**
+- Status: aviso removido de Produção; revisão jurídica formal **continua
+  futura**, conforme decisão já registrada acima ("Contrato do MVP seguirá
+  inicialmente sem revisão formal de advogado")
+- Motivo: o aviso descrevia um risco já registrado nesta seção de forma
+  redundante e desatualizada frente ao texto MVP 1.0 já implementado; sua
+  remoção é uma correção de exibição pública, não uma decisão jurídica nova
+- Fonte: `docs/DECISIONS.md` (seção "Contrato e jurídico", acima)
 
 ---
 

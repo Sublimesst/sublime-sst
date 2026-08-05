@@ -22,10 +22,6 @@ export default function TermosPage() {
             Versão {version} · Sublime Digital (Essencial e Premium)
           </p>
 
-          <div className="bg-amber-50 border border-amber-300 rounded-[10px] px-5 py-4 mb-8 text-[13px] text-amber-800">
-            ⚠️ Este documento está sujeito a revisão jurídica antes do uso comercial em escala. As condições aqui descritas são vinculantes para as partes que celebraram o contrato eletronicamente.
-          </div>
-
           <div className="space-y-8">
             {clausulas.map(({ numero, titulo, blocos }) => (
               <div key={numero}>

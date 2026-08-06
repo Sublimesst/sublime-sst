@@ -41,7 +41,9 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Documentos do cliente
 
-- **Estado:** implementado no código; validação controlada em Produção pendente
+- **Estado:** fluxo funcional validado em Produção; correção da atribuição
+  do ator da auditoria implementada no código e pendente de validação final
+  em Produção
 - **Implementado:**
   - Upload administrativo funcional
   - Upload restrito a PDF
@@ -55,9 +57,16 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Download administrativo
   - `DocumentAccessLog` para downloads (cliente e administrativo)
   - Testes automatizados das rotas e do `DbStorageProvider`
+  - Correção da atribuição do ator no `DocumentAccessLog` (cliente com
+    cookie novo grava o id da própria sessão; Admin continua gravando null)
 - **Pendente:**
-  - Integração à main e deployment
-  - Smoke test controlado em Produção
+  - Integrar a correção de atribuição do ator à main
+  - Deploy da correção
+  - Novo login por magic link após o deploy
+  - Download administrativo e download do cliente usando o documento
+    sintético já existente (sem novo upload)
+  - Validação final de ausência de respostas 500
+  - Encerramento do bloqueador documental
 - **Critério de aceite:**
   - Upload administrativo funcional
   - Isolamento por `Company`

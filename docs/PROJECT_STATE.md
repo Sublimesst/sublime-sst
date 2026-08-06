@@ -7,7 +7,7 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `98d0d2090cb7b33bd29ea890965ede2b19f7de8e`
+**SHA:** `57d42823bd9f3ebbd07426898fae322f6185496d`
 **Data de validação:** 2026-08-05
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
@@ -34,6 +34,12 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   test read-only (2026-08-05): HTTP 200 nas três rotas, versão 2026-08-05
   publicada, 16 cláusulas presentes, ausência confirmada das regras antigas
   críticas (6 mensalidades, avisos de 30/60 dias)
+- Fluxo funcional de documentos validado em Produção por smoke controlado
+  (2026-08-05): upload manual de contrato rejeitado, PDF sintético de
+  declaração persistido com sucesso, documento listado no Admin e visível
+  no Portal do Cliente, download administrativo aprovado, dois downloads do
+  cliente aprovados, cabeçalhos de segurança/privacidade corretos, ausência
+  de resposta 500 no intervalo observado
 
 ---
 
@@ -55,15 +61,19 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   - Validação ponta a ponta do fluxo completo com geração real de PDF em
     Produção: ainda não exercitada (o smoke read-only não gera PDF, por
     exigir evento real com efeitos persistentes)
-- Fluxo de documentos: implementação técnica e validação automatizada
-  concluídas (upload administrativo restrito a PDF de até 10 MiB, validação de
-  extensão/MIME/assinatura, bloqueio de upload manual de `contrato`,
-  compensação de storage, download administrativo, auditoria via
-  `DocumentAccessLog`, isolamento por `Company`; testes das rotas e do
-  `DbStorageProvider` aprovados; nenhum novo erro de TypeScript em relação à
-  baseline da main; build aprovado); validação controlada em Produção ainda
-  pendente; nenhum upload real realizado
 - Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
+- Atribuição do ator no `DocumentAccessLog`: após o smoke controlado do
+  fluxo de documentos, foi encontrada uma divergência de auditoria — os
+  produtores administrativo e do cliente gravavam `sessionId` null,
+  tornando os dois tipos de acesso indistinguíveis no banco. Correção
+  implementada no código (ainda não integrada à main): cookies de cliente
+  emitidos após a correção passam a carregar o id da `ClientSession` do
+  login (propagado internamente como `clientSessionId`) e os dois
+  produtores do lado cliente passam a gravar esse valor; o produtor
+  administrativo continua gravando `sessionId` null. Cookies de cliente já
+  emitidos antes da correção continuam válidos e continuam gravando null
+  durante a janela de compatibilidade. Validação final em Produção ainda
+  pendente.
 
 ---
 

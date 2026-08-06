@@ -41,9 +41,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Documentos do cliente
 
-- **Estado:** fluxo funcional validado em Produção; correção da atribuição
-  do ator da auditoria implementada no código e pendente de validação final
-  em Produção
+- **Estado:** concluído e validado em Produção
 - **Implementado:**
   - Upload administrativo funcional
   - Upload restrito a PDF
@@ -59,21 +57,17 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Testes automatizados das rotas e do `DbStorageProvider`
   - Correção da atribuição do ator no `DocumentAccessLog` (cliente com
     cookie novo grava o id da própria sessão; Admin continua gravando null)
-- **Pendente:**
-  - Integrar a correção de atribuição do ator à main
-  - Deploy da correção
-  - Novo login por magic link após o deploy
-  - Download administrativo e download do cliente usando o documento
-    sintético já existente (sem novo upload)
+  - Integração à main e deploy da correção de atribuição do ator (PR #21)
+  - Novo login por magic link após o deploy, com cookie emitido pelo código corrigido
+  - Download do cliente com cookie novo, validado em Produção
   - Validação final de ausência de respostas 500
-  - Encerramento do bloqueador documental
 - **Critério de aceite:**
   - Upload administrativo funcional
   - Isolamento por `Company`
   - Download disponível no Portal do Cliente
   - `DocumentAccessLog` registrado
   - Validação de tipo e tamanho de arquivo
-- **Bloqueia novo cliente:** sim
+- **Bloqueia novo cliente:** não
 
 ### Backoffice completo
 
@@ -117,6 +111,12 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 - Exportação CSV/Excel dos dados do Admin
   — **Estado:** pendente
+
+- Conectar a rota de download administrativo existente
+  (`/api/admin/empresas/[id]/documents/[documentId]/download`) a um botão
+  na interface do Admin — hoje a rota existe e tem testes, mas não há
+  elemento de UI que a acione
+  — **Estado:** pendente · Não bloqueia o MVP documental nem novo cliente isoladamente
 
 - Melhorias de UX do upload, mensagens de erro e conveniência operacional
   — **Estado:** pendente

@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   await prisma.documentAccessLog.create({
     data: {
       companyId:     company.id,
+      sessionId:     company.clientSessionId,
       tipoDocumento: parsed.data.tipoDocumento,
       nomeDocumento: parsed.data.nomeDocumento,
       acao:          parsed.data.acao,

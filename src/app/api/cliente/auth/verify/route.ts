@@ -20,9 +20,12 @@ export async function GET(req: NextRequest) {
 
   await prisma.clientSession.update({ where: { token }, data: { usedAt: new Date() } })
 
-  // Cookie de sessão assinado com HMAC (ver src/lib/sessionCookie.ts)
+  // Cookie de sessão assinado com HMAC (ver src/lib/sessionCookie.ts). O
+  // sessionId embutido é o id (cuid) da própria ClientSession, não o token
+  // bruto — permite ao DocumentAccessLog distinguir este acesso de um acesso
+  // administrativo (ver src/lib/clientAuth.ts).
   const cookieValue = signSessionCookie(
-    { companyId: session.companyId, email: session.email, issuedAt: Date.now() },
+    { companyId: session.companyId, email: session.email, issuedAt: Date.now(), sessionId: session.id },
     MAX_AGE_SECONDS
   )
 

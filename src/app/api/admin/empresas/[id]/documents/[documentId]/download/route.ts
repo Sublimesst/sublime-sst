@@ -13,8 +13,13 @@ function safeFilename(name: string): string {
 
 // Download administrativo de um documento específico. Espelha o download do
 // cliente (src/app/api/cliente/documents/[id]/download/route.ts), trocando a
-// autenticação de sessão do cliente por admin secret e o access log sem
-// sessionId (representa acesso administrativo, não do cliente).
+// autenticação de sessão do cliente por admin secret. O access log grava
+// sessionId: null propositalmente para representar acesso administrativo —
+// desde a correção de atribuição de ator (src/lib/clientAuth.ts), os
+// acessos do cliente com cookie emitido após o deploy gravam o
+// clientSessionId real, então null aqui já discrimina do lado administrativo.
+// Cookies de cliente emitidos antes dessa correção também produzem null
+// (janela de compatibilidade) até expirarem ou o cliente relogar.
 export async function GET(req: NextRequest, { params }: { params: { id: string; documentId: string } }) {
   if (!auth(req)) return NextResponse.json({ success: false, error: 'Não autorizado.' }, { status: 401 })
 

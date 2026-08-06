@@ -28,7 +28,8 @@ beforeAll(async () => {
   ;({ storage } = await import('@/lib/storage'))
 })
 
-const COMPANY = { id: 'company_1', status: 'active', razaoSocial: 'Empresa Teste', cnpj: '12345678000199' }
+const COMPANY = { id: 'company_1', status: 'active', razaoSocial: 'Empresa Teste', cnpj: '12345678000199', clientSessionId: 'session_sintetico_1' }
+const COMPANY_LEGACY_COOKIE = { ...COMPANY, clientSessionId: null }
 const PARAMS = { params: { id: 'doc_1' } }
 
 const DOCUMENT_FIXTURE = {
@@ -122,5 +123,32 @@ describe('GET /api/cliente/documents/[id]/download', () => {
     vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)
     await GET(downloadRequest(), PARAMS)
     expect(prisma.document.findUnique).toHaveBeenCalledWith({ where: { id: 'doc_1' } })
+  })
+
+  it('cookie novo (com clientSessionId) grava sessionId igual ao id sintético da sessão', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY as any)
+    vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)
+    await GET(downloadRequest(), PARAMS)
+    expect(prisma.documentAccessLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ sessionId: 'session_sintetico_1' }),
+    })
+  })
+
+  it('cookie antigo (sem clientSessionId) grava sessionId null, sem quebrar o download', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY_LEGACY_COOKIE as any)
+    vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)
+    const res = await GET(downloadRequest(), PARAMS)
+    expect(res.status).toBe(200)
+    expect(prisma.documentAccessLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ sessionId: null }),
+    })
+  })
+
+  it('resposta HTTP nunca expõe o sessionId (nem nos headers)', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY as any)
+    vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)
+    const res = await GET(downloadRequest(), PARAMS)
+    const headersDump = JSON.stringify(Object.fromEntries(res.headers.entries()))
+    expect(headersDump).not.toContain('session_sintetico_1')
   })
 })

@@ -27,6 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   await prisma.documentAccessLog.create({
     data: {
       companyId:     document.companyId,
+      sessionId:     company.clientSessionId,
       tipoDocumento: document.tipoDocumento,
       nomeDocumento: document.nomeArquivo,
       acao:          'download',

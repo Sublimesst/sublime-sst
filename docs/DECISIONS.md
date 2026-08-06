@@ -225,6 +225,57 @@ significa que a revisão jurídica formal do contrato tenha sido realizada.**
 
 ---
 
+## Identificação do ator em DocumentAccessLog no MVP
+
+**Cookies de cliente emitidos após a correção da atribuição do ator carregam o id da `ClientSession` do login no payload assinado, propagado internamente como `clientSessionId`.**
+- Status: implementada no código; validação em Produção pendente
+- Motivo: o cookie de sessão do cliente é stateless por HMAC e, antes desta
+  correção, não carregava nenhum identificador ligado ao login que o
+  originou — isso impedia distinguir, no `DocumentAccessLog`, um acesso do
+  cliente de um acesso administrativo
+- Fonte: `src/lib/clientAuth.ts`, `src/app/api/cliente/auth/verify/route.ts`
+
+**Os produtores de `DocumentAccessLog` do lado cliente gravam `sessionId` igual ao `clientSessionId` propagado; o produtor administrativo continua gravando `sessionId` null.**
+- Status: implementada no código; validação em Produção pendente
+- Motivo: `null` explícito do lado administrativo passa a discriminar de
+  fato o acesso administrativo do acesso do cliente, sem exigir nenhum
+  campo novo de schema
+- Fonte: rotas de documentos do cliente e do Admin
+
+**Cookies de cliente emitidos antes da correção permanecem válidos e podem continuar gravando `sessionId` null durante a janela de compatibilidade.**
+- Status: aceito como comportamento transitório
+- Motivo: evitar forçar novo login de clientes já autenticados; a
+  ambiguidade se resolve sozinha quando o cookie expira (30 dias) ou o
+  cliente faz login novamente
+- Fonte: `src/lib/clientAuth.ts`
+
+**Registros de `DocumentAccessLog` já existentes, gravados antes da correção, permanecem ambíguos entre acesso administrativo e do cliente e não serão reescritos.**
+- Status: aceito
+- Motivo: não há mecanismo seguro para reatribuir retroativamente esses
+  registros sem reconstruir a associação a partir de dado sensível (o
+  token bruto nunca foi armazenado); o volume atual é de homologação, sem
+  cliente real ainda contratado
+
+**Nenhuma migration é necessária para esta correção — a coluna `DocumentAccessLog.sessionId` já existia como opcional antes desta decisão.**
+- Status: implementada no código
+- Motivo: o campo já suportava o valor necessário; a correção é só de
+  aplicação (payload do cookie e propagação), não de schema
+
+**Cookie bruto, token bruto e magic link nunca são gravados no `DocumentAccessLog` nem em nenhum outro log.**
+- Status: implementada no código
+- Motivo: o identificador gravado é o id (cuid) da `ClientSession`, opaco e
+  não reversível ao token que autenticou o login
+- Fonte: `src/lib/clientAuth.ts`, `src/app/api/cliente/auth/verify/route.ts`
+
+**Um campo explícito de tipo de ator (`actorType`) no `DocumentAccessLog` fica registrado como possibilidade para P1, não implementado nesta correção.**
+- Status: não implementada — avaliada e descartada para o MVP
+- Motivo: exigiria migration e não resolve nenhuma ambiguidade que a
+  atribuição por `sessionId` já não resolva para o volume atual; mantido
+  como opção caso o número de produtores de `DocumentAccessLog` cresça
+- Fonte: `prisma/schema.prisma`
+
+---
+
 ## Governança técnica
 
 **Repositório Git é a fonte técnica oficial.**

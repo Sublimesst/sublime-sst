@@ -6,6 +6,10 @@ export interface ClientSessionPayload {
   companyId: string
   email: string
   issuedAt: number
+  // Id da ClientSession que originou o login (não o token bruto). Opcional
+  // para manter válidos os cookies assinados antes desta correção — nesses,
+  // a chave simplesmente não existe no payload decodificado.
+  sessionId?: string
 }
 
 export interface AuthorizedCompany {
@@ -13,6 +17,12 @@ export interface AuthorizedCompany {
   status: string
   razaoSocial: string
   cnpj: string
+  // Id da ClientSession do login atual, para diferenciar acesso do cliente
+  // de acesso administrativo no DocumentAccessLog. null para cookies
+  // emitidos antes desta correção (janela de compatibilidade, ver
+  // sessionCookie.ts) — nunca reconsultado no banco, vem só do payload
+  // já autenticado pelo HMAC.
+  clientSessionId: string | null
 }
 
 // Verifica a assinatura/expiração do cookie E revalida que a empresa não foi
@@ -24,8 +34,15 @@ export async function getClientSession(req: NextRequest): Promise<AuthorizedComp
   const payload = verifySessionCookie<ClientSessionPayload>(raw)
   if (!payload?.companyId || !payload.email) return null
 
-  return prisma.company.findFirst({
+  const company = await prisma.company.findFirst({
     where: { id: payload.companyId, NOT: { status: 'cancelled' } },
     select: { id: true, status: true, razaoSocial: true, cnpj: true },
   })
+  if (!company) return null
+
+  const clientSessionId = typeof payload.sessionId === 'string' && payload.sessionId.length > 0
+    ? payload.sessionId
+    : null
+
+  return { ...company, clientSessionId }
 }

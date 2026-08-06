@@ -228,7 +228,7 @@ significa que a revisão jurídica formal do contrato tenha sido realizada.**
 ## Identificação do ator em DocumentAccessLog no MVP
 
 **Cookies de cliente emitidos após a correção da atribuição do ator carregam o id da `ClientSession` do login no payload assinado, propagado internamente como `clientSessionId`.**
-- Status: implementada no código; validação em Produção pendente
+- Status: implementada e validada em Produção em 2026-08-06
 - Motivo: o cookie de sessão do cliente é stateless por HMAC e, antes desta
   correção, não carregava nenhum identificador ligado ao login que o
   originou — isso impedia distinguir, no `DocumentAccessLog`, um acesso do
@@ -236,11 +236,21 @@ significa que a revisão jurídica formal do contrato tenha sido realizada.**
 - Fonte: `src/lib/clientAuth.ts`, `src/app/api/cliente/auth/verify/route.ts`
 
 **Os produtores de `DocumentAccessLog` do lado cliente gravam `sessionId` igual ao `clientSessionId` propagado; o produtor administrativo continua gravando `sessionId` null.**
-- Status: implementada no código; validação em Produção pendente
+- Status: implementada e validada em Produção em 2026-08-06
 - Motivo: `null` explícito do lado administrativo passa a discriminar de
   fato o acesso administrativo do acesso do cliente, sem exigir nenhum
   campo novo de schema
 - Fonte: rotas de documentos do cliente e do Admin
+
+**Validação de Produção (2026-08-06):** após o merge da PR #21, um novo
+magic link foi solicitado e um novo login de cliente foi concluído com
+cookie já emitido pelo código corrigido. Um único download do documento
+sintético já existente retornou HTTP 200. A criação do `DocumentAccessLog`
+ocorre antes do retorno da resposta, sem tratamento de exceção ao redor —
+o 200 observado só é possível se a gravação teve sucesso. O valor gravado
+em `sessionId` provém exclusivamente do payload do cookie assinado por
+HMAC, nunca de query, body ou header. Nenhuma leitura direta do banco foi
+necessária para essa validação.
 
 **Cookies de cliente emitidos antes da correção permanecem válidos e podem continuar gravando `sessionId` null durante a janela de compatibilidade.**
 - Status: aceito como comportamento transitório

@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `57d42823bd9f3ebbd07426898fae322f6185496d`
-**Data de validação:** 2026-08-05
+**SHA:** `ffcfdc6f1a878dbe1473e748210c6cde0389084b`
+**Data de validação:** 2026-08-06
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -40,6 +40,22 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   no Portal do Cliente, download administrativo aprovado, dois downloads do
   cliente aprovados, cabeçalhos de segurança/privacidade corretos, ausência
   de resposta 500 no intervalo observado
+- Atribuição do ator no `DocumentAccessLog`: correção mergeada pela PR #21 e
+  implantada em Produção (2026-08-06). Validação final por smoke controlado:
+  novo magic link solicitado após o deployment, novo login de cliente
+  concluído com cookie emitido pelo código já corrigido, um único download
+  do documento sintético já existente com HTTP 200, ausência de resposta
+  500 nas chamadas observadas. A gravação do `DocumentAccessLog` com
+  `sessionId` não nulo foi confirmada estruturalmente — pela ordem do
+  código (a gravação é aguardada antes da resposta, sem tratamento de
+  exceção ao redor) e pelo `clientSessionId` propagado exclusivamente do
+  payload do cookie assinado por HMAC — sem leitura direta do banco nem dos
+  logs da Vercel nesta validação. Nenhum novo upload, nenhuma alteração
+  financeira ou na Asaas. O download administrativo não foi repetido nesse
+  smoke final: a rota administrativa não sofreu alteração funcional nesta
+  correção (só o comentário do código) e já havia sido validada no smoke
+  anterior (2026-08-05); a interface do Admin ainda não tem um botão
+  conectado a essa rota (ver `docs/MVP_BACKLOG.md`, P1)
 
 ---
 
@@ -62,18 +78,6 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
     Produção: ainda não exercitada (o smoke read-only não gera PDF, por
     exigir evento real com efeitos persistentes)
 - Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
-- Atribuição do ator no `DocumentAccessLog`: após o smoke controlado do
-  fluxo de documentos, foi encontrada uma divergência de auditoria — os
-  produtores administrativo e do cliente gravavam `sessionId` null,
-  tornando os dois tipos de acesso indistinguíveis no banco. Correção
-  implementada no código (ainda não integrada à main): cookies de cliente
-  emitidos após a correção passam a carregar o id da `ClientSession` do
-  login (propagado internamente como `clientSessionId`) e os dois
-  produtores do lado cliente passam a gravar esse valor; o produtor
-  administrativo continua gravando `sessionId` null. Cookies de cliente já
-  emitidos antes da correção continuam válidos e continuam gravando null
-  durante a janela de compatibilidade. Validação final em Produção ainda
-  pendente.
 
 ---
 

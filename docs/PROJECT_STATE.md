@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `ffcfdc6f1a878dbe1473e748210c6cde0389084b`
-**Data de validação:** 2026-08-06
+**SHA:** `bc11592fc17f46ecd6d3eee700e0cbed473c44d3`
+**Data de validação:** 2026-08-07
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -56,6 +56,30 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   correção (só o comentário do código) e já havia sido validada no smoke
   anterior (2026-08-05); a interface do Admin ainda não tem um botão
   conectado a essa rota (ver `docs/MVP_BACKLOG.md`, P1)
+- PR #23 (`fix(cancellation): reconcile subscription status`) mergeada e
+  implantada em Produção (`bc11592`): no cancelamento oficial de uma
+  Company com assinatura, a assinatura Asaas é encerrada antes da
+  transição local, `Company.status` passa a `cancelled` e
+  `Company.subscriptionStatus` passa a `inactive` na mesma transição;
+  falha real da Asaas continua impedindo a transição local
+- **Episódio financeiro controlado real ENCERRADO** (2026-08-07): após o
+  deployment da PR #23, foi executado, com autorização explícita da
+  Administração, um cancelamento controlado real de uma Company de teste
+  com dinheiro real envolvido. Reconciliação final confirmou: assinatura
+  Asaas encerrada (`INACTIVE`/excluída), cobrança futura previamente
+  agendada eliminada, `Company.status=cancelled` e
+  `subscriptionStatus=inactive` reconciliados, exatamente 1
+  `CancellationRequest` (sem duplicidade), a `Commission` vinculada
+  estornada, os dois pagamentos do teste (histórico total de R$ 348,00)
+  com exatamente 1 estorno integral `DONE` cada na Asaas e refletidos como
+  `refunded` no banco local via webhook `PAYMENT_REFUNDED` processado sem
+  intervenção manual, total devolvido R$ 348,00, saldo final R$ 0,00,
+  nenhuma divergência entre Asaas e a plataforma. Este teste valida a
+  correção da PR #23 em Produção, mas não altera nem conclui a pendência
+  da lógica financeira de cancelamento pela regra de 12 meses (ver
+  "Em andamento" abaixo e `docs/MVP_BACKLOG.md`), e não constitui
+  autorização permanente para novas operações financeiras em Produção —
+  cada operação futura continua exigindo autorização explícita.
 
 ---
 

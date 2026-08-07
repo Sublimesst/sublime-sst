@@ -63,9 +63,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const d = parsed.data
 
   // Idempotência: só a primeira chamada consegue transitar de "não cancelado" para "cancelled".
+  // subscriptionStatus só é tocado quando havia assinatura (asaasSubscriptionId) — o
+  // cancelSubscription() acima já teve sucesso (real ou alreadyCancelled) neste ponto,
+  // então a assinatura está garantidamente encerrada na Asaas. Empresa sem assinatura
+  // nunca criada preserva subscriptionStatus como está (normalmente null) — não inventa
+  // um histórico de assinatura que nunca existiu.
   const transition = await prisma.company.updateMany({
     where: { id: params.id, status: { not: 'cancelled' } },
-    data: { status: 'cancelled' },
+    data: {
+      status: 'cancelled',
+      ...(company.asaasSubscriptionId ? { subscriptionStatus: 'inactive' } : {}),
+    },
   })
   if (transition.count === 0) {
     // Corrida: outra chamada concorrente já cancelou entre o check acima e

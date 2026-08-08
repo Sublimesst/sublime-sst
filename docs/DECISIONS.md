@@ -300,3 +300,28 @@ necessária para essa validação.
 **Nenhuma alteração em Produção sem autorização explícita.**
 - Status: implantada
 - Motivo: controle de risco e rastreabilidade de mudanças
+
+---
+
+## Limpeza de dados de homologação em Produção
+
+**Dados de homologação/Sandbox só podem ser removidos de Produção via um
+manifest fechado e verificável (snapshot fixo, contagens e digests
+SHA-256 por tabela, `GLOBAL_MANIFEST_DIGEST`), executado em transação
+única com guards de preservação, precedido de backup lógico fresco e
+seguido de verificação read-only independente do resultado.**
+- Status: implantada — método usado com sucesso na Tranche 1 (2026-08-07,
+  91 registros removidos)
+- Motivo: nenhum campo estrutural distingue homologação de dado real no
+  schema atual; a única forma segura de remover dados de teste é
+  delimitar o universo de forma auditável, com trilha de auditoria
+  preservável, nunca por exclusão ampla/heurística em tempo de execução
+- Regra permanente: qualquer cadastro de teste/homologação associado a
+  movimentação financeira real, obrigação externa ou integração de
+  Produção ainda não reconciliada fica fora de qualquer limpeza
+  automática/em lote. Esses registros exigem classificação, decisão e
+  tratamento próprios antes de eventual preservação, anonimização ou
+  exclusão — não entram automaticamente em tranche de limpeza, mas isso
+  não significa preservação eterna obrigatória: eventual anonimização ou
+  exclusão futura depende de análise própria, feita separadamente
+- Fonte: artefato de execução da Tranche 1, `docs/PROJECT_STATE.md`

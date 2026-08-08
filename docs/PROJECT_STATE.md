@@ -80,6 +80,37 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   "Em andamento" abaixo e `docs/MVP_BACKLOG.md`), e não constitui
   autorização permanente para novas operações financeiras em Produção —
   cada operação futura continua exigindo autorização explícita.
+- **Tranche 1 da limpeza de dados pré-Produção EXECUTADA E VALIDADA**
+  (2026-08-07): após diagnóstico read-only completo, aprovação de um
+  manifest fechado e verificável (91 registros, distribuídos por 15
+  tabelas, com `SNAPSHOT_AT = 2026-08-07T20:17:08.085Z`, contagens e
+  digests SHA-256 por tabela mais um `GLOBAL_MANIFEST_DIGEST`) e um backup
+  lógico fresco (`pg_dump` formato custom, posterior ao snapshot,
+  checksum conferido, listagem via `pg_restore --list` validada), um
+  operador autorizado executou o artefato de limpeza fora desta sessão.
+  A execução rodou dentro de uma única transação Postgres
+  `SERIALIZABLE`, com locks nas tabelas relevantes, introspecção em
+  runtime do grafo real de foreign keys (sem divergência do aprovado),
+  reconstrução do manifest dentro da própria transação, todos os guards
+  de preservação, e `DELETE ... RETURNING` na ordem topológica aprovada.
+  **Verificação read-only independente após a execução (2026-08-07)
+  confirmou, tabela por tabela, que a
+  contagem de registros removidos bate exatamente com o manifest
+  aprovado (91 no total)**, que os dois cadastros pós-cutover protegidos
+  (um episódio de teste/homologação com movimentação financeira real em
+  Asaas Produção, já encerrado/reconciliado, e um segundo cadastro de
+  teste com pendência externa na Asaas) continuam presentes, que os 7
+  objetos de storage órfãos permanecem intocados, e que `Plan`/
+  `CnaeCatalog` permanecem com a mesma contagem de antes. Esta tranche
+  removeu exclusivamente os 91 registros de teste/homologação
+  classificados como excluíveis, sem movimentação financeira real
+  associada e sem pendência externa de Produção. **A base de dados NÃO
+  deve ser descrita como totalmente limpa para Produção** — permanecem
+  fora desta tranche o episódio de teste com movimentação financeira
+  real em Asaas Produção, o cadastro de teste com pendência externa
+  Asaas, e os 7 objetos órfãos de storage; nenhum deles corresponde a
+  cliente real, e cada um tem destino próprio ainda pendente de
+  decisão/execução em frentes separadas.
 
 ---
 
@@ -121,6 +152,16 @@ e PDF.
 - Alteração financeira em Produção
 - Exclusão de branches antigas sem aprovação
 - Abertura pública antes da conclusão dos bloqueadores P0
+- Qualquer ação sobre o episódio de teste/homologação com movimentação
+  financeira real em Asaas Produção já encerrado (preservação ou
+  anonimização de campos identificadores) — aguarda política própria,
+  não coberta pela Tranche 1
+- Qualquer ação sobre o cadastro pós-cutover com pendência externa na
+  Asaas (assinatura/cobrança ainda não resolvida) — permanece
+  `PROTEGER/NÃO TOCAR` até resolução externa
+- Investigação ou exclusão dos 7 objetos de storage órfãos — causa raiz
+  ainda não determinada; tarefa separada
+- Qualquer tranche de limpeza adicional além da Tranche 1 já executada
 
 ---
 

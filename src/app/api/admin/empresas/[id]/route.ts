@@ -37,6 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       partner: { select: { id: true, name: true, office: true, code: true } },
       onboardingData: {
         select: {
+          status: true,
           numFuncionarios: true,
           cargos: true,
           turnoTrabalho: true,

@@ -17,7 +17,11 @@ export async function GET(req: NextRequest) {
   const companies = await prisma.company.findMany({
     where: {
       status: { in: ['active', 'onboarding_pending'] },
-      onboardingData: null,
+      // "Não enviou ainda" — sem registro OU rascunho iniciado e nunca
+      // enviado. Antes desta tranche, onboardingData só existia depois do
+      // envio; agora um rascunho em andamento também precisa continuar
+      // recebendo o lembrete.
+      OR: [{ onboardingData: null }, { onboardingData: { is: { status: 'em_preenchimento' } } }],
       payments: {
         some: { type: 'implantacao', status: 'confirmed', paidAt: { lt: since24h } },
       },

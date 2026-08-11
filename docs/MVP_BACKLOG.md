@@ -69,9 +69,32 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Validação de tipo e tamanho de arquivo
 - **Bloqueia novo cliente:** não
 
+### Onboarding individual dos trabalhadores
+
+- **Estado:** concluído e validado em Produção
+- **Implementado:**
+  - Rascunho persistente e retomável antes do envio
+  - Cadastro individual de `Worker` por `Company` (CRUD completo enquanto não enviado)
+  - Limite de até 20 trabalhadores por `Company`
+  - Validação dos campos obrigatórios do trabalhador revalidada no servidor no envio
+  - Quantidade contratada (`Company.numFuncionarios`) e quantidade declarada (contagem de `Worker`) mantidas separadas
+  - Divergência contratado × declarado exige confirmação explícita do cliente (`quantity_mismatch`, HTTP 409, sem gravação, se não confirmada)
+  - Confirmação explícita não reprecifica nem altera `Company.numFuncionarios`
+  - Snapshot final da quantidade declarada gravado em `OnboardingData.numFuncionarios` no envio
+  - Imutabilidade no Portal do Cliente após o envio (mutações de dados gerais e de `Worker` bloqueadas; leitura continua disponível)
+  - Validação controlada em Produção (Gates A–E, 2026-08-11) com fixture 100% sintética, integralmente removida ao final
+- **Critério de aceite:** atendido para esta tranche
+- **Fora desta tranche (pendente em frente separada):** Admin Workers
+  (visualização/listagem no backoffice), exportação compatível com SOC,
+  backoffice completo — ver seção "Backoffice completo" abaixo
+- **Bloqueia novo cliente:** sim
+
 ### Backoffice completo
 
 - **Estado:** pendente
+- **Pendente (inclui, sem se limitar a):**
+  - Visualização/listagem operacional dos Workers do onboarding individual no Admin
+  - Exportação compatível com SOC dos dados de Worker/onboarding
 - **Critério de aceite:**
   - Todos os dados fornecidos por clientes e parceiros acessíveis via Admin ou exportação
     compatível com Excel

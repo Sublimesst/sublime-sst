@@ -303,6 +303,50 @@ necessária para essa validação.
 
 ---
 
+## Onboarding individual dos trabalhadores
+
+**`Company.numFuncionarios` representa a quantidade contratada e não é sobrescrita pelo onboarding.**
+- Status: implantada e validada em Produção (2026-08-11)
+- Motivo: preservar o valor comercialmente contratado como referência independente do que o cliente efetivamente declarar no onboarding
+- Fonte: `src/app/api/cliente/onboarding/route.ts`
+
+**A quantidade declarada é a quantidade de `Worker` existentes no momento do envio.**
+- Status: implantada e validada em Produção (2026-08-11)
+- Motivo: a declaração real do cliente é sempre derivada dos registros individuais de trabalhador, nunca de um número digitado separadamente
+- Fonte: `src/lib/onboardingWorkers.ts`, `src/app/api/cliente/onboarding/route.ts`
+
+**`OnboardingData.numFuncionarios` é o snapshot da quantidade declarada no momento do envio.**
+- Status: implantada e validada em Produção (2026-08-11)
+- Motivo: registrar de forma imutável quantos trabalhadores foram efetivamente declarados no envio, independente de mudanças posteriores na contagem de `Worker`
+- Fonte: `prisma/schema.prisma`, `src/app/api/cliente/onboarding/route.ts`
+
+**Se a quantidade contratada for diferente da declarada, o envio não é bloqueado definitivamente: exige confirmação explícita do cliente, sem reprecificar automaticamente e sem alterar silenciosamente a quantidade contratada.**
+- Status: implantada e validada em Produção (2026-08-11)
+- Motivo: permitir que o cliente prossiga conscientemente com uma divergência real (por exemplo, quadro de funcionários diferente do contratado) sem que o sistema tome decisões financeiras ou contratuais automáticas em seu lugar
+- Fonte: `src/app/api/cliente/onboarding/route.ts` (código `quantity_mismatch`, HTTP 409)
+
+**Antes do envio, o onboarding permanece em `em_preenchimento` e os dados gerais e os `Worker` podem ser modificados livremente pelo cliente.**
+- Status: implantada e validada em Produção (2026-08-11)
+- Motivo: permitir rascunho e retomada sem pressão de completude imediata
+- Fonte: `src/lib/onboardingAccess.ts`
+
+**Depois do envio (`status=enviado`), a declaração original fica disponível para leitura, mas o Portal não pode mais alterar dados gerais nem `Worker`.**
+- Status: implantada e validada em Produção (2026-08-11)
+- Motivo: preservar a integridade da declaração que fundamenta a produção dos documentos de SST (PGR/PCMSO), impedindo alteração unilateral pelo cliente após o envio
+- Fonte: `src/lib/onboardingAccess.ts` (`onboarding_already_submitted`, HTTP 409)
+
+**Correções operacionais posteriores à declaração original não devem apagá-la ou substituí-la silenciosamente; a arquitetura de versionamento/correção técnica posterior permanece fora desta tranche.**
+- Status: decisão registrada; arquitetura de versionamento ainda não implementada
+- Motivo: qualquer necessidade futura de corrigir uma declaração já enviada deve ser tratada por mecanismo próprio e auditável, não por sobrescrita direta
+- Fonte: escopo da PR #26
+
+**Dados pessoais não necessários ao MVP não fazem parte do `Worker` nesta tranche — nenhum CPF, telefone, e-mail ou dado médico foi adicionado.**
+- Status: implantada
+- Motivo: minimizar a superfície de dados pessoais sensíveis coletados até que exista necessidade funcional concreta (ex. geração do arquivo SOC) e tratamento LGPD correspondente
+- Fonte: `prisma/schema.prisma` (`model Worker`)
+
+---
+
 ## Limpeza de dados de homologação em Produção
 
 **Dados de homologação/Sandbox só podem ser removidos de Produção via um

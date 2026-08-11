@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatOptionalText, formatPossuiPgr, employeeCountDiverges } from './onboardingDisplay'
+import { formatOptionalText, formatPossuiPgr, employeeCountDiverges, formatCivilDateBR } from './onboardingDisplay'
 
 describe('formatOptionalText', () => {
   it('retorna o texto quando presente', () => {
@@ -66,5 +66,28 @@ describe('employeeCountDiverges', () => {
 
   it('zero vs positivo → true', () => {
     expect(employeeCountDiverges(0, 1)).toBe(true)
+  })
+})
+
+describe('formatCivilDateBR', () => {
+  it('converte "YYYY-MM-DD" para "DD/MM/AAAA"', () => {
+    expect(formatCivilDateBR('1990-03-15')).toBe('15/03/1990')
+  })
+
+  it('não usa Date — não desloca dia próximo à virada de ano', () => {
+    expect(formatCivilDateBR('2026-01-01')).toBe('01/01/2026')
+    expect(formatCivilDateBR('2025-12-31')).toBe('31/12/2025')
+  })
+
+  it('retorna "—" para null', () => {
+    expect(formatCivilDateBR(null)).toBe('—')
+  })
+
+  it('retorna "—" para undefined', () => {
+    expect(formatCivilDateBR(undefined)).toBe('—')
+  })
+
+  it('retorna "—" para formato inválido', () => {
+    expect(formatCivilDateBR('15/03/1990')).toBe('—')
   })
 })

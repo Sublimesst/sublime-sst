@@ -16,3 +16,13 @@ export function formatPossuiPgr(value: boolean | null | undefined): string {
 export function employeeCountDiverges(cadastroInicial: number, onboarding: number): boolean {
   return cadastroInicial !== onboarding
 }
+
+// Formata uma data civil "YYYY-MM-DD" (já serializada por serializeWorker,
+// ver src/lib/onboardingWorkers.ts) para "DD/MM/AAAA" via manipulação de
+// string — nunca via Date, para não reintroduzir o deslocamento de
+// timezone que civilDate.ts existe para evitar.
+export function formatCivilDateBR(value: string | null | undefined): string {
+  const match = value ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null
+  if (!match) return '—'
+  return `${match[3]}/${match[2]}/${match[1]}`
+}

@@ -42,11 +42,22 @@ const ONBOARDING_FIXTURE = {
   submittedAt: new Date('2026-08-03T12:00:00Z'),
 }
 
+const WORKER_FIXTURE = {
+  id: 'worker_1',
+  nome: 'Trabalhador Sintético',
+  dataNascimento: new Date(Date.UTC(1990, 2, 15)),
+  sexo: 'F',
+  dataAdmissao: new Date(Date.UTC(2024, 0, 10)),
+  cargo: 'Analista',
+  setor: 'Financeiro',
+}
+
 const COMPANY_FIXTURE = {
   id: 'company_1',
   razaoSocial: 'Empresa Teste',
   numFuncionarios: 5,
   onboardingData: ONBOARDING_FIXTURE,
+  workers: [WORKER_FIXTURE],
 }
 
 beforeEach(() => {
@@ -119,5 +130,93 @@ describe('GET /api/admin/empresas/[id] — onboardingData', () => {
     expect(prisma.company.findUnique).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'company_1' },
     }))
+  })
+})
+
+describe('GET /api/admin/empresas/[id] — workers (visualização read-only)', () => {
+  it('consulta apenas os campos selecionados de Worker, ordenação determinística, escopada à relação da Company', async () => {
+    vi.mocked(verifyAdminSecret).mockReturnValue(true)
+    vi.mocked(prisma.company.findUnique).mockResolvedValue(COMPANY_FIXTURE as any)
+    await GET(detailRequest(), PARAMS)
+    expect(prisma.company.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'company_1' },
+      include: expect.objectContaining({
+        workers: {
+          select: {
+            id: true,
+            nome: true,
+            dataNascimento: true,
+            sexo: true,
+            dataAdmissao: true,
+            cargo: true,
+            setor: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      }),
+    }))
+  })
+
+  it('Workers retornados vêm serializados (datas civis "YYYY-MM-DD", nunca Date cru)', async () => {
+    vi.mocked(verifyAdminSecret).mockReturnValue(true)
+    vi.mocked(prisma.company.findUnique).mockResolvedValue(COMPANY_FIXTURE as any)
+    const res = await GET(detailRequest(), PARAMS)
+    const body = await res.json()
+    expect(body.data.workers).toEqual([{
+      id: 'worker_1',
+      nome: 'Trabalhador Sintético',
+      dataNascimento: '1990-03-15',
+      sexo: 'F',
+      dataAdmissao: '2024-01-10',
+      cargo: 'Analista',
+      setor: 'Financeiro',
+    }])
+  })
+
+  it('zero Workers é aceito — array vazio, sem erro', async () => {
+    vi.mocked(verifyAdminSecret).mockReturnValue(true)
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ ...COMPANY_FIXTURE, workers: [] } as any)
+    const res = await GET(detailRequest(), PARAMS)
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.data.workers).toEqual([])
+  })
+
+  it('onboarding em_preenchimento funciona com Workers presentes', async () => {
+    vi.mocked(verifyAdminSecret).mockReturnValue(true)
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({
+      ...COMPANY_FIXTURE,
+      onboardingData: { ...ONBOARDING_FIXTURE, status: 'em_preenchimento', submittedAt: null },
+    } as any)
+    const res = await GET(detailRequest(), PARAMS)
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.data.workers).toHaveLength(1)
+    expect(body.data.onboardingData.status).toBe('em_preenchimento')
+  })
+
+  it('onboarding inexistente (null) ainda retorna Workers normalmente', async () => {
+    vi.mocked(verifyAdminSecret).mockReturnValue(true)
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ ...COMPANY_FIXTURE, onboardingData: null } as any)
+    const res = await GET(detailRequest(), PARAMS)
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.data.onboardingData).toBeNull()
+    expect(body.data.workers).toHaveLength(1)
+  })
+
+  it('contratado (numFuncionarios) e declarado no envio (onboardingData.numFuncionarios) permanecem independentes da contagem atual de Workers', async () => {
+    vi.mocked(verifyAdminSecret).mockReturnValue(true)
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({
+      ...COMPANY_FIXTURE,
+      numFuncionarios: 5,
+      onboardingData: { ...ONBOARDING_FIXTURE, numFuncionarios: 8 },
+      workers: [WORKER_FIXTURE, { ...WORKER_FIXTURE, id: 'worker_2' }],
+    } as any)
+    const res = await GET(detailRequest(), PARAMS)
+    const body = await res.json()
+    expect(body.data.numFuncionarios).toBe(5)
+    expect(body.data.onboardingData.numFuncionarios).toBe(8)
+    expect(body.data.workers).toHaveLength(2)
   })
 })

@@ -5,7 +5,7 @@ import { ArrowLeft, Save, Upload, Ban } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { formatDate, maskCurrencyBRL } from '@/lib/utils'
 import { PRICING, faixaKeyFromCount } from '@/lib/pricing'
-import { formatOptionalText, formatPossuiPgr, employeeCountDiverges } from './onboardingDisplay'
+import { formatOptionalText, formatPossuiPgr, employeeCountDiverges, formatCivilDateBR } from './onboardingDisplay'
 
 const DOCUMENTO_TIPOS = [
   { value: 'pgr',        label: 'PGR' },
@@ -82,6 +82,18 @@ interface OnboardingDataView {
   submittedAt: string | null
 }
 
+// Trabalhador do onboarding, somente leitura — datas civis já em
+// "YYYY-MM-DD" (serializadas pelo backend via serializeWorker).
+interface WorkerRow {
+  id: string
+  nome: string | null
+  dataNascimento: string | null
+  sexo: 'M' | 'F' | null
+  dataAdmissao: string | null
+  cargo: string | null
+  setor: string | null
+}
+
 interface Company {
   id: string
   razaoSocial: string
@@ -108,6 +120,7 @@ interface Company {
   asaasSubscriptionId?: string | null
   subscriptionStatus?: string | null
   onboardingData?: OnboardingDataView | null
+  workers: WorkerRow[]
 }
 
 const ITEM_STATUSES = [
@@ -429,6 +442,56 @@ export default function EmpresaDetailPage() {
           <p className="text-[12px] text-gray-400 py-2">Cliente iniciou o preenchimento, mas ainda não enviou os dados.</p>
         ) : (
           <p className="text-[12px] text-gray-400 py-2">Cliente ainda não iniciou o onboarding.</p>
+        )}
+      </div>
+
+      {/* Trabalhadores cadastrados (somente leitura — nenhuma mutação de Worker pelo Admin) */}
+      <div className="bg-white rounded-[12px] border border-gray-200 p-5 mb-6">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[14px] font-semibold text-gray-800">Trabalhadores cadastrados</p>
+          <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+            {company.workers.length} {company.workers.length === 1 ? 'trabalhador atual' : 'trabalhadores atuais'}
+          </span>
+        </div>
+
+        {company.onboardingData?.status === 'enviado' && (
+          <p className="text-[11px] text-gray-400 mb-3">
+            Quantidade atual de Workers vinculados à empresa — distinta do snapshot declarado no
+            envio ({company.onboardingData.numFuncionarios ?? '—'}), que permanece fixo mesmo se a
+            lista mudar depois.
+          </p>
+        )}
+
+        {company.workers.length === 0 ? (
+          <p className="text-[12px] text-gray-400 py-4 text-center">
+            {company.onboardingData?.status === 'em_preenchimento'
+              ? 'Cliente iniciou o preenchimento, mas ainda não cadastrou nenhum trabalhador.'
+              : company.onboardingData?.status === 'enviado'
+              ? 'Nenhum trabalhador cadastrado nesta declaração.'
+              : 'Nenhum trabalhador cadastrado.'}
+          </p>
+        ) : (
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="border-b border-gray-100">
+                {['Nome', 'Nascimento', 'Sexo', 'Admissão', 'Cargo', 'Setor'].map(h => (
+                  <th key={h} className="text-left py-2 font-semibold text-[10px] text-gray-400 uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {company.workers.map(worker => (
+                <tr key={worker.id} className="border-b border-gray-50">
+                  <td className="py-2.5 font-medium">{worker.nome ?? '—'}</td>
+                  <td className="py-2.5 text-gray-600">{formatCivilDateBR(worker.dataNascimento)}</td>
+                  <td className="py-2.5 text-gray-600">{worker.sexo === 'F' ? 'Feminino' : worker.sexo === 'M' ? 'Masculino' : '—'}</td>
+                  <td className="py-2.5 text-gray-600">{formatCivilDateBR(worker.dataAdmissao)}</td>
+                  <td className="py-2.5 text-gray-600">{worker.cargo ?? '—'}</td>
+                  <td className="py-2.5 text-gray-400">{worker.setor ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 

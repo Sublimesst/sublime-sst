@@ -84,16 +84,22 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Imutabilidade no Portal do Cliente após o envio (mutações de dados gerais e de `Worker` bloqueadas; leitura continua disponível)
   - Validação controlada em Produção (Gates A–E, 2026-08-11) com fixture 100% sintética, integralmente removida ao final
 - **Critério de aceite:** atendido para esta tranche
-- **Fora desta tranche (pendente em frente separada):** Admin Workers
-  (visualização/listagem no backoffice), exportação compatível com SOC,
-  backoffice completo — ver seção "Backoffice completo" abaixo
+- **Concluído em tranche separada:** Admin Workers (visualização/listagem
+  read-only dos Workers no detalhe da Company, no Admin) — PR #28,
+  mergeada e validada em Produção em 2026-08-11
+- **Fora desta tranche (pendente em frente separada):** exportação
+  compatível com SOC, backoffice completo — ver seção "Backoffice
+  completo" abaixo
 - **Bloqueia novo cliente:** sim
 
 ### Backoffice completo
 
 - **Estado:** pendente
+- **Concluído:**
+  - Visualização/listagem read-only dos Workers do onboarding individual
+    no detalhe da Company, no Admin — PR #28, validada em Produção em
+    2026-08-11
 - **Pendente (inclui, sem se limitar a):**
-  - Visualização/listagem operacional dos Workers do onboarding individual no Admin
   - Exportação compatível com SOC dos dados de Worker/onboarding
 - **Critério de aceite:**
   - Todos os dados fornecidos por clientes e parceiros acessíveis via Admin ou exportação

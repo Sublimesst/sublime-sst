@@ -7,7 +7,7 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `83b3f5feab1e077191e97bb813c9fa1c681a278e`
+**SHA:** `5951707b90aea2df8f0124ae09dcb6f6556e7b65`
 **Data de validação:** 2026-08-11
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
@@ -145,9 +145,46 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   pré-existentes protegidos (ver Tranche 1 acima) permaneceram inalterados
   (confirmado por digest), e os 7 objetos órfãos de storage já conhecidos
   permanecem 7 e fora do escopo desta validação. **Admin Workers**
-  (visualização/listagem operacional dos trabalhadores no backoffice) e
-  **exportação compatível com SOC** não foram implementados nesta tranche —
-  seguem pendentes (ver `docs/MVP_BACKLOG.md`, "Backoffice completo").
+  (visualização/listagem operacional dos trabalhadores no backoffice) não
+  foi implementado nesta tranche — concluído e validado separadamente pela
+  PR #28 (ver item abaixo). **Exportação compatível com SOC** não foi
+  implementada nesta tranche e segue pendente (ver `docs/MVP_BACKLOG.md`,
+  "Backoffice completo").
+- **Admin Workers — visualização/listagem read-only dos Workers no
+  backoffice — PR #28 mergeada e validada em Produção (2026-08-11):** o
+  detalhe da Company no Admin passou a exibir os `Worker` cadastrados no
+  onboarding individual, carregados exclusivamente pelo relacionamento da
+  Company consultada (isolamento estrutural, sem endpoint paralelo), com
+  seleção explícita apenas dos campos já existentes (nome, data de
+  nascimento, sexo, data de admissão, cargo, setor). A visualização é
+  exclusivamente read-only: nenhuma rota administrativa de mutação de
+  `Worker` foi criada, e nenhum controle de criar/editar/excluir `Worker`
+  foi adicionado à UI. `Company.numFuncionarios` (contratado),
+  `OnboardingData.numFuncionarios` (snapshot declarado no envio) e a
+  contagem atual de `Worker` (`workers.length`) permanecem três conceitos
+  independentes, exibidos separadamente. **Validação em Produção
+  (2026-08-11), estritamente read-only:** smoke automatizado confirmou `/`
+  e `/admin/empresas` respondendo HTTP 200, sem nenhum HTTP 500
+  relacionado, e a proteção administrativa permanecendo ativa (401 sem
+  credencial válida); a validação autenticada programática foi
+  interrompida corretamente porque o secret de Produção não estava
+  disponível no ambiente local, sem tentativa de contornar essa limitação.
+  Em complemento, uma validação visual manual autenticada foi realizada
+  por humano pelo fluxo normal do Admin, abrindo uma Company de teste já
+  existente sem qualquer mutação: a seção "Trabalhadores cadastrados"
+  estava visível, mostrando quantidade contratada, snapshot declarado e
+  quantidade atual como conceitos separados, sem nenhum controle de
+  criar/editar/excluir; a evidência observada tinha zero Workers atuais,
+  validando corretamente o estado vazio (sem erro). Nenhuma escrita,
+  fixture, alteração financeira, chamada à Asaas ou mudança de dados foi
+  feita em nenhuma das duas validações. **O caminho visual com pelo menos
+  1 Worker atualmente existente não foi exercitado dinamicamente em
+  Produção nesta validação** — permanece coberto pelos 32 testes
+  automatizados focados da tranche, pelo Preview aprovado e pela revisão
+  estrutural do diff; essa limitação não invalida a tranche, classificada
+  como **validada em Produção — read-only**. Esta tranche não conclui
+  "Backoffice completo": exportação compatível com SOC continua pendente
+  (ver `docs/MVP_BACKLOG.md`).
 
 ---
 
@@ -169,7 +206,6 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   - Validação ponta a ponta do fluxo completo com geração real de PDF em
     Produção: ainda não exercitada (o smoke read-only não gera PDF, por
     exigir evento real com efeitos persistentes)
-- Painel Admin com dados do onboarding: implantado em Produção; validação visual manual ainda pendente
 
 ---
 
@@ -182,10 +218,12 @@ bloqueado até a conclusão de todas essas pendências do bloqueador Contrato
 e PDF.
 
 O Onboarding Individual dos Trabalhadores (PR #26) está concluído e
-validado em Produção. Admin Workers (visualização/listagem no backoffice)
-e a exportação compatível com SOC continuam pendentes, dentro do
-bloqueador "Backoffice completo" já registrado em `docs/MVP_BACKLOG.md`;
-os demais bloqueadores P0 permanecem conforme já priorizado nesse
+validado em Produção. Admin Workers (visualização/listagem read-only no
+backoffice, PR #28) também está concluído e validado em Produção. A
+exportação compatível com SOC continua pendente, dentro do bloqueador
+"Backoffice completo" já registrado em `docs/MVP_BACKLOG.md` — esse
+bloqueador segue pendente enquanto a exportação SOC não for implementada.
+Os demais bloqueadores P0 permanecem conforme já priorizado nesse
 documento.
 
 ---

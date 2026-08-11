@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { verifyAdminSecret } from '@/lib/adminAuth'
+import { serializeWorker } from '@/lib/onboardingWorkers'
 
 const VALID_STATUSES = [
   'pending',
@@ -47,11 +48,30 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           submittedAt: true,
         },
       },
+      // Read-only no Admin: Worker nunca é criado/editado/excluído por aqui.
+      // orderBy determinístico simples (ordem de cadastro), sem regra de
+      // negócio nova.
+      workers: {
+        select: {
+          id: true,
+          nome: true,
+          dataNascimento: true,
+          sexo: true,
+          dataAdmissao: true,
+          cargo: true,
+          setor: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      },
     },
   })
   if (!company) return NextResponse.json({ success: false, error: 'Empresa não encontrada.' }, { status: 404 })
 
-  return NextResponse.json({ success: true, data: company })
+  const { workers, ...companyRest } = company
+  return NextResponse.json({
+    success: true,
+    data: { ...companyRest, workers: workers.map(serializeWorker) },
+  })
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {

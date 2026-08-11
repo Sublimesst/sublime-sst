@@ -19,7 +19,7 @@ interface Company {
   mensalidadeValor: number
   plan?: { label: string; monthlyPrice: number } | null
   payments: { type: string; status: string; checkoutUrl?: string | null }[]
-  onboardingData?: { submittedAt: string } | null
+  onboardingData?: { status: string; submittedAt: string | null } | null
   partner?: { id: string; name: string; code: string } | null
 }
 
@@ -114,7 +114,7 @@ export default function EmpresasPage() {
         c.ltcatAddon ? 'Sim' : 'Não',
         STATUS_LABELS[c.status]?.label ?? c.status,
         c.reviewedBy ?? '—',
-        c.onboardingData ? 'Sim' : 'Não',
+        c.onboardingData?.status === 'enviado' ? 'Sim' : 'Não',
         formatDate(c.createdAt),
       ]),
     ]
@@ -216,10 +216,13 @@ export default function EmpresasPage() {
                         {c.reviewedBy && <p className="text-[10px] text-gray-400 mt-0.5">↳ {c.reviewedBy}</p>}
                       </td>
                       <td className="px-5 py-3.5">
-                        {c.onboardingData
-                          ? <span className="text-green-600 text-[11px] font-medium">✅ Preenchido</span>
-                          : <span className="text-amber-600 text-[11px] font-medium">⏳ Pendente</span>
-                        }
+                        {c.onboardingData?.status === 'enviado' ? (
+                          <span className="text-green-600 text-[11px] font-medium">✅ Preenchido</span>
+                        ) : c.onboardingData?.status === 'em_preenchimento' ? (
+                          <span className="text-blue-600 text-[11px] font-medium">🟡 Em preenchimento</span>
+                        ) : (
+                          <span className="text-amber-600 text-[11px] font-medium">⏳ Pendente</span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         {implantacao ? (

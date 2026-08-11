@@ -14,9 +14,9 @@ datasource db {
 // ── PLANOS ──────────────────────────────────────────────────
 model Plan {
   id           String   @id @default(cuid())
-  name         String   // "1-5" | "6-10" | "11-20"
-  label        String   // "1 a 5 funcionários"
-  monthlyPrice Int      // em centavos
+  name         String // "1-5" | "6-10" | "11-20"
+  label        String // "1 a 5 funcionários"
+  monthlyPrice Int // em centavos
   maxEmployees Int
   minEmployees Int
   active       Boolean  @default(true)
@@ -30,20 +30,20 @@ model Plan {
 
 // ── CATÁLOGO CNAE ────────────────────────────────────────────
 model CnaeCatalog {
-  id                  String   @id @default(cuid())
-  code                String   @unique // "69.20-6"
+  id                  String    @id @default(cuid())
+  code                String    @unique // "69.20-6"
   description         String
-  grauRiscoNr4        Int      @default(1)
+  grauRiscoNr4        Int       @default(1)
   sourcePagePdf       Int?
-  onlineCatalogStatus String   @default("pending") // approved | pending | blocked
-  eligivelOnline      Boolean  @default(false)
+  onlineCatalogStatus String    @default("pending") // approved | pending | blocked
+  eligivelOnline      Boolean   @default(false)
   notes               String?
   approvedBy          String?
   approvedAt          DateTime?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  companies           Company[]
+  companies Company[]
 
   @@map("cnae_catalog")
 }
@@ -64,10 +64,10 @@ model Lead {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  partner              Partner?              @relation(fields: [partnerId], references: [id])
+  partner                Partner?                @relation(fields: [partnerId], references: [id])
   eligibilityAssessments EligibilityAssessment[]
-  company              Company?
-  contactRequests      ContactRequest[]
+  company                Company?
+  contactRequests        ContactRequest[]
 
   @@index([partnerId])
   @@index([email])
@@ -76,22 +76,22 @@ model Lead {
 
 // ── AVALIAÇÕES DE ELEGIBILIDADE ──────────────────────────────
 model EligibilityAssessment {
-  id               String   @id @default(cuid())
-  leadId           String
-  cnae             String
-  cnaeCode         String
-  employees        String   // "1-5" | "6-10" | "11-20" | "21+"
-  usesMachines     Boolean
-  usesChemicals    Boolean
-  worksAtHeight    Boolean
-  hasExternalWork  Boolean
-  declaration      Boolean
-  eligible         Boolean
-  reasons          String[]
-  resultShownAt    DateTime?
-  ipAddress        String?
-  userAgent        String?
-  createdAt        DateTime @default(now())
+  id              String    @id @default(cuid())
+  leadId          String
+  cnae            String
+  cnaeCode        String
+  employees       String // "1-5" | "6-10" | "11-20" | "21+"
+  usesMachines    Boolean
+  usesChemicals   Boolean
+  worksAtHeight   Boolean
+  hasExternalWork Boolean
+  declaration     Boolean
+  eligible        Boolean
+  reasons         String[]
+  resultShownAt   DateTime?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime  @default(now())
 
   lead Lead @relation(fields: [leadId], references: [id])
 
@@ -100,28 +100,28 @@ model EligibilityAssessment {
 
 // ── EMPRESAS ─────────────────────────────────────────────────
 model Company {
-  id              String   @id @default(cuid())
-  leadId          String   @unique
-  planId          String?
-  cnaeId          String?
-  cnpj            String   @unique
-  razaoSocial     String
-  nomeFantasia    String?
-  responsavel     String
-  email           String
-  whatsapp        String
-  cep             String
-  cidade          String
-  estado          String
-  endereco        String
-  numFuncionarios Int
-  cargos          String?
-  observations    String?
-  partnerId       String?
-  source          String   @default("site")
-  implantacaoValor Int     @default(19900)
-  implantacaoPromo Boolean @default(false)
-  promoDeadline   DateTime?
+  id               String    @id @default(cuid())
+  leadId           String    @unique
+  planId           String?
+  cnaeId           String?
+  cnpj             String    @unique
+  razaoSocial      String
+  nomeFantasia     String?
+  responsavel      String
+  email            String
+  whatsapp         String
+  cep              String
+  cidade           String
+  estado           String
+  endereco         String
+  numFuncionarios  Int
+  cargos           String?
+  observations     String?
+  partnerId        String?
+  source           String    @default("site")
+  implantacaoValor Int       @default(19900)
+  implantacaoPromo Boolean   @default(false)
+  promoDeadline    DateTime?
   // Snapshot da mensalidade contratada (centavos) — congelado no cadastro,
   // NUNCA relido de pricing.ts depois. Reprecificar pricing.ts só afeta
   // contratações novas; clientes existentes mantêm este valor para sempre.
@@ -129,28 +129,28 @@ model Company {
   mensalidadeValor Int
 
   // Plano e contrato
-  planType             String?   // "essencial" | "premium"
+  planType             String? // "essencial" | "premium"
   ltcatAddon           Boolean   @default(false) // add-on LTCAT contratado (R$ 450)
   contractAcceptedAt   DateTime?
   contractAcceptanceIp String?
   contractAcceptanceUa String?
   contractVersion      String?
-  contractHash         String?   // SHA-256 do PDF do contrato (prova imutável)
+  contractHash         String? // SHA-256 do PDF do contrato (prova imutável)
 
   // Pipeline de implantação
   // pending | onboarding_pending | in_production | in_review | documents_delivered | active | overdue | suspended | migrating | cancelled
   status               String    @default("pending")
-  reviewedBy           String?   // técnico responsável pela revisão antes de liberar documentos
+  reviewedBy           String? // técnico responsável pela revisão antes de liberar documentos
   reviewedAt           DateTime?
   documentsDeliveredAt DateTime? // preparação P1: setado quando status vira documents_delivered pela 1ª vez
 
   // Assinatura recorrente Asaas (E4)
   asaasCustomerId     String?
-  asaasSubscriptionId String?   @unique
-  subscriptionStatus  String?   // active | overdue | inactive — null = assinatura nunca criada
+  asaasSubscriptionId String? @unique
+  subscriptionStatus  String? // active | overdue | inactive — null = assinatura nunca criada
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   lead                 Lead                  @relation(fields: [leadId], references: [id])
   plan                 Plan?                 @relation(fields: [planId], references: [id])
@@ -165,6 +165,7 @@ model Company {
   commissions          Commission[]
   documents            Document[]
   cancellationRequests CancellationRequest[]
+  workers              Worker[]
 
   @@map("companies")
 }
@@ -196,7 +197,7 @@ model ImplantacaoChecklist {
   osEpiConcluidoPor String?
 
   // LTCAT (apenas quando ltcatAddon = true)
-  ltcatStatus       String?   // null = não aplicável
+  ltcatStatus       String? // null = não aplicável
   ltcatConcluidoEm  DateTime?
   ltcatConcluidoPor String?
 
@@ -214,8 +215,8 @@ model EsocialLog {
   id        String @id @default(cuid())
   companyId String
 
-  tipoEvento   String    // S-2210 | S-2220 | S-2240
-  protocolo    String?   // protocolo do eSocial
+  tipoEvento   String // S-2210 | S-2220 | S-2240
+  protocolo    String? // protocolo do eSocial
   status       String    @default("pending") // pending | enviado | confirmado | erro
   descricao    String?
   enviadoEm    DateTime?
@@ -232,13 +233,13 @@ model EsocialLog {
 
 // ── LOG DE ACESSO A DOCUMENTOS (auditoria LGPD) ───────────────
 model DocumentAccessLog {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   companyId String
   sessionId String?
 
-  tipoDocumento String  // pgr | pcmso | declaracao | os_epi | ltcat | contrato
+  tipoDocumento String // pgr | pcmso | declaracao | os_epi | ltcat | contrato
   nomeDocumento String?
-  acao          String  @default("download") // view | download
+  acao          String   @default("download") // view | download
   ip            String?
   userAgent     String?
   accessedAt    DateTime @default(now())
@@ -256,11 +257,11 @@ model DocumentAccessLog {
 model Document {
   id              String   @id @default(cuid())
   companyId       String
-  tipoDocumento   String   // pgr | pcmso | declaracao | os_epi | ltcat | contrato
+  tipoDocumento   String // pgr | pcmso | declaracao | os_epi | ltcat | contrato
   nomeArquivo     String
   mimeType        String
   tamanhoBytes    Int
-  storageProvider String   // "db" (interino, ver src/lib/storage/dbProvider.ts)
+  storageProvider String // "db" (interino, ver src/lib/storage/dbProvider.ts)
   storageKey      String   @unique
   uploadedBy      String?
   uploadedAt      DateTime @default(now())
@@ -309,8 +310,8 @@ model CancellationRequest {
 
 // ── PARCEIROS ────────────────────────────────────────────────
 model Partner {
-  id              String   @id @default(cuid())
-  code            String   @unique @default(cuid())
+  id              String  @id @default(cuid())
+  code            String  @unique @default(cuid())
   name            String
   office          String
   cnpj            String?
@@ -319,22 +320,22 @@ model Partner {
   city            String?
   state           String?
   clientsEstimate Int?
-  tier            String   @default("comum") // comum | recorrente | estratégico
-  status          String   @default("pending") // pending | active | inactive
+  tier            String  @default("comum") // comum | recorrente | estratégico
+  status          String  @default("pending") // pending | active | inactive
   notes           String?
 
   // Aceite eletrônico do Termo de Parceria
   termsAcceptedAt   DateTime?
   termsAcceptanceIp String?
   termsVersion      String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  leads           Lead[]
-  referrals       PartnerReferral[]
-  companies       Company[]
-  sessions        PartnerSession[]
-  commissions     Commission[]
+  leads       Lead[]
+  referrals   PartnerReferral[]
+  companies   Company[]
+  sessions    PartnerSession[]
+  commissions Commission[]
 
   @@map("partners")
 }
@@ -356,21 +357,21 @@ model PartnerSession {
 
 // ── INDICAÇÕES DE PARCEIROS ──────────────────────────────────
 model PartnerReferral {
-  id              String   @id @default(cuid())
-  partnerId       String
-  companyName     String
-  cnpj            String?
-  contactName     String?
-  phone           String?
-  email           String?
-  employeesEst    Int?
-  observations    String?
-  status          String   @default("pending") // pending | contacted | converted | lost
-  convertedAt     DateTime?
-  rewardAmount    Int?
-  rewardPaidAt    DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String    @id @default(cuid())
+  partnerId    String
+  companyName  String
+  cnpj         String?
+  contactName  String?
+  phone        String?
+  email        String?
+  employeesEst Int?
+  observations String?
+  status       String    @default("pending") // pending | contacted | converted | lost
+  convertedAt  DateTime?
+  rewardAmount Int?
+  rewardPaidAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   partner Partner @relation(fields: [partnerId], references: [id])
 
@@ -379,22 +380,22 @@ model PartnerReferral {
 
 // ── COMISSÕES DE PARCEIROS ───────────────────────────────────
 model Commission {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   partnerId String
   companyId String
   paymentId String?
 
-  mensalidadeNum  Int    // 1 a 12
-  mensalidadeLiq  Int    // centavos (líquido após impostos/taxas)
-  percentual      Int    @default(10)
-  valorComissao   Int    // centavos
+  mensalidadeNum Int // 1 a 12
+  mensalidadeLiq Int // centavos (líquido após impostos/taxas)
+  percentual     Int @default(10)
+  valorComissao  Int // centavos
 
   // em_carencia (30 dias) | liberada | paga | estornada
-  status      String    @default("em_carencia")
-  liberadaEm  DateTime?
-  pagaEm      DateTime?
+  status     String    @default("em_carencia")
+  liberadaEm DateTime?
+  pagaEm     DateTime?
 
-  referencia  String?   // ex: "2026-08" (ano-mês da mensalidade)
+  referencia  String? // ex: "2026-08" (ano-mês da mensalidade)
   observacoes String?
 
   createdAt DateTime @default(now())
@@ -411,23 +412,23 @@ model Commission {
 
 // ── PAGAMENTOS ───────────────────────────────────────────────
 model Payment {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   companyId         String
-  asaasId           String?  @unique
-  externalReference String?  // ecoado pela Asaas (= companyId, propagado da assinatura) — usado p/ reconciliar mensalidade desconhecida
-  type              String   // implantacao | mensalidade
-  amount            Int      // centavos
-  status            String   @default("pending") // pending | confirmed | failed | refunded
+  asaasId           String?   @unique
+  externalReference String? // ecoado pela Asaas (= companyId, propagado da assinatura) — usado p/ reconciliar mensalidade desconhecida
+  type              String // implantacao | mensalidade
+  amount            Int // centavos
+  status            String    @default("pending") // pending | confirmed | failed | refunded
   dueDate           DateTime?
   paidAt            DateTime?
   checkoutUrl       String?
   invoiceUrl        String?
   billingType       String?
   notes             String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  company     Company    @relation(fields: [companyId], references: [id])
+  company     Company      @relation(fields: [companyId], references: [id])
   commissions Commission[]
 
   @@index([companyId, type, status])
@@ -451,19 +452,58 @@ model ClientSession {
 
 // ── DADOS DE ONBOARDING ──────────────────────────────────────
 model OnboardingData {
-  id              String   @id @default(cuid())
-  companyId       String   @unique
-  numFuncionarios Int
+  id        String @id @default(cuid())
+  companyId String @unique
+
+  // em_preenchimento | enviado — default "enviado" é proposital: preserva a
+  // semântica histórica dos registros já existentes, todos criados só no
+  // momento do envio final pelo código anterior a esta tranche. Fluxos novos
+  // de rascunho sempre definem "em_preenchimento" explicitamente na escrita.
+  status String @default("enviado")
+
+  // Snapshot da quantidade de trabalhadores efetivamente declarada no envio
+  // (= count(Worker) no instante do envio, congelado — nunca recalculado
+  // depois). Nullable porque, durante o rascunho, ainda não há snapshot;
+  // deixou de ser digitado pelo cliente.
+  numFuncionarios Int?
   cargos          String?
   turnoTrabalho   String?
   observacoes     String?
   dataUltimoPcmso String?
-  possuiPgr       Boolean  @default(false)
-  submittedAt     DateTime @default(now())
+  // null = ainda não respondido (rascunho); true/false só após resposta
+  // explícita do cliente — obrigatório no envio.
+  possuiPgr       Boolean?
+  submittedAt     DateTime?
 
   company Company @relation(fields: [companyId], references: [id])
 
   @@map("onboarding_data")
+}
+
+// ── TRABALHADORES INDIVIDUAIS DO ONBOARDING ───────────────────
+// Um registro por trabalhador declarado pelo cliente durante o onboarding
+// individual. Ligado diretamente à Company (não a OnboardingData) para não
+// depender de OnboardingData já existir ao salvar o 1º rascunho de Worker.
+// Campos nullable durante o rascunho; obrigatoriedade de envio é validada
+// só na aplicação (mesmo padrão já usado em OnboardingData).
+model Worker {
+  id        String @id @default(cuid())
+  companyId String
+
+  nome           String?
+  dataNascimento DateTime? @db.Date
+  sexo           String? // "M" | "F"
+  dataAdmissao   DateTime? @db.Date
+  cargo          String?
+  setor          String? // opcional mesmo no envio
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("workers")
 }
 
 // ── SOLICITAÇÕES DE CONTATO ───────────────────────────────────

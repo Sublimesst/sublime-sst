@@ -95,7 +95,9 @@ function getSteps(
 ): Step[] {
   const hasPendingPayment = company.payments.some(p => p.type === 'implantacao' && p.status === 'pending')
   const hasConfirmedPayment = company.payments.some(p => p.type === 'implantacao' && p.status === 'confirmed')
-  const hasOnboarding = !!company.onboardingData
+  // Um rascunho em andamento (status "em_preenchimento") ainda não conta
+  // como etapa concluída — só o envio final ("enviado") avança o passo.
+  const hasOnboarding = company.onboardingData?.status === 'enviado'
   const isActive = company.status === 'active'
 
   return [
@@ -148,7 +150,7 @@ export default async function DashboardPage() {
 
   const financialState = deriveFinancialActivationState(company.status, company.payments)
   const steps = getSteps(company, financialState.financiallyComplete)
-  const needsOnboarding = financialState.financiallyComplete && !company.onboardingData
+  const needsOnboarding = financialState.financiallyComplete && company.onboardingData?.status !== 'enviado'
 
   const monthly = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(company.mensalidadeValor / 100)
 
@@ -255,7 +257,7 @@ export default async function DashboardPage() {
             {company.documents.length === 0 ? (
               <>
                 <p className="text-[14px] text-gray-700">
-                  {company.onboardingData ? 'Em elaboração' : 'Aguardando dados'}
+                  {company.onboardingData?.status === 'enviado' ? 'Em elaboração' : 'Aguardando dados'}
                 </p>
                 <p className="text-[12px] text-gray-500 mt-1">PGR · PCMSO · ASOs</p>
               </>

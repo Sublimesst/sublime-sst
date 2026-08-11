@@ -32,6 +32,7 @@ function detailRequest(secret = 'correct-secret') {
 const PARAMS = { params: { id: 'company_1' } }
 
 const ONBOARDING_FIXTURE = {
+  status: 'enviado',
   numFuncionarios: 5,
   cargos: 'Analista, Motorista',
   turnoTrabalho: 'Diurno',
@@ -97,6 +98,7 @@ describe('GET /api/admin/empresas/[id] — onboardingData', () => {
       include: expect.objectContaining({
         onboardingData: {
           select: {
+            status: true,
             numFuncionarios: true,
             cargos: true,
             turnoTrabalho: true,

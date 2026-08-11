@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `bc11592fc17f46ecd6d3eee700e0cbed473c44d3`
-**Data de validação:** 2026-08-07
+**SHA:** `83b3f5feab1e077191e97bb813c9fa1c681a278e`
+**Data de validação:** 2026-08-11
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -111,6 +111,43 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   Asaas, e os 7 objetos órfãos de storage; nenhum deles corresponde a
   cliente real, e cada um tem destino próprio ainda pendente de
   decisão/execução em frentes separadas.
+- **Onboarding Individual dos Trabalhadores — PR #26 mergeada e validada em
+  Produção (2026-08-11):** rascunho persistente (`OnboardingData` em
+  `em_preenchimento`, retomável antes do envio); cadastro individual de
+  `Worker` por `Company` (relação 1:N), com CRUD completo (criar, ler,
+  editar, excluir) enquanto o onboarding não foi enviado, limitado a até 20
+  trabalhadores; campos obrigatórios do trabalhador revalidados no
+  servidor no momento do envio. `Company.numFuncionarios` continua
+  representando a quantidade **contratada** e nunca é sobrescrita pelo
+  onboarding; a quantidade **declarada** é a contagem real de `Worker`
+  cadastrados. Se contratado ≠ declarado, o envio sem confirmação explícita
+  retorna `quantity_mismatch` (HTTP 409) sem gravar nada; com confirmação
+  explícita, o envio é aceito sem reprecificar e sem alterar
+  `Company.numFuncionarios`. No envio bem-sucedido, `OnboardingData.status`
+  passa a `enviado`, `submittedAt` é preenchido, `OnboardingData.numFuncionarios`
+  grava o snapshot da quantidade declarada no momento do envio, e uma
+  `Company` em `pending`/`onboarding_pending` pode avançar para
+  `in_production`. Depois do envio, o Portal do Cliente bloqueia qualquer
+  mutação de dados gerais ou de `Worker` (HTTP 409,
+  `onboarding_already_submitted`); a leitura (`GET`) da declaração enviada
+  continua disponível. **Validação controlada em Produção (Gates A–E,
+  2026-08-11):** exercitou o fluxo completo — rascunho, CRUD de Worker,
+  tentativa de envio com divergência não confirmada (`quantity_mismatch`),
+  envio final com confirmação explícita, e as quatro rotas de mutação
+  pós-envio rejeitadas com `onboarding_already_submitted` — usando
+  exclusivamente uma fixture 100% sintética (nenhum dado de cliente real e
+  nenhuma operação Asaas ou financeira; no envio final, o fluxo normal
+  tentou uma notificação interna de onboarding, sem verificação
+  independente de entrega). A fixture foi integralmente
+  removida ao final da validação: contagens globais do banco retornaram ao
+  baseline anterior à criação da fixture, o schema de Produção terminou
+  `ZERO_DIFF` contra `prisma/schema.prisma` de `main`, os 2 cadastros
+  pré-existentes protegidos (ver Tranche 1 acima) permaneceram inalterados
+  (confirmado por digest), e os 7 objetos órfãos de storage já conhecidos
+  permanecem 7 e fora do escopo desta validação. **Admin Workers**
+  (visualização/listagem operacional dos trabalhadores no backoffice) e
+  **exportação compatível com SOC** não foram implementados nesta tranche —
+  seguem pendentes (ver `docs/MVP_BACKLOG.md`, "Backoffice completo").
 
 ---
 
@@ -143,6 +180,13 @@ lógica financeira de cancelamento (12 meses), Eixo B e Eixo D deve ser
 definida pela Administração de Desenvolvimento. Novo cliente real continua
 bloqueado até a conclusão de todas essas pendências do bloqueador Contrato
 e PDF.
+
+O Onboarding Individual dos Trabalhadores (PR #26) está concluído e
+validado em Produção. Admin Workers (visualização/listagem no backoffice)
+e a exportação compatível com SOC continuam pendentes, dentro do
+bloqueador "Backoffice completo" já registrado em `docs/MVP_BACKLOG.md`;
+os demais bloqueadores P0 permanecem conforme já priorizado nesse
+documento.
 
 ---
 

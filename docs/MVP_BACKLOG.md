@@ -86,25 +86,31 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 - **Critério de aceite:** atendido para esta tranche
 - **Concluído em tranche separada:** Admin Workers (visualização/listagem
   read-only dos Workers no detalhe da Company, no Admin) — PR #28,
-  mergeada e validada em Produção em 2026-08-11
-- **Fora desta tranche (pendente em frente separada):** exportação
-  compatível com SOC, backoffice completo — ver seção "Backoffice
-  completo" abaixo
+  mergeada e validada em Produção em 2026-08-11; exportação compatível
+  com SOC — PR #30, mergeada e validada em Produção em 2026-08-11 (ver
+  seção "Backoffice completo" abaixo)
 - **Bloqueia novo cliente:** sim
 
 ### Backoffice completo
 
-- **Estado:** pendente
+- **Estado:** concluído e validado em Produção
 - **Concluído:**
   - Visualização/listagem read-only dos Workers do onboarding individual
     no detalhe da Company, no Admin — PR #28, validada em Produção em
     2026-08-11
-- **Pendente (inclui, sem se limitar a):**
-  - Exportação compatível com SOC dos dados de Worker/onboarding
+  - Exportação compatível com SOC dos dados de Worker/onboarding — PR
+    #30, mergeada e validada em Produção em 2026-08-11 (geração e
+    download do arquivo `.xls` compatível com o Modelo I; a importação
+    efetiva do arquivo no software SOC ainda não foi validada — ver
+    `docs/PROJECT_STATE.md`)
 - **Critério de aceite:**
   - Todos os dados fornecidos por clientes e parceiros acessíveis via Admin ou exportação
     compatível com Excel
-- **Bloqueia novo cliente:** sim
+- **Critério atendido:** dados de Worker/onboarding acessíveis via Admin
+  (PR #28) e via exportação compatível com Excel/SOC (PR #30). A
+  exportação genérica CSV/Excel dos demais dados do Admin é item
+  separado, registrado em P1 (não incluído neste critério)
+- **Bloqueia novo cliente:** não (concluído)
 
 ### Fechamento técnico
 

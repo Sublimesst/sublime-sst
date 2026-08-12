@@ -68,7 +68,8 @@ describe('toWorkerWriteData', () => {
 
 describe('isWorkerCompleteForSubmission', () => {
   const complete = {
-    nome: 'Ana', dataNascimento: new Date('1990-01-01'), sexo: 'F', dataAdmissao: new Date('2026-01-01'), cargo: 'Analista',
+    nome: 'Ana', dataNascimento: new Date('1990-01-01'), sexo: 'F', dataAdmissao: new Date('2026-01-01'),
+    cargo: 'Analista', setor: 'Financeiro',
   }
 
   it('completo → true', () => {
@@ -93,10 +94,8 @@ describe('isWorkerCompleteForSubmission', () => {
   it('sem cargo → false', () => {
     expect(isWorkerCompleteForSubmission({ ...complete, cargo: null })).toBe(false)
   })
-  it('setor não entra na obrigatoriedade — não faz parte do input', () => {
-    // isWorkerCompleteForSubmission nem recebe "setor": confirma que a
-    // ausência dele nunca poderia bloquear o envio.
-    expect(isWorkerCompleteForSubmission(complete)).toBe(true)
+  it('sem setor → false (obrigatório no envio desde a tranche de exportação SOC)', () => {
+    expect(isWorkerCompleteForSubmission({ ...complete, setor: null })).toBe(false)
   })
 })
 

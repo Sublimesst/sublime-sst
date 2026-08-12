@@ -74,7 +74,7 @@ const CONFIRMED_PAYMENTS = [
 function worker(overrides: Partial<{ id: string; nome: string | null; dataNascimento: Date | null; sexo: string | null; dataAdmissao: Date | null; cargo: string | null; setor: string | null }> = {}) {
   return {
     id: 'w1', nome: 'Ana Teste', dataNascimento: new Date('1990-01-01'), sexo: 'F',
-    dataAdmissao: new Date('2026-01-01'), cargo: 'Analista', setor: null,
+    dataAdmissao: new Date('2026-01-01'), cargo: 'Analista', setor: 'Financeiro',
     ...overrides,
   }
 }
@@ -274,6 +274,16 @@ describe('POST — envio final', () => {
     expect(res.status).toBe(400)
     expect(body.code).toBe('workers_incomplete')
     expect(body.data.incompleteIds).toEqual(['w2'])
+  })
+
+  it('Worker sem setor → 400 workers_incomplete (setor obrigatório desde a tranche de exportação SOC)', async () => {
+    vi.mocked(prisma.onboardingData.findUnique).mockResolvedValue({ status: 'em_preenchimento', possuiPgr: true } as any)
+    vi.mocked(prisma.worker.findMany).mockResolvedValue([worker({ id: 'w1', setor: null })] as any)
+    const res = await POST(req('POST', {}))
+    const body = await res.json()
+    expect(res.status).toBe(400)
+    expect(body.code).toBe('workers_incomplete')
+    expect(body.data.incompleteIds).toEqual(['w1'])
   })
 
   it('quantidade igual → não exige confirmação, envia com sucesso', async () => {

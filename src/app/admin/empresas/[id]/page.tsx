@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowLeft, Save, Upload, Ban } from 'lucide-react'
+import { ArrowLeft, Save, Upload, Ban, Download } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { formatDate, maskCurrencyBRL } from '@/lib/utils'
 import { PRICING, faixaKeyFromCount } from '@/lib/pricing'
@@ -163,6 +163,8 @@ export default function EmpresaDetailPage() {
   const [cancelling, setCancelling] = useState(false)
   const [cancelError, setCancelError] = useState('')
   const [cancelEmailStatus, setCancelEmailStatus] = useState<{ cliente: boolean; parceiro: boolean | null } | null>(null)
+  const [exportingSoc, setExportingSoc] = useState(false)
+  const [socExportError, setSocExportError] = useState('')
 
   const headers = { 'x-admin-secret': getAdminSecret(), 'Content-Type': 'application/json' }
 
@@ -240,6 +242,35 @@ export default function EmpresaDetailPage() {
         if (fileInputRef.current) fileInputRef.current.value = ''
       }
     } finally { setUploading(false) }
+  }
+
+  // Exportação read-only compatível com o Modelo I do SOC — baixa o .xls
+  // gerado pela rota administrativa. Nenhum dado é enviado automaticamente
+  // ao SOC; é só um download manual para importação posterior.
+  async function exportSoc() {
+    setExportingSoc(true)
+    setSocExportError('')
+    try {
+      const res = await fetch(`/api/admin/empresas/${id}/export/soc`, {
+        headers: { 'x-admin-secret': getAdminSecret() },
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setSocExportError(data.error ?? 'Falha ao gerar a exportação SOC.')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'SOC-Modelo1.xls'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } finally {
+      setExportingSoc(false)
+    }
   }
 
   function reaisToCents(v: string): number | null {
@@ -449,10 +480,29 @@ export default function EmpresaDetailPage() {
       <div className="bg-white rounded-[12px] border border-gray-200 p-5 mb-6">
         <div className="flex items-center justify-between mb-1">
           <p className="text-[14px] font-semibold text-gray-800">Trabalhadores cadastrados</p>
-          <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
-            {company.workers.length} {company.workers.length === 1 ? 'trabalhador atual' : 'trabalhadores atuais'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+              {company.workers.length} {company.workers.length === 1 ? 'trabalhador atual' : 'trabalhadores atuais'}
+            </span>
+            <button
+              onClick={exportSoc}
+              disabled={exportingSoc || company.workers.length === 0}
+              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-teal border border-teal/30 rounded-[6px] px-2.5 py-1 hover:bg-teal/5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download size={13} /> {exportingSoc ? 'Gerando…' : 'Exportar para SOC'}
+            </button>
+          </div>
         </div>
+
+        {socExportError && (
+          <p className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-[6px] px-2.5 py-1.5 mb-3">
+            {socExportError}
+          </p>
+        )}
+
+        <p className="text-[10px] text-gray-400 mb-2">
+          Gera um arquivo .xls para importação manual no SOC — nenhum dado é enviado automaticamente.
+        </p>
 
         {company.onboardingData?.status === 'enviado' && (
           <p className="text-[11px] text-gray-400 mb-3">

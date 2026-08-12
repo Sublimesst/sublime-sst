@@ -7,7 +7,7 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `5951707b90aea2df8f0124ae09dcb6f6556e7b65`
+**SHA:** `3336aca8e759b683fc60948ae1876fb8b7237d48`
 **Data de validação:** 2026-08-11
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
@@ -185,6 +185,50 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   como **validada em Produção — read-only**. Esta tranche não conclui
   "Backoffice completo": exportação compatível com SOC continua pendente
   (ver `docs/MVP_BACKLOG.md`).
+- **Exportação compatível com SOC — PR #30 mergeada e validada em
+  Produção (2026-08-11):** ação "Exportar para SOC" no detalhe da Company
+  no Admin gera um arquivo `.xls` BIFF8 real (assinatura OLE2/CFB), aba
+  `ModeloI`, título `Modelo 1`, reproduzindo os 118 cabeçalhos exatos do
+  Modelo I do SOC, uma linha por `Worker`, filename fixo minimizado
+  `SOC-Modelo1.xls` (sem identificador fiscal ou interno). Somente os 8
+  campos marcados como obrigatórios no modelo real recebem valor — Nome
+  Unidade (`Company.razaoSocial`), Nome Setor (`Worker.setor`), Nome
+  Cargo, Nome Funcionário, Dt.Nascimento, Sexo, Situação (fixo `"S"`,
+  único valor possível hoje porque o sistema não tem nenhum conceito de
+  desligamento/afastamento de Worker) e Dt.Admissão; os demais 110 campos
+  permanecem vazios, sem inventar valor nem coletar dado pessoal
+  (CPF/RG/CTPS/telefone/e-mail) só para completar a planilha. Setor
+  passou a ser obrigatório também em NOVOS envios do onboarding
+  (`isWorkerCompleteForSubmission`); declarações já enviadas antes desta
+  mudança não são revalidadas nem recebem backfill. Zero Workers ou
+  qualquer Worker incompleto bloqueia a exportação inteira da Company,
+  sem gerar arquivo parcial. Endpoint administrativo é read-only,
+  protegido pela mesma autenticação admin já existente, isolado por
+  Company. **Validação em Produção (2026-08-11):** smoke sem credencial
+  confirmou a rota protegida (401); como as 2 Companies preexistentes em
+  Produção tinham zero Workers, foi criada, com autorização explícita,
+  uma fixture sintética temporária mínima (1 Lead, 1 Company, 1 Worker
+  completo) — precedida de backup lógico custom de Produção com checksum
+  e `pg_restore --list` validados, criada em transação `SERIALIZABLE` com
+  guards de preservação. O usuário acessou normalmente o Admin de
+  Produção, confirmou visualmente o Worker sintético e baixou o arquivo
+  real via "Exportar para SOC"; o arquivo `SOC-Modelo1.xls` foi analisado
+  externamente e confirmado: BIFF8 real, aba `ModeloI`, 118 cabeçalhos,
+  exatamente os 8 campos obrigatórios preenchidos, demais 110 vazios,
+  datas `DD/MM/AAAA`, sexo e situação corretos, nenhuma linha inesperada.
+  Em seguida os 3 registros sintéticos foram removidos pelos IDs exatos
+  do manifest, em nova transação `SERIALIZABLE` com guards — baseline
+  pós-limpeza confirmado idêntico ao anterior à fixture (`Company=2`,
+  `Worker=0`, `Lead=2`, `Payment=4`, `OnboardingData=1`,
+  `ClientSession=4`, `Commission=1`, `CancellationRequest=1`,
+  `Document=1`), digest dos 2 registros preexistentes protegidos com
+  `MATCH` exato, zero Asaas, zero e-mail, zero operação financeira, zero
+  storage tocado. Backup e manifest preservados fora do repositório como
+  evidência. **Ressalva:** esta validação confirma a geração e o download
+  do arquivo compatível com o Modelo I em Produção — a importação efetiva
+  desse arquivo dentro do software SOC ainda não foi exercitada e
+  permanece como validação operacional futura. Esta tranche conclui
+  "Backoffice completo" (ver `docs/MVP_BACKLOG.md`).
 
 ---
 
@@ -217,14 +261,15 @@ definida pela Administração de Desenvolvimento. Novo cliente real continua
 bloqueado até a conclusão de todas essas pendências do bloqueador Contrato
 e PDF.
 
-O Onboarding Individual dos Trabalhadores (PR #26) está concluído e
-validado em Produção. Admin Workers (visualização/listagem read-only no
-backoffice, PR #28) também está concluído e validado em Produção. A
-exportação compatível com SOC continua pendente, dentro do bloqueador
-"Backoffice completo" já registrado em `docs/MVP_BACKLOG.md` — esse
-bloqueador segue pendente enquanto a exportação SOC não for implementada.
-Os demais bloqueadores P0 permanecem conforme já priorizado nesse
-documento.
+O Onboarding Individual dos Trabalhadores (PR #26), Admin Workers
+(visualização/listagem read-only no backoffice, PR #28) e a Exportação
+compatível com SOC (PR #30) estão concluídos e validados em Produção. O
+bloqueador "Backoffice completo" está concluído (ver
+`docs/MVP_BACKLOG.md`). Os demais bloqueadores P0 (Contrato e PDF,
+Fechamento técnico) permanecem conforme já priorizado nesse documento — a
+importação efetiva do arquivo SOC dentro do software externo ainda não
+foi validada e segue como risco/validação operacional futura, sem
+bloquear novo cliente por esse motivo específico.
 
 ---
 

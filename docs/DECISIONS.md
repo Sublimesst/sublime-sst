@@ -51,12 +51,17 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 ## Dados e backoffice
 
 **Todos os dados fornecidos por clientes e parceiros devem estar acessíveis ao backoffice.**
-- Status: parcialmente implantada (exportação pendente — veja P1 do backlog)
+- Status: implantada para os dados de Worker/onboarding — acessíveis via
+  Admin (PR #28) e via exportação compatível com SOC (PR #30); a
+  exportação genérica CSV/Excel dos demais dados do Admin continua P1 do
+  backlog
 - Motivo: rastreabilidade operacional e conformidade
-- Fonte: `/admin`, onboarding
+- Fonte: `/admin`, onboarding, `src/lib/socExport/`
 
 **Parte dos dados pode estar na tela do Admin e parte em exportação compatível com Excel.**
-- Status: ainda não implementada (exportação é item P1 do backlog)
+- Status: implantada para Worker/onboarding via exportação SOC (PR #30);
+  a exportação genérica CSV/Excel dos demais dados do Admin continua item
+  P1 do backlog
 - Motivo: equilíbrio entre usabilidade e volume de dados
 
 ---
@@ -344,6 +349,46 @@ necessária para essa validação.
 - Status: implantada
 - Motivo: minimizar a superfície de dados pessoais sensíveis coletados até que exista necessidade funcional concreta (ex. geração do arquivo SOC) e tratamento LGPD correspondente
 - Fonte: `prisma/schema.prisma` (`model Worker`)
+
+---
+
+## Exportação SOC — Modelo I
+
+**A exportação compatível com o Modelo I de importação do SOC gera um arquivo `.xls` BIFF8 real, nunca XLSX renomeado.**
+- Status: implantada e validada em Produção (PR #30, 2026-08-11)
+- Motivo: o SOC exige o formato binário legado (.xls, BIFF8) para importação; substituir por XLSX ou CSV não seria compatível com o modelo real fornecido
+- Fonte: `src/lib/socExport/socExport.ts`
+
+**No MVP, uma `Company` corresponde a uma única Unidade do SOC; Nome Unidade = `Company.razaoSocial`.**
+- Status: implantada
+- Motivo: o sistema não tem conceito de múltiplas unidades por empresa; `razaoSocial` é sempre presente e determinístico, ao contrário de `nomeFantasia` (opcional)
+- Fonte: `src/app/api/admin/empresas/[id]/export/soc/route.ts`
+
+**Nome Setor = `Worker.setor`; setor é obrigatório tanto para a exportação SOC quanto em NOVOS envios do onboarding.**
+- Status: implantada
+- Motivo: Nome Setor é campo obrigatório no Modelo I do SOC; tornar setor obrigatório também no envio do onboarding evita declarações futuras inexportáveis
+- Declarações já enviadas antes desta mudança não são revalidadas retroativamente nem recebem backfill — permanecem preservadas e simplesmente não podem ser exportadas até correção operacional própria, fora de escopo desta tranche
+- Fonte: `src/lib/onboardingWorkers.ts` (`isWorkerCompleteForSubmission`)
+
+**Situação = código fixo `"S"` (Ativo) para todas as linhas, enquanto o sistema não tiver nenhum fluxo de desligamento/afastamento de Worker.**
+- Status: implantada
+- Motivo: os valores válidos do modelo são S=Ativo, N=Inativo, P=Pendente, A=Afastado, F=Férias; como não existe hoje nenhum mecanismo para marcar um Worker como desligado/afastado, todo Worker cadastrado representa, por construção, o quadro atual declarado — "S" é um fato estrutural do sistema, não um valor inventado por linha
+- Fonte: `src/lib/socExport/socExport.ts`
+
+**Somente os 8 campos marcados como obrigatórios no Modelo I real recebem valor (Nome Unidade, Nome Setor, Nome Cargo, Nome Funcionário, Dt.Nascimento, Sexo, Situação, Dt.Admissão); os demais 110 campos permanecem vazios.**
+- Status: implantada
+- Motivo: nenhum dos demais campos (13 condicionais dependentes da parametrização eSocial do cliente no SOC + 97 opcionais) tem origem determinística no sistema hoje sem inventar valor
+- Fonte: `src/lib/socExport/socTemplate.ts`
+
+**Nenhum dado pessoal adicional (CPF, RG, CTPS, telefone, e-mail) é coletado ou inventado apenas para completar a planilha SOC.**
+- Status: implantada
+- Motivo: minimização de dados pessoais — consistente com a decisão já registrada em "Onboarding individual dos trabalhadores" (nenhum CPF/telefone/e-mail/dado médico faz parte do `Worker`)
+- Fonte: `prisma/schema.prisma` (`model Worker`), seção "Onboarding individual dos trabalhadores" acima
+
+**A geração e o download do arquivo compatível com o Modelo I foram validados em Produção; a importação efetiva do arquivo dentro do software SOC ainda não foi exercitada.**
+- Status: geração/download implantada e validada; importação real no SOC não validada — risco/validação operacional futura
+- Motivo: a validação em Produção usou uma fixture sintética temporária (criada e removida sob autorização explícita, com backup lógico e guards de preservação) para confirmar a estrutura do arquivo gerado (BIFF8 real, 118 cabeçalhos, 8 campos obrigatórios corretos); não incluiu a importação do arquivo no SOC real
+- Fonte: `docs/PROJECT_STATE.md`
 
 ---
 

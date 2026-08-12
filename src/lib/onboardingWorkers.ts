@@ -129,18 +129,23 @@ export interface WorkerCompletenessInput {
   sexo: string | null
   dataAdmissao: Date | null
   cargo: string | null
+  setor: string | null
 }
 
-// Campos obrigatórios só no envio (setor fica sempre opcional). Checagem
-// feita no servidor contra o estado já persistido — nunca confia em flag
-// vinda do cliente.
+// Campos obrigatórios no envio. Setor passou a ser exigido aqui junto com os
+// demais a partir da tranche de exportação SOC (Nome Setor é campo
+// obrigatório no modelo de importação do SOC) — só vale para envios NOVOS;
+// declarações já enviadas antes desta mudança não são revalidadas
+// retroativamente. Checagem feita no servidor contra o estado já
+// persistido — nunca confia em flag vinda do cliente.
 export function isWorkerCompleteForSubmission(worker: WorkerCompletenessInput): boolean {
   return (
     !!worker.nome &&
     !!worker.dataNascimento &&
     (worker.sexo === 'M' || worker.sexo === 'F') &&
     !!worker.dataAdmissao &&
-    !!worker.cargo
+    !!worker.cargo &&
+    !!worker.setor
   )
 }
 

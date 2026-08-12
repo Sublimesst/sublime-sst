@@ -30,10 +30,11 @@ export interface SocExportWorkerCompleteness {
   setor: string | null
 }
 
-// Mesmos 5 campos já exigidos no envio do onboarding (ver
-// isWorkerCompleteForSubmission em onboardingWorkers.ts) mais setor, que só
-// é obrigatório para a exportação SOC nesta tranche — não altera a
-// obrigatoriedade de setor em declarações já enviadas antes desta mudança.
+// Mesmos 6 campos exigidos no envio do onboarding (ver
+// isWorkerCompleteForSubmission em onboardingWorkers.ts) — setor é
+// obrigatório tanto para a exportação SOC quanto para NOVOS envios do
+// onboarding desde esta tranche; declarações já enviadas antes desta
+// mudança não são revalidadas retroativamente.
 export function isWorkerReadyForSocExport(worker: SocExportWorkerCompleteness): boolean {
   return (
     !!worker.nome &&

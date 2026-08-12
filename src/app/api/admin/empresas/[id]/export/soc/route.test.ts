@@ -37,8 +37,6 @@ function worker(overrides: Partial<{
 }
 
 const COMPANY_FIXTURE = {
-  id: 'company_1',
-  cnpj: '12.345.678/0001-90',
   razaoSocial: 'Empresa Teste LTDA',
   workers: [worker()],
 }
@@ -82,6 +80,13 @@ describe('GET /api/admin/empresas/[id]/export/soc', () => {
     )
   })
 
+  it('minimização: o select não solicita cnpj nem id da Company (nome do arquivo não depende de identificador)', async () => {
+    await GET(exportRequest(), PARAMS)
+    const call = vi.mocked(prisma.company.findUnique).mock.calls[0][0] as any
+    expect(call.select).not.toHaveProperty('cnpj')
+    expect(call.select).not.toHaveProperty('id')
+  })
+
   it('zero Workers → 422 soc_export_no_workers, nenhum arquivo gerado', async () => {
     vi.mocked(prisma.company.findUnique).mockResolvedValue({ ...COMPANY_FIXTURE, workers: [] } as any)
     const res = await GET(exportRequest(), PARAMS)
@@ -123,11 +128,10 @@ describe('GET /api/admin/empresas/[id]/export/soc', () => {
     expect(buf.subarray(0, 8).toString('hex')).toBe('d0cf11e0a1b11ae1')
   })
 
-  it('cabeçalhos: Content-Type xls, Content-Disposition attachment com nome baseado no CNPJ, anti-cache', async () => {
+  it('cabeçalhos: Content-Type xls, Content-Disposition com nome fixo minimizado (sem identificador fiscal ou interno), anti-cache', async () => {
     const res = await GET(exportRequest(), PARAMS)
     expect(res.headers.get('Content-Type')).toBe('application/vnd.ms-excel')
-    expect(res.headers.get('Content-Disposition')).toContain('attachment')
-    expect(res.headers.get('Content-Disposition')).toContain('SOC-12345678000190.xls')
+    expect(res.headers.get('Content-Disposition')).toBe('attachment; filename="SOC-Modelo1.xls"')
     expect(res.headers.get('Cache-Control')).toBe('private, no-store, max-age=0')
     expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
   })

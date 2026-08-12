@@ -261,10 +261,9 @@ export default function EmpresaDetailPage() {
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
-      const cnpjDigits = company?.cnpj.replace(/\D/g, '') ?? id
       const a = document.createElement('a')
       a.href = url
-      a.download = `SOC-${cnpjDigits}.xls`
+      a.download = 'SOC-Modelo1.xls'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

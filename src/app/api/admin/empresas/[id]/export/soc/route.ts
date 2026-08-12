@@ -17,8 +17,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const company = await prisma.company.findUnique({
     where: { id: params.id },
     select: {
-      id: true,
-      cnpj: true,
       razaoSocial: true,
       workers: {
         select: { id: true, nome: true, dataNascimento: true, sexo: true, dataAdmissao: true, cargo: true, setor: true },
@@ -65,7 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }))
   )
 
-  const filename = `SOC-${company.cnpj.replace(/\D/g, '')}.xls`
+  const filename = 'SOC-Modelo1.xls'
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/vnd.ms-excel',

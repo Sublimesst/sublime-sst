@@ -356,7 +356,7 @@ necessária para essa validação.
 
 **A exportação compatível com o Modelo I de importação do SOC gera um arquivo `.xls` BIFF8 real, nunca XLSX renomeado.**
 - Status: implantada e validada em Produção (PR #30, 2026-08-11)
-- Motivo: o SOC exige o formato binário legado (.xls, BIFF8) para importação; substituir por XLSX ou CSV não seria compatível com o modelo real fornecido
+- Motivo: o Modelo I fornecido para esta integração está em `.xls` BIFF8 e não havia evidência confirmando aceitação de `.xlsx`; no MVP, foi decidido reproduzir o formato original para minimizar risco de incompatibilidade
 - Fonte: `src/lib/socExport/socExport.ts`
 
 **No MVP, uma `Company` corresponde a uma única Unidade do SOC; Nome Unidade = `Company.razaoSocial`.**

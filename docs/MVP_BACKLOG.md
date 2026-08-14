@@ -130,7 +130,10 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   — **Estado:** concluído e validado em Produção — PR #32, 2026-08-14
 
 - Redirecionamento pós-checkout para usuário do Portal
-  — **Estado:** pendente · Bloqueia abertura pública: sim
+  — **Estado:** concluído e mergeado — PR #34, 2026-08-14 (merge commit
+  `0094eed2cf9a1913ba3ec6953c03cd5cdbf4910a`). Validação estrutural/
+  read-only aceita para encerramento; caminho positivo end-to-end não
+  exercitado dinamicamente em Produção (ver `docs/PROJECT_STATE.md`)
 
 - CTA para `/cliente/login` em sessão expirada
   — **Estado:** pendente

@@ -28,8 +28,9 @@ beforeAll(async () => {
   ;({ storage } = await import('@/lib/storage'))
 })
 
-const COMPANY = { id: 'company_1', status: 'active', razaoSocial: 'Empresa Teste', cnpj: '12345678000199', clientSessionId: 'session_sintetico_1' }
+const COMPANY = { id: 'company_1', status: 'active', razaoSocial: 'Empresa Teste', cnpj: '12345678000199', clientSessionId: 'session_sintetico_1', documentsDeliveredAt: new Date('2026-08-01') }
 const COMPANY_LEGACY_COOKIE = { ...COMPANY, clientSessionId: null }
+const COMPANY_NOT_DELIVERED = { ...COMPANY, documentsDeliveredAt: null }
 const PARAMS = { params: { id: 'doc_1' } }
 
 const DOCUMENT_FIXTURE = {
@@ -38,6 +39,14 @@ const DOCUMENT_FIXTURE = {
   tipoDocumento: 'pgr',
   nomeArquivo: 'PGR.pdf',
   storageKey: 'company_1/pgr/uuid-nao-previsivel',
+}
+
+const CONTRATO_FIXTURE = {
+  id: 'doc_contrato',
+  companyId: 'company_1',
+  tipoDocumento: 'contrato',
+  nomeArquivo: 'Contrato.pdf',
+  storageKey: 'company_1/contrato/uuid-nao-previsivel',
 }
 
 function downloadRequest() {
@@ -150,5 +159,32 @@ describe('GET /api/cliente/documents/[id]/download', () => {
     const res = await GET(downloadRequest(), PARAMS)
     const headersDump = JSON.stringify(Object.fromEntries(res.headers.entries()))
     expect(headersDump).not.toContain('session_sintetico_1')
+  })
+
+  it('documento técnico antes da entrega formal (documentsDeliveredAt null) → 404, sem tocar storage nem criar log', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY_NOT_DELIVERED as any)
+    vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)
+    const res = await GET(downloadRequest(), PARAMS)
+    expect(res.status).toBe(404)
+    expect(storage.download).not.toHaveBeenCalled()
+    expect(prisma.documentAccessLog.create).not.toHaveBeenCalled()
+  })
+
+  it('documento técnico depois da entrega formal (documentsDeliveredAt preenchido) → 200, storage e log normais', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY as any)
+    vi.mocked(prisma.document.findUnique).mockResolvedValue(DOCUMENT_FIXTURE as any)
+    const res = await GET(downloadRequest(), PARAMS)
+    expect(res.status).toBe(200)
+    expect(storage.download).toHaveBeenCalled()
+    expect(prisma.documentAccessLog.create).toHaveBeenCalled()
+  })
+
+  it('contrato acessível mesmo antes da entrega formal dos documentos técnicos (fluxo próprio, não depende de documentsDeliveredAt)', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY_NOT_DELIVERED as any)
+    vi.mocked(prisma.document.findUnique).mockResolvedValue(CONTRATO_FIXTURE as any)
+    const res = await GET(downloadRequest(), PARAMS)
+    expect(res.status).toBe(200)
+    expect(storage.download).toHaveBeenCalled()
+    expect(prisma.documentAccessLog.create).toHaveBeenCalled()
   })
 })

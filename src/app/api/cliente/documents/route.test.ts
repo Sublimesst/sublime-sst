@@ -21,7 +21,8 @@ beforeAll(async () => {
   ;({ prisma } = await import('@/lib/prisma'))
 })
 
-const COMPANY = { id: 'company_1', status: 'active', razaoSocial: 'Empresa Teste', cnpj: '12345678000199' }
+const COMPANY = { id: 'company_1', status: 'active', razaoSocial: 'Empresa Teste', cnpj: '12345678000199', documentsDeliveredAt: new Date('2026-08-01') }
+const COMPANY_NOT_DELIVERED = { ...COMPANY, documentsDeliveredAt: null }
 
 function listRequest() {
   return new NextRequest('https://www.sublimesst.com/api/cliente/documents')
@@ -65,5 +66,28 @@ describe('GET /api/cliente/documents', () => {
     const body = await res.json()
     expect(res.status).toBe(200)
     expect(body.data).toEqual([])
+  })
+
+  it('antes da entrega formal (documentsDeliveredAt null): documento técnico não listado, contrato continua listado', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY_NOT_DELIVERED as any)
+    vi.mocked(prisma.document.findMany).mockResolvedValue([
+      { id: 'doc_pgr', tipoDocumento: 'pgr', nomeArquivo: 'PGR.pdf', tamanhoBytes: 100, uploadedAt: new Date() },
+      { id: 'doc_contrato', tipoDocumento: 'contrato', nomeArquivo: 'Contrato.pdf', tamanhoBytes: 100, uploadedAt: new Date() },
+    ] as any)
+    const res = await GET(listRequest())
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.data.map((d: any) => d.id)).toEqual(['doc_contrato'])
+  })
+
+  it('depois da entrega formal (documentsDeliveredAt preenchido): documento técnico listado normalmente', async () => {
+    vi.mocked(getClientSession).mockResolvedValue(COMPANY as any)
+    vi.mocked(prisma.document.findMany).mockResolvedValue([
+      { id: 'doc_pgr', tipoDocumento: 'pgr', nomeArquivo: 'PGR.pdf', tamanhoBytes: 100, uploadedAt: new Date() },
+    ] as any)
+    const res = await GET(listRequest())
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.data.map((d: any) => d.id)).toEqual(['doc_pgr'])
   })
 })

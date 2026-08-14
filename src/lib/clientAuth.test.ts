@@ -99,7 +99,7 @@ describe('getClientSession', () => {
     await getClientSession(requestWithCookie('cookie-novo'))
     expect(prisma.company.findFirst).toHaveBeenCalledWith({
       where: { id: 'company_1', NOT: { status: 'cancelled' } },
-      select: { id: true, status: true, razaoSocial: true, cnpj: true },
+      select: { id: true, status: true, razaoSocial: true, cnpj: true, documentsDeliveredAt: true },
     })
   })
 })

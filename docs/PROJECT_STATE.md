@@ -7,7 +7,7 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `a5eb9ed928e10b393d9afb7c7f7a7a5d11c515f0`
+**SHA:** `0094eed2cf9a1913ba3ec6953c03cd5cdbf4910a`
 **Data de validação:** 2026-08-14
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
@@ -276,6 +276,50 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   status (`reviewedBy` obrigatório, preenchimento automático de
   `documentsDeliveredAt`), que não foi alterado por esta PR e permanece
   coberto pela evidência anterior.**
+- **Redirecionamento pós-checkout para o Portal — PR #34 mergeada em
+  Produção (merge commit `0094eed2cf9a1913ba3ec6953c03cd5cdbf4910a`,
+  2026-08-14):** `/cadastro/continuar` passou a consultar a fonte
+  financeira central já existente (`/api/contratacao/status`) e, somente
+  quando a resposta indica simultaneamente `financiallyComplete === true`
+  e `step === 'completed'`, dispara `router.replace('/cliente/dashboard')`
+  — navegação única, protegida contra disparo repetido por
+  polling/foco/`visibilitychange`/verificação manual (reaproveita o
+  `createSingleShotGuard` já existente, sem lógica nova de guarda). O
+  cookie `sublime_checkout_continuation` permanece exclusivamente como
+  sessão de continuação da contratação; nenhuma conversão para
+  autenticação do Portal foi feita. `/cliente/dashboard` mantém sua
+  própria autenticação (`sublime_client`) inalterada — sem sessão válida
+  do Portal, o dashboard continua encaminhando para `/cliente/login` pela
+  regra já existente. **Validação local pré-merge:** testes focados 88/88
+  aprovados; suíte completa 736/741 (as 5 falhas de `eligibility.test.ts`
+  confirmadas pré-existentes na baseline via comparação com `git stash`);
+  TypeScript standalone com os mesmos 41 erros pré-existentes da baseline,
+  nenhuma regressão nova; `npm run build` aprovado; `git diff --check`
+  limpo. **Após o merge, deployment Production Vercel `Ready`:** confirmado
+  por smoke read-only — `/cadastro/continuar` respondeu HTTP 200, sem
+  cookie de sessão `/api/contratacao/status` respondeu 401 corretamente e
+  a UI exibiu "Sessão expirada" sem erro de aplicação; `/cliente/login`
+  respondeu HTTP 200 e renderizou normalmente; o bundle JS publicado de
+  `/cadastro/continuar` foi lido publicamente e contém a string
+  `/cliente/dashboard`, consistente com o código da PR #34. Nenhuma
+  escrita de banco, nenhuma chamada Asaas e nenhuma operação financeira
+  ocorreram nesta validação. **Validação estrutural/read-only aceita para
+  encerramento; caminho positivo end-to-end
+  (`financiallyComplete=true`+`step=completed` → redirect → dashboard ou
+  login) não foi exercitado dinamicamente em Produção** — não havia sessão
+  de continuação legítima nem `Company` de teste elegível disponível sem
+  mutação, e uma tentativa posterior de preparar fixture sintética
+  controlada (autorizada, mínima: 1 `Lead` + 1 `Company` + 2 `Payment`
+  confirmados, sem `ClientSession`) foi interrompida antes de qualquer
+  escrita porque o ambiente da sessão não possuía os meios seguros
+  (credenciais de banco de Produção, acesso ao painel Supabase) exigidos
+  pelo gate de backup prévio — nenhuma fixture foi criada, nenhum cleanup
+  foi necessário. **Decisão explícita do responsável pelo projeto:**
+  aceitar o encerramento desta tranche com a validação estrutural/read-only
+  obtida, evitando ampliar a superfície de risco de Produção (credenciais
+  de banco na sessão, fixture sem os gates operacionais completos) apenas
+  para provar uma navegação — risco residual de validação aceito
+  conscientemente, não uma alegação de teste dinâmico realizado.
 
 ---
 

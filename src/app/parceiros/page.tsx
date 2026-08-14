@@ -163,10 +163,10 @@ export default function ParceirosPage() {
               <div className="card p-6 mb-6">
                 <h4 className="text-[14px] font-bold text-gray-900 mb-3">📊 Acompanhe tudo pelo Portal do Parceiro</h4>
                 <p className="text-[14px] text-gray-600 leading-relaxed mb-3">
-                  Após a ativação do cadastro, você recebe acesso ao portal com seu{' '}
-                  <strong>link de indicação exclusivo</strong> — toda empresa que se cadastrar por ele é
-                  vinculada a você automaticamente. No portal você acompanha suas indicações, o extrato
-                  de comissões e encontra materiais prontos de divulgação (WhatsApp e e-mail).
+                  Assim que você conclui o cadastro e aceita o Termo de Parceria, seu acesso ao portal já
+                  fica disponível, com seu <strong>link de indicação exclusivo</strong> — toda empresa que se
+                  cadastrar por ele é vinculada a você automaticamente. No portal você acompanha suas
+                  indicações, o extrato de comissões e encontra materiais prontos de divulgação (WhatsApp e e-mail).
                 </p>
                 <a href="/parceiro/login" className="text-[13px] text-teal font-semibold hover:underline">
                   Já é parceiro? Acesse o portal →
@@ -176,7 +176,10 @@ export default function ParceirosPage() {
               {/* Who can join */}
               <div className="card p-6">
                 <h4 className="text-[14px] font-bold text-gray-900 mb-3">Quem pode ser parceiro?</h4>
-                {['Contadores e escritórios contábeis','Consultores empresariais','Associações e entidades de classe','Qualquer profissional que atenda PMEs'].map(i => (
+                <p className="text-[13px] text-gray-500 mb-3">
+                  Nesta fase, o Programa de Parceiros está disponível para parceiros com CNPJ.
+                </p>
+                {['Contadores e escritórios contábeis','Consultores empresariais','Associações e entidades de classe','Qualquer empresa (CNPJ) que atenda PMEs'].map(i => (
                   <div key={i} className="flex items-center gap-2 text-[14px] text-gray-700 mb-2 last:mb-0">
                     <span className="text-teal font-bold">✅</span> {i}
                   </div>
@@ -189,14 +192,14 @@ export default function ParceirosPage() {
               {submitted ? (
                 <div className="text-center py-8">
                   <div className="text-5xl mb-4">🤝</div>
-                  <h3 className="text-[1.2rem] font-bold text-gray-900 mb-2">Cadastro recebido!</h3>
+                  <h3 className="text-[1.2rem] font-bold text-gray-900 mb-2">Cadastro concluído!</h3>
                   <p className="text-[14px] text-gray-500 mb-4">
-                    Nossa equipe vai validar seu cadastro e entrar em contato em breve.
-                    Após a ativação, você acessa o <strong>Portal do Parceiro</strong> com seu
-                    link de indicação exclusivo e o extrato de comissões.
+                    Seu acesso ao <strong>Portal do Parceiro</strong> já está disponível, com seu link de
+                    indicação exclusivo e o extrato de comissões. Nossa equipe também pode entrar em
+                    contato para apresentar o programa.
                   </p>
                   <p className="text-[13px] text-gray-400">
-                    O acesso é feito em{' '}
+                    Acesse o portal em{' '}
                     <a href="/parceiro/login" className="text-teal hover:underline">sublimesst.com/parceiro/login</a>{' '}
                     com o e-mail informado no cadastro.
                   </p>
@@ -204,7 +207,10 @@ export default function ParceirosPage() {
               ) : (
                 <>
                   <h3 className="text-[1.1rem] font-bold text-gray-900 mb-1">Cadastro de parceiro</h3>
-                  <p className="text-[14px] text-gray-500 mb-6">Preencha o formulário e nossa equipe entrará em contato.</p>
+                  <p className="text-[14px] text-gray-500 mb-6">
+                    Preencha o formulário para ativar seu acesso ao Portal do Parceiro. Nossa equipe também
+                    pode entrar em contato para apresentar o programa.
+                  </p>
 
                   <div className="space-y-4">
                     <div>

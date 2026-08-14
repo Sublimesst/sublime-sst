@@ -5,6 +5,7 @@ import {
   getPaymentStepLabel,
   getIntermediateStatusMessage,
   createSingleShotGuard,
+  shouldRedirectToPortal,
 } from './paymentCta'
 
 describe('canPayNow', () => {
@@ -126,6 +127,47 @@ describe('getIntermediateStatusMessage', () => {
   it('valores ausentes/nulos → null, nunca lança', () => {
     expect(getIntermediateStatusMessage(null, null)).toBeNull()
     expect(getIntermediateStatusMessage(undefined, undefined)).toBeNull()
+  })
+})
+
+describe('shouldRedirectToPortal — gate de redirecionamento pós-checkout', () => {
+  it('financiallyComplete=true + step=completed → true (único caso positivo)', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: true, step: 'completed' })).toBe(true)
+  })
+
+  it('implantação confirmada + mensalidade pendente (step2) → false', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: false, step: 'step2' })).toBe(false)
+  })
+
+  it('mensalidade confirmada sem implantação confirmada (step1) → false', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: false, step: 'step1' })).toBe(false)
+  })
+
+  it('preparing → false', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: false, step: 'preparing' })).toBe(false)
+  })
+
+  it('implantacao_issue → false', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: false, step: 'implantacao_issue' })).toBe(false)
+  })
+
+  it('mensalidade_issue → false', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: false, step: 'mensalidade_issue' })).toBe(false)
+  })
+
+  it('defensivo: financiallyComplete=true sem step=completed → false (falha fechado)', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: true, step: 'step2' })).toBe(false)
+    expect(shouldRedirectToPortal({ financiallyComplete: true, step: 'preparing' })).toBe(false)
+  })
+
+  it('defensivo: step=completed sem financiallyComplete=true → false (falha fechado)', () => {
+    expect(shouldRedirectToPortal({ financiallyComplete: false, step: 'completed' })).toBe(false)
+  })
+
+  it('payload ausente/nulo/indefinido → false, nunca lança', () => {
+    expect(shouldRedirectToPortal(null)).toBe(false)
+    expect(shouldRedirectToPortal(undefined)).toBe(false)
+    expect(shouldRedirectToPortal({})).toBe(false)
   })
 })
 

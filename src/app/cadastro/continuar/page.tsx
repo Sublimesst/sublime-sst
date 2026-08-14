@@ -17,13 +17,23 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle2, Clock, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
-import { shouldShowPaymentButton, getPaymentStepLabel, getIntermediateStatusMessage, createSingleShotGuard } from './paymentCta'
+import {
+  shouldShowPaymentButton,
+  getPaymentStepLabel,
+  getIntermediateStatusMessage,
+  createSingleShotGuard,
+  shouldRedirectToPortal,
+} from './paymentCta'
 
 const POLL_INTERVAL_MS = 5000
 const MAX_POLL_ATTEMPTS = 12
+// Destino fixo e interno — nunca aceito de URL, query string, cookie ou
+// resposta externa. Único destino autorizado após conclusão financeira.
+const PORTAL_DASHBOARD_PATH = '/cliente/dashboard'
 
 interface StatusData {
   // 'cancelled' nunca chega aqui: a API responde 403 company_cancelled antes
@@ -51,6 +61,7 @@ function formatBRL(cents: number) {
 }
 
 export default function ContinuarCadastroPage() {
+  const router = useRouter()
   const [state, setState] = useState<FetchState>({ kind: 'loading' })
   const [manualChecking, setManualChecking] = useState(false)
   const attemptsRef = useRef(0)
@@ -60,6 +71,12 @@ export default function ContinuarCadastroPage() {
   // exato momento em que a aba recupera o foco) — só uma consulta por vez.
   const isFetchingRef = useRef(false)
   const cancelledRef = useRef(false)
+  // Disparo único da navegação para o Portal: reaproveita o mesmo guard já
+  // usado para o checkout (createSingleShotGuard) — polling, foco,
+  // visibilitychange e o botão manual podem todos observar "completed" em
+  // sequência, mas só o primeiro consegue navegar.
+  const redirectGuardRef = useRef<ReturnType<typeof createSingleShotGuard> | null>(null)
+  if (!redirectGuardRef.current) redirectGuardRef.current = createSingleShotGuard()
 
   const fetchStatus = useCallback(async (options: { manual?: boolean } = {}) => {
     if (isFetchingRef.current) return
@@ -91,6 +108,17 @@ export default function ContinuarCadastroPage() {
       }
 
       setState({ kind: 'ok', data: json.data })
+
+      // Conclusão financeira comprovada pela fonte central (via
+      // /api/contratacao/status): conduz o usuário ao Portal. tryConsume()
+      // garante que, mesmo que polling/foco/visibilidade/botão manual
+      // observem "completed" em sequência, a navegação só ocorre uma vez.
+      if (shouldRedirectToPortal(json.data) && redirectGuardRef.current!.tryConsume()) {
+        if (timerRef.current) clearTimeout(timerRef.current)
+        router.replace(PORTAL_DASHBOARD_PATH)
+        return
+      }
+
       attemptsRef.current += 1
 
       const isDefinitive = DEFINITIVE_STEPS.has(json.data.step)
@@ -104,7 +132,7 @@ export default function ContinuarCadastroPage() {
       isFetchingRef.current = false
       if (options.manual) setManualChecking(false)
     }
-  }, [])
+  }, [router])
 
   useEffect(() => {
     cancelledRef.current = false

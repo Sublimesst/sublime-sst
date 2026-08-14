@@ -52,9 +52,9 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 **Nesta fase, o cadastro de Partner é somente para pessoa jurídica com CNPJ válido.**
 - Status: implantada
-- Motivo: simplificar a validação e a emissão de nota fiscal para
-  recebimento recorrente de comissão; pessoa física não faz parte do
-  fluxo operacional atual do programa de parceiros
+- Motivo: manter o fluxo operacional inicial do programa de parceiros
+  simples e compatível com o cadastro empresarial vigente, deixando
+  eventual participação de pessoa física para decisão futura específica
 - Fonte: `src/app/api/partners/route.ts`, `src/lib/utils.ts` (`validateCNPJ`)
 
 **Novo Partner com dados obrigatórios válidos e aceite do Termo de Parceria entra diretamente como `active`.**

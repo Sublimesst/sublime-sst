@@ -48,6 +48,56 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ---
 
+## Programa de Parceiros MVP
+
+**Nesta fase, o cadastro de Partner é somente para pessoa jurídica com CNPJ válido.**
+- Status: implantada
+- Motivo: manter o fluxo operacional inicial do programa de parceiros
+  simples e compatível com o cadastro empresarial vigente, deixando
+  eventual participação de pessoa física para decisão futura específica
+- Fonte: `src/app/api/partners/route.ts`, `src/lib/utils.ts` (`validateCNPJ`)
+
+**Novo Partner com dados obrigatórios válidos e aceite do Termo de Parceria entra diretamente como `active`.**
+- Status: implantada
+- `active` significa Partner apto a acessar o Portal do Parceiro e a
+  receber novas atribuições de indicação pelo código; aprovação manual
+  prévia deixou de ser o fluxo normal
+- O Admin continua podendo inativar/reativar a qualquer momento, para
+  moderação ou para registros legados criados antes desta decisão
+- Motivo: reduzir fricção operacional no cadastro sem abrir mão da
+  validação de CNPJ, do aceite do Termo e da moderação posterior pelo Admin
+- Fonte: `src/app/api/partners/route.ts`
+
+**First-touch do Partner é determinado por `Lead.partnerId` já persistido.**
+- Status: implantada
+- Um `partnerRef` (`?ref=CODE`) recebido posteriormente, inclusive no
+  cadastro final da `Company`, nunca substitui uma atribuição já
+  persistida no `Lead`; `Company.partnerId` herda exatamente o parceiro
+  já vinculado ao `Lead`
+- Motivo: impedir que um segundo parceiro "roube" uma indicação já
+  atribuída ao primeiro parceiro que efetivamente trouxe o lead
+- Fonte: `src/app/api/leads/route.ts`, `src/app/api/eligibility/route.ts`,
+  `src/app/api/leads/register/route.ts`
+
+**"Contratação concluída" no Portal do Parceiro exige o estado financeiro central `financiallyComplete`.**
+- Status: implantada
+- A existência isolada de uma `Company` vinculada ao Partner não
+  representa conversão; a classificação comercial usa
+  `deriveFinancialActivationState(...).financiallyComplete` (a mesma
+  fonte read-only já usada pelo Portal do Cliente), nunca uma regra
+  financeira paralela
+- Fonte: `src/app/api/partner/dashboard/route.ts`, `src/lib/paymentPresentation.ts`
+
+**O Portal do Parceiro opera com minimização de dados.**
+- Status: implantada
+- O payload do dashboard do parceiro não expõe CNPJ do lead, Workers,
+  onboarding, documentos, `checkoutUrl`/`invoiceUrl` ou IDs Asaas; toda
+  consulta é filtrada exclusivamente pelo Partner autenticado na sessão
+  (isolamento entre parceiros)
+- Fonte: `src/app/api/partner/dashboard/route.ts`, `src/lib/partnerAuth.ts`
+
+---
+
 ## Dados e backoffice
 
 **Todos os dados fornecidos por clientes e parceiros devem estar acessíveis ao backoffice.**

@@ -55,6 +55,20 @@ export function getIntermediateStatusMessage(
   return null
 }
 
+// ═══════════════════════════════════════════════════════════
+// Redirecionamento pós-checkout para o Portal (P1) — função pura, sem
+// navegação/JSX. Único gate autorizado: financiallyComplete E step ===
+// 'completed' simultaneamente — a mesma dupla verificação fail-closed já
+// presente na resposta de /api/contratacao/status. Nunca recalcula estado
+// financeiro; só lê o que a API já derivou da fonte central.
+// ═══════════════════════════════════════════════════════════
+export function shouldRedirectToPortal(
+  data: { financiallyComplete?: boolean; step?: string } | null | undefined
+): boolean {
+  if (!data) return false
+  return data.financiallyComplete === true && data.step === 'completed'
+}
+
 // Guarda de disparo único: protege a abertura do checkout (window.open) contra
 // duplo clique/cliques rápidos no botão "Continuar" do modal. `tryConsume()` só
 // devolve true na PRIMEIRA chamada — qualquer chamada seguinte na mesma

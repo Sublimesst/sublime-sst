@@ -228,10 +228,17 @@ export async function POST(req: NextRequest) {
 
     const dbPlan = await prisma.plan.findFirst({ where: { name: employees } })
 
-    // Resolve partner from ref code
-    let partner = data.partnerRef
-      ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
-      : null
+    // Lead.partnerId (se já persistido) é a fonte de verdade do first-touch —
+    // foi atribuído antes, em /api/leads ou /api/eligibility, e nenhum
+    // partnerRef desta própria request pode substituí-lo. Sem essa checagem,
+    // um segundo `?ref=` chegando só nesta etapa "roubava" a indicação de quem
+    // trouxe o lead primeiro. Só quando o lead ainda não tem partnerId (first
+    // touch nunca aconteceu antes) um partnerRef desta request é considerado.
+    let partner = lead.partnerId
+      ? await prisma.partner.findUnique({ where: { id: lead.partnerId } })
+      : (data.partnerRef
+          ? await prisma.partner.findFirst({ where: { code: data.partnerRef, status: 'active' } })
+          : null)
 
     // Autoindicação: parceiro não pode se indicar usando o próprio CNPJ. Ignora
     // o vínculo (segue como se não houvesse ?ref=) — não bloqueia o cadastro,
@@ -407,7 +414,10 @@ export async function POST(req: NextRequest) {
 
     await prisma.lead.update({
       where: { id: lead.id },
-      data: { status: 'registered', ...(partner ? { partnerId: partner.id } : {}) },
+      // Só grava partnerId aqui quando é a primeira atribuição (lead.partnerId
+      // ainda não existia) — se já vinha do Lead, é reafirmação redundante do
+      // mesmo valor já persistido, não uma escrita nova.
+      data: { status: 'registered', ...(partner && !lead.partnerId ? { partnerId: partner.id } : {}) },
     })
 
     // Sessão de continuação é um extra de conveniência — se falhar (ex.: secret

@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Download, RefreshCw } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { formatDate, maskCNPJ } from '@/lib/utils'
 
 interface Partner {
   id: string; name: string; office: string; email: string; whatsapp: string
   city: string; state: string; status: string; code: string; createdAt: string
   clientsEstimate: number | null
+  cnpj: string | null
+  termsAcceptedAt: string | null; termsVersion: string | null
   referrals: { id: string; companyName: string; status: string }[]
 }
 
@@ -138,6 +140,16 @@ export default function AdminPartnersPage() {
               <div><span className="text-gray-500 block text-[11px] uppercase tracking-wide">WhatsApp</span><a href={`https://wa.me/${selected.whatsapp.replace(/\D/g,'')}`} target="_blank" className="text-teal">{selected.whatsapp}</a></div>
               <div><span className="text-gray-500 block text-[11px] uppercase tracking-wide">Localização</span>{selected.city}/{selected.state}</div>
               {selected.clientsEstimate && <div><span className="text-gray-500 block text-[11px] uppercase tracking-wide">Clientes aprox.</span>{selected.clientsEstimate}</div>}
+              {/* CNPJ mascarado — minimização de dados, o Admin raramente precisa do valor bruto para conferência visual */}
+              {selected.cnpj && <div><span className="text-gray-500 block text-[11px] uppercase tracking-wide">CNPJ</span>{maskCNPJ(selected.cnpj)}</div>}
+
+              {/* Evidência do aceite eletrônico do Termo de Parceria */}
+              {selected.termsAcceptedAt && (
+                <div className="text-[11px] bg-teal-pale rounded-[6px] px-2.5 py-1.5">
+                  <span className="text-gray-500 block text-[10px] uppercase tracking-wide mb-0.5">Aceite do Termo de Parceria</span>
+                  Aceito em {formatDate(selected.termsAcceptedAt)}{selected.termsVersion ? ` · versão ${selected.termsVersion}` : ''}
+                </div>
+              )}
 
               {selected.referrals.length > 0 && (
                 <>

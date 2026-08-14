@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
-import { maskCNPJ, maskPhone } from '@/lib/utils'
+import { maskCNPJ, maskPhone, validateCNPJ } from '@/lib/utils'
 import { track } from '@/lib/analytics'
 import { PRICING } from '@/lib/pricing'
 
@@ -46,6 +46,7 @@ export default function ParceirosPage() {
     const e: Record<string, string> = {}
     if (!form.name.trim()) e.name = 'Informe seu nome.'
     if (!form.office.trim()) e.office = 'Informe o escritório.'
+    if (!validateCNPJ(form.cnpj)) e.cnpj = 'CNPJ inválido.'
     if (!form.email.includes('@')) e.email = 'E-mail inválido.'
     if (form.whatsapp.replace(/\D/g,'').length < 10) e.whatsapp = 'WhatsApp inválido.'
     if (!form.city.trim()) e.city = 'Informe a cidade.'
@@ -220,9 +221,10 @@ export default function ParceirosPage() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="form-label">CNPJ</label>
-                        <input className="form-input" placeholder="00.000.000/0000-00" maxLength={18}
+                        <label className="form-label required">CNPJ</label>
+                        <input className={`form-input ${errors.cnpj ? 'error' : ''}`} placeholder="00.000.000/0000-00" maxLength={18}
                           value={form.cnpj} onChange={e => set('cnpj', maskCNPJ(e.target.value))} />
+                        {errors.cnpj && <p className="text-[12px] text-red-500 mt-1">{errors.cnpj}</p>}
                       </div>
                       <div>
                         <label className="form-label required">E-mail</label>

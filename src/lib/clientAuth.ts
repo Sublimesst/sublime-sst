@@ -17,6 +17,9 @@ export interface AuthorizedCompany {
   status: string
   razaoSocial: string
   cnpj: string
+  // Evidência persistente de entrega formal dos documentos técnicos — ver
+  // src/lib/documentVisibility.ts. Nunca deduzido do status atual.
+  documentsDeliveredAt: Date | null
   // Id da ClientSession do login atual, para diferenciar acesso do cliente
   // de acesso administrativo no DocumentAccessLog. null para cookies
   // emitidos antes desta correção (janela de compatibilidade, ver
@@ -36,7 +39,7 @@ export async function getClientSession(req: NextRequest): Promise<AuthorizedComp
 
   const company = await prisma.company.findFirst({
     where: { id: payload.companyId, NOT: { status: 'cancelled' } },
-    select: { id: true, status: true, razaoSocial: true, cnpj: true },
+    select: { id: true, status: true, razaoSocial: true, cnpj: true, documentsDeliveredAt: true },
   })
   if (!company) return null
 

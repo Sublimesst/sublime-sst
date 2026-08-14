@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getClientSession } from '@/lib/clientAuth'
+import { isDocumentVisibleToClient } from '@/lib/documentVisibility'
 
 export async function GET(req: NextRequest) {
   const company = await getClientSession(req)
@@ -14,5 +15,11 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  return NextResponse.json({ success: true, data: documents })
+  // Defesa em profundidade: mesmo gate aplicado no dashboard e no download
+  // direto — documentos técnicos só listados depois da entrega formal.
+  const visibleDocuments = documents.filter(doc =>
+    isDocumentVisibleToClient(doc.tipoDocumento, company.documentsDeliveredAt)
+  )
+
+  return NextResponse.json({ success: true, data: visibleDocuments })
 }

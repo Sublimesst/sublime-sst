@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getClientSession } from '@/lib/clientAuth'
 import { storage } from '@/lib/storage'
+import { isDocumentVisibleToClient } from '@/lib/documentVisibility'
 
 function safeFilename(name: string): string {
   return name.replace(/[\r\n"]/g, '').trim() || 'documento'
@@ -13,6 +14,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const document = await prisma.document.findUnique({ where: { id: params.id } })
   if (!document || document.companyId !== company.id) {
+    return NextResponse.json({ error: 'Documento não encontrado.' }, { status: 404 })
+  }
+
+  // Defesa em profundidade: mesmo gate do dashboard e da listagem. Recusado
+  // antes do download do storage e antes da criação do DocumentAccessLog —
+  // bloqueio nunca gera log de acesso.
+  if (!isDocumentVisibleToClient(document.tipoDocumento, company.documentsDeliveredAt)) {
     return NextResponse.json({ error: 'Documento não encontrado.' }, { status: 404 })
   }
 

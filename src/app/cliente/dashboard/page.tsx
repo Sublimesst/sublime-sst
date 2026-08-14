@@ -13,6 +13,8 @@ import {
   type PaymentStatus,
 } from '@/lib/paymentPresentation'
 import { paymentDisplayInfo } from './paymentPresentationView'
+import { getSteps } from './steps'
+import { isDocumentVisibleToClient } from '@/lib/documentVisibility'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -87,63 +89,6 @@ const DOCUMENTO_LABELS: Record<string, string> = {
   os_epi: 'OS + Fichas de EPI', ltcat: 'LTCAT', contrato: 'Contrato',
 }
 
-type Step = { label: string; description: string; done: boolean; pending: boolean }
-
-function getSteps(
-  company: NonNullable<Awaited<ReturnType<typeof getCompany>>>,
-  financiallyComplete: boolean
-): Step[] {
-  const hasPendingPayment = company.payments.some(p => p.type === 'implantacao' && p.status === 'pending')
-  const hasConfirmedPayment = company.payments.some(p => p.type === 'implantacao' && p.status === 'confirmed')
-  // Um rascunho em andamento (status "em_preenchimento") ainda não conta
-  // como etapa concluída — só o envio final ("enviado") avança o passo.
-  const hasOnboarding = company.onboardingData?.status === 'enviado'
-  const isActive = company.status === 'active'
-
-  return [
-    {
-      label: 'Contratação realizada',
-      description: 'Sua empresa foi cadastrada no Sublime Digital.',
-      done: true,
-      pending: false,
-    },
-    {
-      label: 'Pagamento da implantação',
-      description: hasConfirmedPayment
-        ? 'Pago e confirmado.'
-        : hasPendingPayment
-          ? 'Aguardando confirmação do pagamento.'
-          : 'Realize o pagamento para prosseguir.',
-      done: hasConfirmedPayment,
-      pending: hasPendingPayment,
-    },
-    {
-      label: 'Preenchimento dos dados',
-      description: hasOnboarding
-        ? 'Dados recebidos — em análise pela equipe.'
-        : financiallyComplete
-          ? 'Preencha o formulário de onboarding para iniciar a elaboração dos documentos.'
-          : 'Libera após a confirmação da implantação e da primeira mensalidade.',
-      done: hasOnboarding,
-      pending: !hasOnboarding && financiallyComplete,
-    },
-    {
-      label: 'Elaboração dos documentos',
-      description: isActive && hasOnboarding
-        ? 'Nossa equipe está elaborando seu PGR e PCMSO.'
-        : 'Aguarda preenchimento dos dados e confirmação do pagamento.',
-      done: false,
-      pending: isActive && hasOnboarding,
-    },
-    {
-      label: 'Documentos entregues',
-      description: 'PGR e PCMSO disponíveis para download no portal.',
-      done: false,
-      pending: false,
-    },
-  ]
-}
-
 export default async function DashboardPage() {
   const company = await getCompany()
   if (!company) redirect('/cliente/login')
@@ -151,6 +96,9 @@ export default async function DashboardPage() {
   const financialState = deriveFinancialActivationState(company.status, company.payments)
   const steps = getSteps(company, financialState.financiallyComplete)
   const needsOnboarding = financialState.financiallyComplete && company.onboardingData?.status !== 'enviado'
+  const visibleDocuments = company.documents.filter(doc =>
+    isDocumentVisibleToClient(doc.tipoDocumento, company.documentsDeliveredAt)
+  )
 
   const monthly = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(company.mensalidadeValor / 100)
 
@@ -254,7 +202,7 @@ export default async function DashboardPage() {
               <FileText size={15} className="text-gray-400" />
               <span className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide">Documentos</span>
             </div>
-            {company.documents.length === 0 ? (
+            {visibleDocuments.length === 0 ? (
               <>
                 <p className="text-[14px] text-gray-700">
                   {company.onboardingData?.status === 'enviado' ? 'Em elaboração' : 'Aguardando dados'}
@@ -263,7 +211,7 @@ export default async function DashboardPage() {
               </>
             ) : (
               <ul className="space-y-2">
-                {company.documents.map(doc => (
+                {visibleDocuments.map(doc => (
                   <li key={doc.id} className="flex items-center justify-between gap-2">
                     <span className="text-[13px] text-gray-700 truncate">
                       {DOCUMENTO_LABELS[doc.tipoDocumento] ?? doc.tipoDocumento}

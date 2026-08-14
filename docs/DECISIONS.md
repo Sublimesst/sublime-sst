@@ -230,6 +230,40 @@ significa que a revisão jurídica formal do contrato tenha sido realizada.**
 
 ---
 
+## Visibilidade de documentos técnicos no Portal Cliente
+
+**Para todo `Document` que não seja `contrato`, `Company.documentsDeliveredAt != null` é a evidência persistente que autoriza sua exposição no Portal Cliente.**
+- Status: implantada e validada em Produção (PR #32, 2026-08-14)
+- Motivo: documentos técnicos podem ser persistidos internamente antes da entrega formal ao cliente; a autorização não deve ser deduzida exclusivamente de `Company.status`, da existência física do `Document`, ou do upload/persistência prévia
+- Fonte: `src/lib/documentVisibility.ts`
+
+**Depois de preenchido `documentsDeliveredAt`, a disponibilidade dos documentos técnicos não deve desaparecer somente porque a Company evoluiu para outro status operacional, como `active`, `overdue`, `suspended` ou `migrating`.**
+- Status: implantada e validada em Produção (PR #32, 2026-08-14)
+- Motivo: a entrega formal é um fato já ocorrido, não uma condição atrelada ao status corrente da Company
+- Fonte: `src/lib/documentVisibility.ts`
+
+**`contrato` é exceção explícita ao gate técnico.**
+- Status: implantada
+- Motivo: possui fluxo próprio de geração/persistência/hash/imutabilidade (`src/lib/contractPersistence.ts`) e continua acessível segundo esse fluxo, sem depender de `documentsDeliveredAt`
+- Fonte: `src/lib/documentVisibility.ts`, `src/lib/contractPersistence.ts`
+
+**A mesma regra de visibilidade é aplicada em defesa em profundidade: UI/dashboard, API de listagem e download direto.**
+- Status: implantada e validada em Produção (PR #32, 2026-08-14)
+- Motivo: conhecer o `documentId` não pode contornar o gate — a UI nunca é a única proteção
+- Fonte: `src/lib/documentVisibility.ts`, dashboard do cliente, `src/app/api/cliente/documents/`, PR #32
+
+**Download bloqueado por este gate não deve produzir `DocumentAccessLog`.**
+- Status: implantada e validada em Produção (PR #32, 2026-08-14)
+- Motivo: preservar a auditoria de acesso real sem registrar tentativas que nunca chegaram a acessar o conteúdo do documento
+- Fonte: `src/app/api/cliente/documents/[id]/download/route.ts`
+
+**`in_production` e `in_review` pertencem à mesma macroetapa exibida ao cliente no Portal — elaboração/revisão dos documentos técnicos — e não criam nova obrigação para o cliente cujo onboarding já foi enviado.**
+- Status: implantada e validada em Produção (PR #32, 2026-08-14)
+- Motivo: refletir corretamente o estágio operacional real da Company sem exigir ação repetida do cliente
+- Fonte: `src/app/cliente/dashboard/steps.ts`
+
+---
+
 ## Identificação do ator em DocumentAccessLog no MVP
 
 **Cookies de cliente emitidos após a correção da atribuição do ator carregam o id da `ClientSession` do login no payload assinado, propagado internamente como `clientSessionId`.**

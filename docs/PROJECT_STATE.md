@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `3336aca8e759b683fc60948ae1876fb8b7237d48`
-**Data de validação:** 2026-08-11
+**SHA:** `a5eb9ed928e10b393d9afb7c7f7a7a5d11c515f0`
+**Data de validação:** 2026-08-14
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -229,6 +229,53 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   desse arquivo dentro do software SOC ainda não foi exercitada e
   permanece como validação operacional futura. Esta tranche conclui
   "Backoffice completo" (ver `docs/MVP_BACKLOG.md`).
+- **Portal Cliente — status `in_production`/`in_review` e liberação segura
+  de documentos — PR #32 mergeada e validada em Produção (2026-08-14):** o
+  Portal passou a reconhecer `in_production` e `in_review` como a mesma
+  macroetapa de elaboração/revisão dos documentos técnicos, sem criar
+  nenhuma ação obrigatória nova para o cliente cujo onboarding já foi
+  enviado. `Company.documentsDeliveredAt != null` passou a ser a evidência
+  persistente e única de entrega formal dos documentos técnicos (`pgr`,
+  `pcmso`, `declaracao`, `os_epi`, `ltcat`); `contrato` permanece fora
+  desse gate, acessível pelo seu fluxo próprio. A mesma regra central
+  (`src/lib/documentVisibility.ts`) é aplicada em defesa em profundidade
+  no dashboard, na listagem (`GET /api/cliente/documents`) e no download
+  direto (`GET /api/cliente/documents/[id]/download`); download de
+  documento técnico ainda não liberado é recusado com HTTP 404 antes do
+  acesso ao storage e sem criar `DocumentAccessLog`; download liberado
+  continua gerando o log normalmente. A liberação, uma vez registrada,
+  permanece reconhecida mesmo que o status evolua depois para `active` ou
+  outro estágio posterior — não depende do valor atual de `status`.
+  **Validação controlada em Produção (2026-08-14):** precedida de backup
+  lógico fresco (`pg_dump` formato custom, checksum validado, `pg_restore
+  --list` aprovado) e de baseline com guards das 2 Companies
+  pré-existentes, foi criada, com autorização explícita, uma fixture 100%
+  sintética e temporária (Lead, Company, OnboardingData, Payments locais,
+  dois Documents com storage sintético, ClientSession) para exercitar 5
+  gates diretamente no deployment real: `in_production` (dashboard e API
+  corretos, contrato acessível, técnico oculto e bloqueado com 404 sem
+  log), `in_review` (mesma macroetapa), `documents_delivered` com
+  `documentsDeliveredAt` ainda nulo (confirma que o status isolado não
+  libera o documento técnico), `documentsDeliveredAt` preenchido (técnico
+  passa a aparecer e a ser baixável, com `DocumentAccessLog`
+  correspondente), e `active` (documento já entregue permanece
+  disponível). Por fim, `cancelled` foi testado diretamente na fixture
+  para confirmar que o mesmo cookie antes válido deixa de conceder acesso
+  ao Portal — validação restrita ao gate de autenticação já existente, não
+  ao fluxo administrativo de cancelamento. A autenticação da fixture usou
+  uma `ClientSession` sintética consumida pela rota real
+  `/api/cliente/auth/verify` do deployment de Produção (sem magic link nem
+  e-mail). Nenhum HTTP 500 relacionado foi observado, nenhuma chamada à
+  Asaas ou operação financeira ocorreu, e a fixture foi integralmente
+  removida ao final: contagens de todas as tabelas tocadas retornaram
+  exatamente ao baseline, todos os registros da fixture ficaram
+  confirmadamente ausentes, e os 2 registros pré-existentes protegidos
+  permaneceram idênticos por comparação de digest. **Esta validação
+  exercitou diretamente os estados da fixture para validar o comportamento
+  do Portal — não revalida o workflow administrativo de transição de
+  status (`reviewedBy` obrigatório, preenchimento automático de
+  `documentsDeliveredAt`), que não foi alterado por esta PR e permanece
+  coberto pela evidência anterior.**
 
 ---
 

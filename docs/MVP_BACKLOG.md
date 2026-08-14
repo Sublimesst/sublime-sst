@@ -127,7 +127,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 ## P1 — Antes da abertura pública
 
 - Portal reconhece status `in_production` e exibe conteúdo correspondente
-  — **Estado:** pendente · Bloqueia abertura pública: sim
+  — **Estado:** concluído e validado em Produção — PR #32, 2026-08-14
 
 - Redirecionamento pós-checkout para usuário do Portal
   — **Estado:** pendente · Bloqueia abertura pública: sim

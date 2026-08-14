@@ -126,6 +126,31 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ## P1 — Antes da abertura pública
 
+- Portal do Parceiro / fluxo mínimo MVP
+  — **Estado:** concluído, mergeado pela PR #36 (merge commit
+  `e9feabb15843dec1c4861579f57c4dcd52997c98`) e validado em Produção por
+  smoke read-only em 2026-08-14 (ver `docs/PROJECT_STATE.md`). Cadastro
+  restrito a PJ com CNPJ obrigatório/validado/normalizado; autoativação do
+  Partner após cadastro válido e aceite do Termo (aprovação manual deixou
+  de ser o fluxo normal); login por magic-link já existente preservado;
+  painel de indicações e extrato de comissões no dashboard do parceiro;
+  first-touch determinado por `Lead.partnerId`, herdado pela `Company` sem
+  possibilidade de sobrescrita por um `partnerRef` posterior; classificação
+  de conversão ("contratação concluída") condicionada ao estado financeiro
+  central `financiallyComplete`, nunca à simples existência da `Company`;
+  isolamento das indicações/comissões pelo Partner autenticado na sessão;
+  minimização de dados no payload do Portal. Recursos avançados do
+  programa de parceiros (Parceiro Estratégico, white label, Partner PF)
+  seguem fora de escopo — ver Pós-MVP.
+
+- Alinhar Termo de Parceria ao gate operacional PJ-only do MVP
+  — **Estado:** pendente. O texto vigente de `/termos-parceria` ainda
+  identifica o parceiro como "a pessoa física ou jurídica identificada no
+  formulário de cadastro de parceiros", enquanto o cadastro (PR #36) já
+  exige CNPJ obrigatório e opera nesta fase somente para PJ. Divergência
+  registrada aqui como pendência documental/jurídica; o Termo não foi
+  alterado nesta tranche.
+
 - Portal reconhece status `in_production` e exibe conteúdo correspondente
   — **Estado:** concluído e validado em Produção — PR #32, 2026-08-14
 
@@ -172,6 +197,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 - Versionamento avançado de documentos
 - Exclusão controlada de dados com audit trail
 - XLSX avançado com múltiplas abas
-- Área logada do parceiro (login, painel de indicados, extrato de comissões)
+- Parceiro Estratégico (benefício/tier diferenciado por volume de clientes) — não implementado
+- Partner pessoa física — não implementado, fora do MVP atual (somente PJ/CNPJ)
 - White label para parceiros — requer volume mínimo de clientes validado
 - Melhorias de UX não bloqueadoras

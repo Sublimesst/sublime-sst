@@ -7,7 +7,7 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `0094eed2cf9a1913ba3ec6953c03cd5cdbf4910a`
+**SHA:** `e9feabb15843dec1c4861579f57c4dcd52997c98`
 **Data de validação:** 2026-08-14
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
@@ -320,6 +320,66 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   de banco na sessão, fixture sem os gates operacionais completos) apenas
   para provar uma navegação — risco residual de validação aceito
   conscientemente, não uma alegação de teste dinâmico realizado.
+- **Portal do Parceiro — Fluxo Mínimo MVP — PR #36 mergeada por merge
+  commit e implantada em Produção (`e9feabb15843dec1c4861579f57c4dcd52997c98`,
+  2026-08-14):** fecha o fluxo mínimo do Portal do Parceiro já existente
+  (não reconstrói o portal, não altera regra financeira de `Commission`).
+  Cadastro de parceiro restrito a PJ nesta fase: CNPJ obrigatório, validado
+  por checksum e normalizado (dígitos) no servidor para novos registros;
+  duplicidade de novos Partners (e-mail e CNPJ) checada dentro de uma
+  transação `Serializable` (mesma técnica de `runSerializable` já usada em
+  onboarding/workers), com retry em conflito de serialização — proteção
+  real contra corrida de escrita, ainda sem constraint única no schema.
+  Novo Partner com dados obrigatórios válidos e aceite do Termo de
+  Parceria entra diretamente em `status=active` — aprovação manual deixou
+  de ser o fluxo normal; o Admin continua podendo inativar/reativar a
+  qualquer momento, e Partner `inactive` não acessa o Portal nem recebe
+  nova atribuição por código. First-touch permanece determinado por
+  `Lead.partnerId` já persistido: um `partnerRef` chegando só no cadastro
+  final da Company nunca sobrescreve nem apaga uma atribuição anterior;
+  `Company.partnerId` herda exatamente o parceiro já vinculado ao Lead.
+  No dashboard do parceiro, a classificação comercial das indicações é
+  amigável (nunca expõe `Lead.status`/`Company.status` técnicos) e
+  "contratação concluída" depende de `deriveFinancialActivationState(...)
+  .financiallyComplete` (fonte financeira central read-only já usada pelo
+  Portal do Cliente) — a existência isolada de uma `Company` não é
+  conversão. Payload do Portal do Parceiro minimizado (sem CNPJ do lead,
+  Workers, onboarding, documentos, `checkoutUrl`/`invoiceUrl` ou IDs
+  Asaas); toda consulta é filtrada pelo `Partner` autenticado na sessão
+  (isolamento entre parceiros). Admin passou a exibir CNPJ mascarado e a
+  evidência do aceite do Termo (data/versão) no detalhe do parceiro. Copy
+  pública de `/parceiros` atualizada para refletir a autoativação e o
+  gate PJ/CNPJ, sem mais sugerir aprovação humana como etapa normal antes
+  do acesso ao Portal. **Validação pré-merge:** 55/55 testes focados
+  aprovados; suíte completa 769 passed / 5 failed (as 5 falhas de
+  `eligibility.test.ts` confirmadas pré-existentes na baseline via
+  `git stash` contra `origin/main`); TypeScript com os mesmos 23 erros
+  pré-existentes da baseline, nenhuma regressão nova; `npm run build`
+  aprovado; `git diff --check` limpo. **Validação read-only em Produção
+  (2026-08-14), aceita para encerramento desta tranche:** `origin/main`
+  confirmado no merge commit da PR #36; deployment Production associado
+  com status `success`; `GET /parceiros` → HTTP 200, com o CNPJ obrigatório
+  publicado e a copy PJ/autoativação confirmada no conteúdo renderizado;
+  `GET /parceiro/login` → HTTP 200, formulário de magic link presente;
+  `/parceiro/dashboard` sem sessão não expõe nenhum dado e encaminha para
+  `/parceiro/login`; `GET /api/partner/dashboard` sem sessão → HTTP 401
+  genérico; `GET /api/partners` sem `x-admin-secret` → HTTP 401 genérico;
+  nenhuma resposta 5xx nem erro de console observado; validação 100%
+  read-only (só GET), sem nenhum POST/PATCH/DELETE, cadastro, magic link,
+  login, fixture, escrita em banco ou chamada Asaas. **Esta validação NÃO
+  exercitou dinamicamente em Produção:** criação real de Partner,
+  autoativação server-side, persistência/normalização real do CNPJ,
+  deduplicação concorrente real no Postgres, envio do e-mail de boas-
+  vindas, magic link autenticado, dashboard autenticado com dados reais,
+  first-touch em Produção, isolamento dinâmico entre dois Partners reais,
+  classificação comercial com `Company`/`Payments` reais, ou inativação/
+  revogação dinâmica — esses pontos permanecem cobertos apenas por código
+  revisado e pelos testes automatizados da tranche, pendentes de eventual
+  autorização humana para smoke mutante controlado em tranche própria.
+  **Risco residual registrado:** Partners eventualmente cadastrados antes
+  desta mudança, com CNPJ salvo em formato mascarado (não normalizado),
+  podem não ser encontrados pela nova checagem de duplicidade por CNPJ
+  normalizado — nenhum backfill/migration foi feito para esse caso.
 
 ---
 

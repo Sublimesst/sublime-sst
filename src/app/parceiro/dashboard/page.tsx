@@ -7,15 +7,19 @@ import { LogOut, Copy, Check } from 'lucide-react'
 interface PartnerData {
   partner: { id: string; name: string; code: string; email: string; tier: string }
   leads: {
-    id: string; companyName: string; cnpj: string; status: string
-    converted: boolean; planType: string | null; createdAt: string
+    id: string; companyName: string
+    classification: 'indicacao_recebida' | 'elegibilidade_avaliada' | 'encaminhada_consultoria' | 'cadastro_em_andamento' | 'contratacao_concluida'
+    planType: string | null; createdAt: string
   }[]
   commissions: {
     id: string; companyName: string; mensalidadeNum: number
     valorComissao: number; status: string; liberadaEm: string | null
     pagaEm: string | null; referencia: string | null
   }[]
-  summary: { totalComissoes: number; liberadas: number; pagas: number }
+  summary: {
+    indicacoesRecebidas: number; emAndamento: number; convertidas: number
+    totalComissoes: number; liberadas: number; pagas: number
+  }
 }
 
 function formatBRL(cents: number) {
@@ -31,15 +35,17 @@ const COMMISSION_STATUS: Record<string, { label: string; color: string }> = {
   liberada:     { label: 'Liberada',      color: 'bg-blue-100 text-blue-700' },
   paga:         { label: 'Paga',          color: 'bg-green-100 text-green-700' },
   estornada:    { label: 'Estornada',     color: 'bg-red-100 text-red-700' },
+  bloqueada:    { label: 'Em análise',    color: 'bg-orange-100 text-orange-700' },
 }
 
-const LEAD_STATUS_LABEL: Record<string, string> = {
-  captured:    'Capturado',
-  assessed:    'Avaliado',
-  eligible:    'Elegível',
-  backoffice:  'Em análise',
-  registered:  'Cadastrado',
-  converted:   'Convertido',
+// Classificação comercial amigável — nunca expõe o status técnico do funil
+// (Lead.status/Company.status) diretamente ao parceiro.
+const LEAD_CLASSIFICATION: Record<string, { label: string; color: string }> = {
+  indicacao_recebida:      { label: 'Indicação recebida',                 color: 'bg-amber-100 text-amber-700' },
+  elegibilidade_avaliada:  { label: 'Elegibilidade avaliada',             color: 'bg-blue-100 text-blue-700' },
+  encaminhada_consultoria: { label: 'Encaminhada para Consultoria Sublime', color: 'bg-purple-100 text-purple-700' },
+  cadastro_em_andamento:   { label: 'Cadastro/contratação em andamento',  color: 'bg-blue-100 text-blue-700' },
+  contratacao_concluida:   { label: 'Contratação concluída',              color: 'bg-green-100 text-green-700' },
 }
 
 export default function PartnerDashboardPage() {
@@ -88,7 +94,9 @@ export default function PartnerDashboardPage() {
         <div className="max-w-[900px] mx-auto px-6 h-[68px] flex items-center justify-between">
           <div>
             <p className="font-display text-[15px] text-gray-900">{partner.name}</p>
-            <p className="text-[11px] text-gray-400">Portal do Parceiro · <span className="capitalize">{partner.tier}</span></p>
+            {/* Nunca exibir o tier técnico cru (comum/recorrente/estratégico) — nenhum benefício
+                diferenciado por tier existe hoje, e um enum interno na tela sugeriria o contrário. */}
+            <p className="text-[11px] text-gray-400">Portal do Parceiro · Parceiro Sublime</p>
           </div>
           <div className="flex items-center gap-4">
             <a href="/parceiro/materiais" className="text-[13px] text-teal hover:text-petrol font-medium">
@@ -121,7 +129,22 @@ export default function PartnerDashboardPage() {
           <p className="text-[11px] text-gray-400 mt-2">Compartilhe este link. Quando a empresa se cadastrar, você será creditado automaticamente.</p>
         </div>
 
-        {/* Summary */}
+        {/* Funil de indicações */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          {[
+            { label: 'Indicações recebidas', value: String(summary.indicacoesRecebidas), sub: 'total' },
+            { label: 'Em andamento',         value: String(summary.emAndamento),         sub: 'em contratação' },
+            { label: 'Convertidas',          value: String(summary.convertidas),         sub: 'pagamento confirmado' },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-[12px] border border-gray-200 p-5">
+              <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1">{s.label}</p>
+              <p className="text-[22px] font-display text-teal">{s.value}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{s.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Comissões */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
             { label: 'Total comissões', value: formatBRL(summary.totalComissoes), sub: 'previsto' },
@@ -171,12 +194,12 @@ export default function PartnerDashboardPage() {
                     <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
                       <td className="px-5 py-3.5">
                         <p className="font-medium text-gray-900">{l.companyName}</p>
-                        <p className="text-[11px] text-gray-400">{l.cnpj}</p>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${l.converted ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {l.converted ? 'Convertido' : LEAD_STATUS_LABEL[l.status] ?? l.status}
-                        </span>
+                        {(() => {
+                          const c = LEAD_CLASSIFICATION[l.classification]
+                          return <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${c.color}`}>{c.label}</span>
+                        })()}
                       </td>
                       <td className="px-5 py-3.5 text-gray-500 capitalize">{l.planType ?? '—'}</td>
                       <td className="px-5 py-3.5 text-gray-400 text-[11px]">{formatDate(l.createdAt)}</td>

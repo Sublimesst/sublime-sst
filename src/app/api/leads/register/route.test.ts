@@ -11,7 +11,7 @@ vi.mock('@/lib/prisma', () => ({
     lead:    { findUnique: vi.fn(), update: vi.fn() },
     company: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     plan:    { findFirst: vi.fn() },
-    partner: { findFirst: vi.fn() },
+    partner: { findFirst: vi.fn(), findUnique: vi.fn() },
     payment: { create: vi.fn() },
   },
 }))
@@ -47,7 +47,7 @@ const { createSubscription, createImplantacaoCharge, configurePaymentCallback, g
 const { syncFirstSubscriptionPayment } = await import('@/lib/subscriptionSync')
 const { issueCheckoutSessionToken } = await import('@/lib/checkoutSession')
 
-function registerRequest() {
+function registerRequest(overrides: Record<string, unknown> = {}) {
   const body = {
     cnpj: '12345678000199',
     razaoSocial: 'Empresa Teste LTDA',
@@ -64,6 +64,7 @@ function registerRequest() {
     consentDeclaration: true,
     consentTerms: true,
     contractAccepted: true,
+    ...overrides,
   }
   return new NextRequest('https://www.sublimesst.com/api/leads/register', {
     method: 'POST',
@@ -367,5 +368,75 @@ describe('POST /api/leads/register — callback: reasons e logs seguros (Etapa 2
     }
 
     errSpy.mockRestore()
+  })
+})
+
+describe('POST /api/leads/register — first-touch: Company herda Lead.partnerId', () => {
+  it('Lead já tem partnerId de first touch anterior → Company herda esse partnerId, ignorando um partnerRef diferente desta request (anti-roubo de atribuição)', async () => {
+    vi.mocked(prisma.lead.findUnique).mockResolvedValue({
+      id: 'lead_1',
+      cnpj: '12345678000199',
+      partnerId: 'partner_original',
+      eligibilityAssessments: [{ employees: '1-5', resultShownAt: null }],
+    } as any)
+    vi.mocked(prisma.partner.findUnique).mockResolvedValue({ id: 'partner_original', cnpj: null } as any)
+
+    await POST(registerRequest({ partnerRef: 'code_do_parceiro_ladrao' }))
+
+    expect(prisma.partner.findUnique).toHaveBeenCalledWith({ where: { id: 'partner_original' } })
+    expect(prisma.partner.findFirst).not.toHaveBeenCalled()
+    const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
+    expect(createCall.data.partnerId).toBe('partner_original')
+    expect(createCall.data.source).toBe('partner')
+  })
+
+  it('Lead já tem partnerId → Lead.update final não reescreve partnerId (já persistido, escrita seria redundante)', async () => {
+    vi.mocked(prisma.lead.findUnique).mockResolvedValue({
+      id: 'lead_1',
+      cnpj: '12345678000199',
+      partnerId: 'partner_original',
+      eligibilityAssessments: [{ employees: '1-5', resultShownAt: null }],
+    } as any)
+    vi.mocked(prisma.partner.findUnique).mockResolvedValue({ id: 'partner_original', cnpj: null } as any)
+
+    await POST(registerRequest())
+
+    const updateCall = vi.mocked(prisma.lead.update).mock.calls[0][0] as any
+    expect(updateCall.data).not.toHaveProperty('partnerId')
+  })
+
+  it('Lead sem partnerId (first touch nunca ocorreu) + partnerRef válido nesta request → Company herda o parceiro recém-resolvido e Lead é atualizado', async () => {
+    vi.mocked(prisma.lead.findUnique).mockResolvedValue({
+      id: 'lead_1',
+      cnpj: '12345678000199',
+      partnerId: null,
+      eligibilityAssessments: [{ employees: '1-5', resultShownAt: null }],
+    } as any)
+    vi.mocked(prisma.partner.findFirst).mockResolvedValue({ id: 'partner_new', cnpj: null } as any)
+
+    await POST(registerRequest({ partnerRef: 'code_valido' }))
+
+    expect(prisma.partner.findFirst).toHaveBeenCalledWith({ where: { code: 'code_valido', status: 'active' } })
+    const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
+    expect(createCall.data.partnerId).toBe('partner_new')
+    const updateCall = vi.mocked(prisma.lead.update).mock.calls[0][0] as any
+    expect(updateCall.data.partnerId).toBe('partner_new')
+  })
+
+  it('Lead sem partnerId e sem partnerRef na request → Company sem parceiro, fonte "site"', async () => {
+    vi.mocked(prisma.lead.findUnique).mockResolvedValue({
+      id: 'lead_1',
+      cnpj: '12345678000199',
+      partnerId: null,
+      eligibilityAssessments: [{ employees: '1-5', resultShownAt: null }],
+    } as any)
+
+    await POST(registerRequest())
+
+    expect(prisma.partner.findFirst).not.toHaveBeenCalled()
+    expect(prisma.partner.findUnique).not.toHaveBeenCalled()
+    const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
+    expect(createCall.data.partnerId).toBeUndefined()
+    expect(createCall.data.source).toBe('site')
   })
 })

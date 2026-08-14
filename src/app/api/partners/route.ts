@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { runSerializable } from '@/lib/prismaSerializable'
 import { notifyNewPartner, notifyNewLead, sendPartnerActivated } from '@/lib/mailer'
 import { rateLimit, rateLimitResponse } from '@/lib/rateLimit'
 import { PARTNER_TERMS_VERSION } from '@/lib/pricing'
 import { verifyAdminSecret } from '@/lib/adminAuth'
+import { validateCNPJ } from '@/lib/utils'
+
+// Erro interno só para distinguir qual campo colidiu — nunca sai da rota,
+// é sempre convertido para a resposta 409 correspondente no catch abaixo.
+class PartnerDuplicateError extends Error {
+  constructor(public field: 'email' | 'cnpj') { super(`duplicate_${field}`) }
+}
+
+const DUPLICATE_MESSAGE: Record<'email' | 'cnpj', string> = {
+  email: 'Este e-mail já possui cadastro de parceiro. Se já foi ativado, acesse o portal em /parceiro/login. Dúvidas: (21) 99724-8630.',
+  cnpj:  'Este CNPJ já possui cadastro de parceiro. Se já foi ativado, acesse o portal em /parceiro/login. Dúvidas: (21) 99724-8630.',
+}
 
 // .nullish() (não .optional()): o frontend envia referral: null quando o
 // checkbox de indicação está desmarcado, e .optional() rejeita null com
@@ -22,7 +35,10 @@ const referralSchema = z.object({
 const schema = z.object({
   name: z.string().min(1),
   office: z.string().min(1),
-  cnpj: z.string().optional(),
+  // MVP: parceiro somente PJ — CNPJ é obrigatório aqui e validado (checksum)
+  // logo abaixo, no handler (o formato bruto ainda pode vir mascarado do
+  // frontend, então só o tamanho mínimo é checado no schema).
+  cnpj: z.string().min(1),
   email: z.string().email(),
   whatsapp: z.string().min(10),
   clientsEstimate: z.coerce.number().optional(),
@@ -47,38 +63,77 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'É necessário aceitar o Termo de Parceria.' }, { status: 400 })
     }
 
-    // Evita parceiros duplicados por e-mail (cada submit criava um registro novo)
-    const existing = await prisma.partner.findFirst({
-      where: { email: { equals: data.email, mode: 'insensitive' } },
-    })
-    if (existing) {
-      return NextResponse.json({
-        success: false,
-        error: 'Este e-mail já possui cadastro de parceiro. Se já foi ativado, acesse o portal em /parceiro/login. Dúvidas: (21) 99724-8630.',
-      }, { status: 409 })
+    // MVP: parceiro somente PJ — CNPJ obrigatório e validado (checksum módulo 11)
+    // no servidor, nunca só no frontend. Normalizado para dígitos antes de
+    // gravar (mesma convenção usada no id determinístico de Lead), o que também
+    // torna a checagem de duplicidade abaixo uma comparação exata, sem precisar
+    // varrer todos os parceiros comparando máscaras diferentes.
+    if (!validateCNPJ(data.cnpj)) {
+      return NextResponse.json({ success: false, error: 'CNPJ inválido.' }, { status: 400 })
     }
+    const cnpjDigits = data.cnpj.replace(/\D/g, '')
 
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       ?? req.headers.get('x-real-ip')
       ?? 'unknown'
 
-    const partner = await prisma.partner.create({
-      data: {
-        name: data.name,
-        office: data.office,
-        cnpj: data.cnpj,
-        email: data.email,
-        whatsapp: data.whatsapp,
-        clientsEstimate: data.clientsEstimate,
-        city: data.city,
-        state: data.state,
-        status: 'pending',
-        // Aceite eletrônico do Termo de Parceria (data, IP e versão)
-        termsAcceptedAt:   new Date(),
-        termsAcceptanceIp: clientIp,
-        termsVersion:      PARTNER_TERMS_VERSION,
-      },
-    })
+    // Proteção de duplicidade compatível com o schema atual (Partner.email e
+    // Partner.cnpj não têm índice único — não é uma garantia equivalente a uma
+    // constraint no banco). Checagem + criação rodam dentro da mesma transação
+    // Serializable (mesma técnica já usada em onboarding/workers): duas
+    // requisições concorrentes que ambas leem "sem duplicata" e tentam criar
+    // colidem por write-skew — o Postgres aborta uma delas (P2034) e
+    // runSerializable reexecuta do zero, vendo então o Partner já criado pela
+    // outra. `fn` não tem nenhum efeito colateral externo (e-mail só é
+    // disparado depois, fora da transação, uma única vez).
+    let partner: Awaited<ReturnType<typeof prisma.partner.create>>
+    try {
+      partner = await runSerializable(async (tx) => {
+        const [existingByEmail, existingByCnpj] = await Promise.all([
+          tx.partner.findFirst({ where: { email: { equals: data.email, mode: 'insensitive' } } }),
+          tx.partner.findFirst({ where: { cnpj: cnpjDigits } }),
+        ])
+        if (existingByEmail) throw new PartnerDuplicateError('email')
+        if (existingByCnpj) throw new PartnerDuplicateError('cnpj')
+
+        // Autoativação: cadastro PJ com CNPJ válido, sem duplicidade e com
+        // aceite do Termo de Parceria já registrado (data/IP/versão abaixo)
+        // entra direto como 'active' — sem depender de ativação manual do
+        // Admin. O Admin continua podendo inativar/reativar a qualquer momento.
+        return tx.partner.create({
+          data: {
+            name: data.name,
+            office: data.office,
+            cnpj: cnpjDigits,
+            email: data.email,
+            whatsapp: data.whatsapp,
+            clientsEstimate: data.clientsEstimate,
+            city: data.city,
+            state: data.state,
+            status: 'active',
+            // Aceite eletrônico do Termo de Parceria (data, IP e versão)
+            termsAcceptedAt:   new Date(),
+            termsAcceptanceIp: clientIp,
+            termsVersion:      PARTNER_TERMS_VERSION,
+          },
+        })
+      })
+    } catch (err) {
+      if (err instanceof PartnerDuplicateError) {
+        return NextResponse.json({ success: false, error: DUPLICATE_MESSAGE[err.field] }, { status: 409 })
+      }
+      throw err
+    }
+
+    // E-mail de boas-vindas com o link de indicação exclusivo — com await
+    // (mesmo motivo do PATCH de ativação manual: fire-and-forget morre quando
+    // a função serverless retorna). Falha aqui NUNCA reverte o Partner já
+    // criado e válido — só fica registrada em log para acompanhamento manual.
+    try {
+      await sendPartnerActivated({ to: partner.email, name: partner.name, code: partner.code })
+    } catch (err) {
+      console.error('[API /partners] sendPartnerActivated (autoativação):', err)
+    }
 
     // Save referral if provided
     if (data.referral?.companyName) {

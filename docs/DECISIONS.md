@@ -498,3 +498,45 @@ seguido de verificação read-only independente do resultado.**
   não significa preservação eterna obrigatória: eventual anonimização ou
   exclusão futura depende de análise própria, feita separadamente
 - Fonte: artefato de execução da Tranche 1, `docs/PROJECT_STATE.md`
+
+---
+
+## Eixo B — faixa histórica e campanha promocional (2026-08-15)
+
+**A faixa histórica do quadro-resumo/comprovante deriva exclusivamente de
+`Company.numFuncionarios` (já congelado no cadastro) por uma regra
+estrutural do contrato, versionada por `contractVersion` — nunca por
+`pricing.ts`.**
+- Status: implantada
+- As versões contratuais já suportadas (`2026-07-04` e `2026-08-05`) usam
+  os mesmos limites já aprovados (1-5 / 6-10 / 11-20). Uma futura mudança
+  de faixas exige uma nova versão contratual com sua própria configuração
+  — nunca a edição retroativa da configuração de uma versão já existente.
+  Uma `contractVersion` sem regra estrutural conhecida falha
+  explicitamente na geração do quadro-resumo, nunca cai na faixa vigente
+  do `pricing.ts` atual como substituto
+- Motivo: eliminar o último ponto em que o comprovante de um contrato já
+  aceito dependia, mesmo que estruturalmente, de `pricing.ts` — a faixa e
+  o nome do plano exibidos passam a ser tão imutáveis quanto a mensalidade
+  e a implantação já congeladas
+- Fonte: `src/lib/contract/quadroResumo.ts` (`deriveFaixaHistorica`,
+  `derivePlanoLabel`)
+
+**O MVP possui um único mecanismo promocional (desconto de implantação por
+prazo determinado) e não existe entidade de campanha comercial nomeada;
+`implantacaoPromo` (Sim/Não) atende ao campo "identificação da campanha, se
+aplicável" do quadro-resumo enquanto essa condição se mantiver.**
+- Status: implantada
+- Não foi criado nenhum campo/identificador artificial de campanha;
+  `Company.promoDeadline` continua sendo apenas o prazo de conclusão do
+  pagamento promocional, nunca um identificador de campanha, e
+  `Lead.campaign` (atribuição de marketing) não foi reaproveitado para
+  este fim
+- Motivo: não há, hoje, nenhuma fonte de dado histórico confiável para uma
+  campanha nomeada — inventar um identificador violaria o princípio de
+  nunca reconstruir condição histórica a partir de dado inexistente
+- Se no futuro existirem múltiplas campanhas promocionais identificáveis
+  simultaneamente, isso exigirá uma decisão e modelagem de dados próprias,
+  fora desta tranche
+- Fonte: `src/lib/contract/quadroResumo.ts`, `docs/CONTRACT_MVP_V1.md`
+  (Seção 5)

@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { PRICING, getMonthlyPrice, getImplantacaoPrice } from '@/lib/pricing'
-import { buildQuadroResumo, deriveLtcatSituacao, QuadroResumoIndisponivelError, type QuadroResumoSource } from './quadroResumo'
+import {
+  buildQuadroResumo,
+  deriveLtcatSituacao,
+  deriveFaixaHistorica,
+  derivePlanoLabel,
+  QuadroResumoIndisponivelError,
+  VersaoContratualDesconhecidaError,
+  type QuadroResumoSource,
+} from './quadroResumo'
 
 function sourceFixture(overrides: Partial<QuadroResumoSource> = {}): QuadroResumoSource {
   return {
@@ -92,20 +100,72 @@ describe('buildQuadroResumo — imutabilidade histórica (prova de alto valor, o
     }
   })
 
-  it('buildQuadroResumo nunca importa PRICING/getMonthlyPrice/getImplantacaoPrice/LTCAT_ADDON_PRICE_CENTS (verificação estática)', async () => {
+  it('quadroResumo.ts não importa absolutamente nada de pricing.ts (verificação estática)', async () => {
     const { readFileSync } = await import('fs')
     const { join } = await import('path')
     const source = readFileSync(join(process.cwd(), 'src/lib/contract/quadroResumo.ts'), 'utf-8')
-    // Só a linha de import de pricing.ts importa (sem trocadilho) — o resto
-    // do arquivo pode mencionar esses nomes livremente em comentários
-    // explicativos, por isso a checagem mira exclusivamente a linha de
-    // import, nunca o arquivo inteiro.
-    const importLine = source.split('\n').find(l => l.includes("from '../pricing'")) ?? ''
-    expect(importLine).not.toMatch(/getMonthlyPrice/)
-    expect(importLine).not.toMatch(/getImplantacaoPrice/)
-    expect(importLine).not.toMatch(/LTCAT_ADDON_PRICE_CENTS/)
-    expect(importLine).not.toMatch(/\bPRICING\b/)
-    expect(importLine).toMatch(/faixaKeyFromCount/)
+    // Zero linhas de import apontando para pricing.ts — faixa e nome do
+    // plano agora vêm de regra estrutural própria, versionada por
+    // contractVersion, nunca da tabela de preços vigente.
+    expect(source).not.toMatch(/from ['"]\.\.\/pricing['"]/)
+  })
+
+  it('resultado da faixa/plano não muda mesmo que PRICING seja alterado em runtime (nenhuma leitura tardia)', () => {
+    const originalName = PRICING.essencial.name
+    ;(PRICING.essencial as { name: string }).name = 'NOME CORROMPIDO EM RUNTIME'
+    try {
+      const resumo = buildQuadroResumo(sourceFixture({ planType: 'essencial', contractVersion: '2026-08-05' }))
+      expect(resumo.planoLabel).toBe('Digital Essencial')
+      expect(resumo.planoLabel).not.toBe('NOME CORROMPIDO EM RUNTIME')
+    } finally {
+      ;(PRICING.essencial as { name: string }).name = originalName
+    }
+  })
+})
+
+describe('deriveFaixaHistorica — regra estrutural versionada por contractVersion', () => {
+  it.each([
+    [1, '1-5'], [5, '1-5'],
+    [6, '6-10'], [10, '6-10'],
+    [11, '11-20'], [20, '11-20'],
+  ])('versão 2026-08-05: %i funcionários → faixa %s', (num, faixaEsperada) => {
+    expect(deriveFaixaHistorica(num, '2026-08-05')).toBe(faixaEsperada)
+  })
+
+  it('versão 2026-07-04 (histórica) preserva os mesmos limites aprovados', () => {
+    expect(deriveFaixaHistorica(5, '2026-07-04')).toBe('1-5')
+    expect(deriveFaixaHistorica(6, '2026-07-04')).toBe('6-10')
+    expect(deriveFaixaHistorica(11, '2026-07-04')).toBe('11-20')
+  })
+
+  it('versão contratual desconhecida falha explicitamente, nunca usa a faixa vigente como fallback', () => {
+    expect(() => deriveFaixaHistorica(4, '1999-01-01')).toThrow(VersaoContratualDesconhecidaError)
+  })
+})
+
+describe('derivePlanoLabel — nome do plano por regra estrutural versionada', () => {
+  it('Essencial produz o label contratual oficial', () => {
+    expect(derivePlanoLabel('essencial', '2026-08-05')).toBe('Digital Essencial')
+  })
+
+  it('Premium produz o label contratual oficial', () => {
+    expect(derivePlanoLabel('premium', '2026-08-05')).toBe('Digital Premium')
+  })
+
+  it('versão histórica 2026-07-04 também resolve os labels', () => {
+    expect(derivePlanoLabel('essencial', '2026-07-04')).toBe('Digital Essencial')
+    expect(derivePlanoLabel('premium', '2026-07-04')).toBe('Digital Premium')
+  })
+
+  it('versão contratual desconhecida falha explicitamente', () => {
+    expect(() => derivePlanoLabel('essencial', '1999-01-01')).toThrow(VersaoContratualDesconhecidaError)
+  })
+})
+
+describe('buildQuadroResumo — versão contratual desconhecida (faixa/plano)', () => {
+  it('falha explicitamente ao montar o resumo com uma contractVersion sem regra estrutural conhecida', () => {
+    expect(() => buildQuadroResumo(sourceFixture({ contractVersion: '1999-01-01' })))
+      .toThrow(VersaoContratualDesconhecidaError)
   })
 })
 
@@ -181,5 +241,21 @@ describe('buildQuadroResumo — demais campos do quadro-resumo', () => {
   it('versão contratual do resumo é exatamente a versão do snapshot recebido', () => {
     const resumo = buildQuadroResumo(sourceFixture({ contractVersion: '2026-07-04' }))
     expect(resumo.versaoContratual).toBe('2026-07-04')
+  })
+
+  it('planoLabel reflete o nome contratual oficial do plano, coerente com resumo.plano', () => {
+    const essencial = buildQuadroResumo(sourceFixture({ planType: 'essencial' }))
+    expect(essencial.plano).toBe('essencial')
+    expect(essencial.planoLabel).toBe('Digital Essencial')
+
+    const premium = buildQuadroResumo(sourceFixture({ planType: 'premium' }))
+    expect(premium.plano).toBe('premium')
+    expect(premium.planoLabel).toBe('Digital Premium')
+  })
+
+  it('demaisAdicionais é sempre um array (hoje vazio, sem adicional além do LTCAT no MVP) — preparado para lista futura', () => {
+    const resumo = buildQuadroResumo(sourceFixture())
+    expect(Array.isArray(resumo.demaisAdicionais)).toBe(true)
+    expect(resumo.demaisAdicionais).toHaveLength(0)
   })
 })

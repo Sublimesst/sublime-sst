@@ -61,6 +61,10 @@ export interface QuadroResumo {
   enderecoEstabelecimento: string
   numFuncionarios: number
   plano: ContractPlanKey
+  // Nome de exibição do plano ("Digital Essencial"/"Digital Premium"),
+  // resolvido por versaoContratual — nunca por PRICING[plano].name, que
+  // pode mudar após o aceite (ver quadroResumo.ts).
+  planoLabel: string
   faixa: ContractFaixaKey
   mensalidadeCents: number
   implantacaoNormalCents: number

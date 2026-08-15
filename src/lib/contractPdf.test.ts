@@ -95,11 +95,18 @@ describe('generateContractPdf — seleção da versão contratual (sem fallback 
   })
 
   it('versão desconhecida falha explicitamente, sem gerar PDF com conteúdo ambíguo', async () => {
-    const spy = vi.spyOn(contractContentModule, 'getContractContent')
     await expect(generateContractPdf(syntheticData({ contractVersion: '2020-01-01' }))).rejects.toThrow(/desconhecida/i)
-    // A tentativa de busca ocorreu com a versão pedida — não houve
-    // substituição silenciosa por nenhuma outra versão antes de falhar.
-    expect(spy).toHaveBeenCalledWith('2020-01-01')
+  })
+
+  it('versão desconhecida falha em buildQuadroResumo (faixa/plano) ANTES de sequer consultar o conteúdo das cláusulas', async () => {
+    // A montagem do quadro-resumo comercial acontece antes de qualquer
+    // leitura do conteúdo/cláusulas — uma versão sem regra estrutural
+    // conhecida (faixa/nome do plano) nunca chega a consultar
+    // getContractContent, reforçando que a falha é rápida e não depende
+    // da ordem de outras validações.
+    const spy = vi.spyOn(contractContentModule, 'getContractContent')
+    await expect(generateContractPdf(syntheticData({ contractVersion: '2020-01-01' }))).rejects.toThrow(/versao_contratual_desconhecida/)
+    expect(spy).not.toHaveBeenCalled()
   })
 
   it('versão ausente (string vazia, simulando dado histórico corrompido) falha explicitamente', async () => {
@@ -131,12 +138,12 @@ describe('contractPdf.ts — fonte única de preços e de conteúdo (verificaç�
     expect(source).not.toMatch(/R\$\s*\d/)
   })
 
-  it('importa de pricing.ts só o essencial estrutural (label do plano) — nunca getMonthlyPrice/getImplantacaoPrice (Eixo B)', () => {
-    expect(source).toMatch(/from ['"].\/pricing['"]/)
-    // getMonthlyPrice/getImplantacaoPrice recalculariam a partir do pricing
-    // vigente no momento da geração — exatamente o risco de imutabilidade
-    // que este arquivo existe para eliminar (ver describe "imutabilidade
-    // histórica" abaixo e src/lib/contract/quadroResumo.ts).
+  it('não importa absolutamente nada de pricing.ts (nem preços, nem faixa, nem nome do plano — Eixo B)', () => {
+    // Nome do plano e faixa também passaram a vir de resumo (regra
+    // estrutural versionada em quadroResumo.ts), então contractPdf.ts não
+    // precisa mais de PRICING nem de nenhum tipo/função de pricing.ts.
+    expect(source).not.toMatch(/from ['"]\.\/pricing['"]/)
+    expect(source).not.toMatch(/\bPRICING\b/)
     expect(source).not.toMatch(/getMonthlyPrice/)
     expect(source).not.toMatch(/getImplantacaoPrice/)
   })
@@ -144,6 +151,20 @@ describe('contractPdf.ts — fonte única de preços e de conteúdo (verificaç�
   it('monta os dados comerciais exclusivamente via buildQuadroResumo (fonte única entre "Plano Contratado" e o comprovante)', () => {
     expect(source).toMatch(/from ['"].\/contract\/quadroResumo['"]/)
     expect(source).toMatch(/buildQuadroResumo/)
+  })
+
+  it('não mantém constantes locais duplicadas de vigência/renovação/aviso prévio — consome exclusivamente resumo.*', () => {
+    expect(source).not.toMatch(/const VIGENCIA_INICIAL/)
+    expect(source).not.toMatch(/const RENOVACAO/)
+    expect(source).not.toMatch(/const AVISO_PREVIO/)
+    expect(source).toMatch(/resumo\.vigenciaInicial/)
+    expect(source).toMatch(/resumo\.renovacao/)
+    expect(source).toMatch(/resumo\.avisoPrevio/)
+  })
+
+  it('renderiza "Demais adicionais" a partir de resumo.demaisAdicionais', () => {
+    expect(source).toMatch(/Demais adicionais/)
+    expect(source).toMatch(/resumo\.demaisAdicionais/)
   })
 
   it('importa cláusulas da fonte única de conteúdo (./contract/content), não de texto próprio', () => {
@@ -217,5 +238,24 @@ describe('generateContractPdf — imutabilidade histórica (Eixo B, prova de alt
   it('rejeita a geração quando implantacaoValorPadrao é null (Company legada sem snapshot) — nunca inventa o valor a partir do pricing atual', async () => {
     const data = syntheticData({ implantacaoValorPadrao: null })
     await expect(generateContractPdf(data)).rejects.toThrow(/quadro_resumo_indisponivel/)
+  })
+
+  it('alteração em PRICING.essencial.name em runtime não afeta o nome do plano usado pela geração', async () => {
+    const original = PRICING.essencial.name
+    ;(PRICING.essencial as { name: string }).name = 'NOME CORROMPIDO EM RUNTIME'
+    try {
+      const spy = vi.spyOn(quadroResumoModule, 'buildQuadroResumo')
+      await generateContractPdf(syntheticData({ planType: 'essencial', contractVersion: '2026-08-05' }))
+      const resultado = spy.mock.results[0].value
+      expect(resultado.planoLabel).toBe('Digital Essencial')
+      expect(resultado.planoLabel).not.toBe('NOME CORROMPIDO EM RUNTIME')
+    } finally {
+      ;(PRICING.essencial as { name: string }).name = original
+    }
+  })
+
+  it('rejeita a geração quando contractVersion não tem regra estrutural conhecida de faixa/plano', async () => {
+    const data = syntheticData({ contractVersion: 'inexistente-2000-01-01' })
+    await expect(generateContractPdf(data)).rejects.toThrow(/versao_contratual_desconhecida/)
   })
 })

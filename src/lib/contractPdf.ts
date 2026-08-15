@@ -1,14 +1,22 @@
 // ═══════════════════════════════════════════════════════════
 // SUBLIME SST — Geração de PDF do Contrato (server-side)
 // Gera o contrato integral (16 cláusulas, fonte única em
-// src/lib/contract/content.ts) + comprovante de aceite.
-// Preços: exclusivamente de src/lib/pricing.ts — nunca fixados aqui.
+// src/lib/contract/content.ts) + comprovante de aceite com quadro-resumo
+// (Eixo B).
+// Preços: nunca fixados aqui nem relidos de pricing.ts no momento da
+// geração — todos os valores comerciais chegam já congelados em `data`
+// (snapshots gravados na Company no momento do cadastro) e são montados
+// em `resumo` por src/lib/contract/quadroResumo.ts, a única fonte usada
+// para renderizar tanto "Plano Contratado" quanto o comprovante. Isso
+// garante que um contrato já aceito nunca passe a exibir um valor
+// diferente por causa de uma mudança posterior em pricing.ts.
 // ═══════════════════════════════════════════════════════════
 
 import PDFDocument from 'pdfkit'
-import { PRICING, getMonthlyPrice, faixaKeyFromCount, type PlanKey, type FaixaKey } from './pricing'
+import { PRICING, type PlanKey } from './pricing'
 import { getContractContent } from './contract/content'
 import type { ContractBlock } from './contract/types'
+import { buildQuadroResumo, LTCAT_SITUACAO_LABEL } from './contract/quadroResumo'
 
 // ── Constantes ───────────────────────────────────────────────
 
@@ -50,10 +58,15 @@ export interface ContractPdfData {
   cep: string
   numFuncionarios: number
   email: string
-  // Plano
+  // Plano — todos os valores monetários abaixo são snapshots já congelados
+  // na Company no momento do cadastro (Eixo B) e nunca recalculados aqui a
+  // partir de pricing.ts. Ver src/lib/contract/quadroResumo.ts.
   planType: string
-  implantacaoValor: number   // centavos
+  mensalidadeValor: number          // centavos, snapshot (Company.mensalidadeValor)
+  implantacaoValor: number          // centavos, snapshot — efetivamente contratada
+  implantacaoValorPadrao: number | null // centavos, snapshot — normal, sem promo/LTCAT
   implantacaoPromo: boolean
+  ltcatAddon: boolean
   // Aceite
   contractAcceptedAt: Date
   contractAcceptanceIp: string
@@ -160,11 +173,33 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     doc.on('error', reject)
 
     const planKey = data.planType as PlanKey
-    const range: FaixaKey = faixaKeyFromCount(data.numFuncionarios)
-    const monthly = getMonthlyPrice(planKey, range)
     const planLabel = PRICING[planKey]?.name ?? data.planType
-    const implantacaoReais = data.implantacaoValor / 100
     const content = getContractContent(data.contractVersion)
+
+    // Fonte única dos dados comerciais desta contratação — a mesma usada na
+    // página "Plano Contratado" e no comprovante abaixo, para que as duas
+    // nunca possam divergir entre si nem refletir o pricing.ts atual.
+    const resumo = buildQuadroResumo({
+      razaoSocialContratante: data.razaoSocial,
+      cnpjContratante:        data.cnpj,
+      nomeResponsavel:        data.responsavel,
+      emailCadastrado:        data.email,
+      enderecoEstabelecimento: `${data.endereco} — ${data.cidade}/${data.estado} · CEP ${data.cep}`,
+      numFuncionarios:        data.numFuncionarios,
+      planType:               data.planType,
+      mensalidadeValor:       data.mensalidadeValor,
+      implantacaoValor:       data.implantacaoValor,
+      implantacaoValorPadrao: data.implantacaoValorPadrao,
+      implantacaoPromo:       data.implantacaoPromo,
+      ltcatAddon:             data.ltcatAddon,
+      contractVersion:        data.contractVersion,
+    })
+    const range = resumo.faixa
+    const monthlyReais = resumo.mensalidadeCents / 100
+    const implantacaoReais = resumo.implantacaoAceitaCents / 100
+    const implantacaoNormalReais = resumo.implantacaoNormalCents / 100
+    const condicaoPromocionalLabel = resumo.condicaoPromocional ? 'Sim' : 'Não'
+    const ltcatLabel = LTCAT_SITUACAO_LABEL[resumo.ltcat]
 
     // ── PÁGINA 1: Cabeçalho + Partes + Plano Contratado ──────
 
@@ -179,8 +214,8 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
 
     // ── CONTRATADA ────────────────────────────────────────────
     sectionTitle(doc, 'Contratada')
-    labelValue(doc, 'Razão Social', 'SUBLIME SEGURANCA E SAUDE OCUPACIONAL LTDA')
-    labelValue(doc, 'CNPJ', '65.051.167/0001-27')
+    labelValue(doc, 'Razão Social', resumo.razaoSocialContratada)
+    labelValue(doc, 'CNPJ', resumo.cnpjContratada)
     labelValue(doc, 'Endereço', 'Av. Ataulfo de Paiva, 1235, Sala 303 — Leblon, Rio de Janeiro/RJ · CEP 22.440-034')
     labelValue(doc, 'Representante', 'ARIANE GUIMARAES LEITE — Sócia-Administradora · CPF 141.263.667-17')
 
@@ -197,10 +232,13 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     sectionTitle(doc, 'Plano Contratado')
     rowLine(doc, 'Plano', planLabel, false)
     rowLine(doc, 'Faixa de funcionários', `${range} funcionários`, true)
-    rowLine(doc, 'Mensalidade', brlR(monthly) + '/mês', false)
-    rowLine(doc, data.implantacaoPromo ? 'Implantação (promocional)' : 'Implantação', brlR(implantacaoReais), true)
-    rowLine(doc, 'Vigência inicial', VIGENCIA_INICIAL, false)
-    rowLine(doc, 'Renovação', RENOVACAO, true)
+    rowLine(doc, 'Mensalidade', brlR(monthlyReais) + '/mês', false)
+    rowLine(doc, 'Implantação normal', brlR(implantacaoNormalReais), true)
+    rowLine(doc, data.implantacaoPromo ? 'Implantação (promocional)' : 'Implantação efetivamente contratada', brlR(implantacaoReais), false)
+    rowLine(doc, 'Condição promocional', condicaoPromocionalLabel, true)
+    rowLine(doc, 'LTCAT', ltcatLabel, false)
+    rowLine(doc, 'Vigência inicial', VIGENCIA_INICIAL, true)
+    rowLine(doc, 'Renovação', RENOVACAO, false)
 
     pageFooter(doc, content.version)
 
@@ -251,8 +289,11 @@ export async function generateContractPdf(data: ContractPdfData): Promise<Buffer
     sectionTitle(doc, 'Objeto do Aceite')
     labelValue(doc, 'Plano', planLabel)
     labelValue(doc, 'Faixa', `${range} funcionários`)
-    labelValue(doc, 'Mensalidade', brlR(monthly) + '/mês')
-    labelValue(doc, 'Implantação contratada', brlR(implantacaoReais) + (data.implantacaoPromo ? ' (promocional)' : ''))
+    labelValue(doc, 'Mensalidade', brlR(monthlyReais) + '/mês')
+    labelValue(doc, 'Implantação normal', brlR(implantacaoNormalReais))
+    labelValue(doc, 'Implantação efetivamente contratada', brlR(implantacaoReais) + (data.implantacaoPromo ? ' (promocional)' : ''))
+    labelValue(doc, 'Condição promocional', condicaoPromocionalLabel)
+    labelValue(doc, 'LTCAT', ltcatLabel)
     labelValue(doc, 'Vigência inicial', VIGENCIA_INICIAL)
     labelValue(doc, 'Renovação', RENOVACAO)
     labelValue(doc, 'Aviso prévio', AVISO_PREVIO)

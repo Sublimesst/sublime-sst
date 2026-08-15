@@ -46,10 +46,11 @@ export type ContractLtcatSituacao =
   | 'nao_contratado'
 
 // Campos obrigatórios do quadro-resumo (docs/CONTRACT_MVP_V1.md, Seção 5).
-// Estrutura de tipo para a Seção 5 — o preenchimento e a persistência do
-// quadro-resumo em si pertencem ao Eixo B; aqui só se define o formato.
-// Nenhum valor monetário fixo: mensalidade/implantação sempre vêm de
-// `pricing.ts` no momento da montagem deste objeto pelo chamador.
+// Montado por src/lib/contract/quadroResumo.ts (Eixo B) exclusivamente a
+// partir de campos já congelados no momento do cadastro (Company.*) — NUNCA
+// recalculado a partir de `pricing.ts` no momento da montagem. Uma mudança
+// futura em pricing.ts nunca pode alterar o conteúdo de um QuadroResumo já
+// montado para uma contratação aceita anteriormente.
 export interface QuadroResumo {
   razaoSocialContratada: string
   cnpjContratada: string

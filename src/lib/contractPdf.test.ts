@@ -4,7 +4,8 @@ import { join } from 'path'
 import { generateContractPdf } from './contractPdf'
 import * as contractContentModule from './contract/content'
 import { getContractContent } from './contract/content'
-import { CONTRACT_VERSION, getImplantacaoPrice } from './pricing'
+import * as quadroResumoModule from './contract/quadroResumo'
+import { CONTRACT_VERSION, PRICING, getMonthlyPrice, getImplantacaoPrice } from './pricing'
 
 function syntheticData(overrides: Partial<Parameters<typeof generateContractPdf>[0]> = {}) {
   return {
@@ -18,8 +19,11 @@ function syntheticData(overrides: Partial<Parameters<typeof generateContractPdf>
     numFuncionarios: 4,
     email: 'teste@example.com',
     planType: 'essencial',
+    mensalidadeValor: getMonthlyPrice('essencial', '1-5'),
     implantacaoValor: getImplantacaoPrice('essencial', false),
+    implantacaoValorPadrao: getImplantacaoPrice('essencial', false),
     implantacaoPromo: false,
+    ltcatAddon: false,
     contractAcceptedAt: new Date('2026-08-05T12:00:00.000Z'),
     contractAcceptanceIp: '127.0.0.1',
     contractAcceptanceUa: 'vitest-synthetic-agent',
@@ -127,9 +131,19 @@ describe('contractPdf.ts — fonte única de preços e de conteúdo (verificaç�
     expect(source).not.toMatch(/R\$\s*\d/)
   })
 
-  it('importa preços exclusivamente de pricing.ts', () => {
+  it('importa de pricing.ts só o essencial estrutural (label do plano) — nunca getMonthlyPrice/getImplantacaoPrice (Eixo B)', () => {
     expect(source).toMatch(/from ['"].\/pricing['"]/)
-    expect(source).toMatch(/getMonthlyPrice/)
+    // getMonthlyPrice/getImplantacaoPrice recalculariam a partir do pricing
+    // vigente no momento da geração — exatamente o risco de imutabilidade
+    // que este arquivo existe para eliminar (ver describe "imutabilidade
+    // histórica" abaixo e src/lib/contract/quadroResumo.ts).
+    expect(source).not.toMatch(/getMonthlyPrice/)
+    expect(source).not.toMatch(/getImplantacaoPrice/)
+  })
+
+  it('monta os dados comerciais exclusivamente via buildQuadroResumo (fonte única entre "Plano Contratado" e o comprovante)', () => {
+    expect(source).toMatch(/from ['"].\/contract\/quadroResumo['"]/)
+    expect(source).toMatch(/buildQuadroResumo/)
   })
 
   it('importa cláusulas da fonte única de conteúdo (./contract/content), não de texto próprio', () => {
@@ -161,5 +175,47 @@ describe('/termos e PDF consomem a mesma fonte de conteúdo (verificação está
   it('ambos os arquivos referenciam o módulo src/lib/contract/content (fonte única)', () => {
     expect(termosSource).toMatch(/contract\/content/)
     expect(pdfSource).toMatch(/contract\/content/)
+  })
+})
+
+describe('generateContractPdf — imutabilidade histórica (Eixo B, prova de alto valor)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('repassa mensalidadeValor/implantacaoValor/implantacaoValorPadrao intactos para buildQuadroResumo — nunca um valor recalculado de pricing.ts', async () => {
+    const spy = vi.spyOn(quadroResumoModule, 'buildQuadroResumo')
+    const data = syntheticData({ mensalidadeValor: 987654, implantacaoValor: 111111, implantacaoValorPadrao: 222222 })
+    await generateContractPdf(data)
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({
+      mensalidadeValor: 987654,
+      implantacaoValor: 111111,
+      implantacaoValorPadrao: 222222,
+    }))
+  })
+
+  it('snapshot X + pricing corrente Y (alterado em runtime) → geração usa X, nunca lança nem reflete Y', async () => {
+    // Simula pricing.ts tendo mudado depois do aceite: corrompe o preço
+    // vigente do mesmo plano/faixa da fixture em runtime. Se
+    // generateContractPdf relesse pricing.ts em qualquer ponto do pipeline,
+    // o comportamento mudaria; como não relê, o resultado é idêntico.
+    const original = PRICING.essencial.faixas['1-5'].monthly
+    ;(PRICING.essencial.faixas['1-5'] as { monthly: number }).monthly = 1
+    try {
+      const spy = vi.spyOn(quadroResumoModule, 'buildQuadroResumo')
+      const buffer = await generateContractPdf(syntheticData({ mensalidadeValor: 19900 }))
+      expect(buffer.subarray(0, 4).toString('ascii')).toBe('%PDF')
+      // O valor corrompido (1) nunca chega a buildQuadroResumo — o dado que
+      // entra é sempre o snapshot da fixture (19900), nunca o PRICING
+      // vigente no momento da chamada.
+      expect(spy).toHaveBeenCalledWith(expect.objectContaining({ mensalidadeValor: 19900 }))
+    } finally {
+      ;(PRICING.essencial.faixas['1-5'] as { monthly: number }).monthly = original
+    }
+  })
+
+  it('rejeita a geração quando implantacaoValorPadrao é null (Company legada sem snapshot) — nunca inventa o valor a partir do pricing atual', async () => {
+    const data = syntheticData({ implantacaoValorPadrao: null })
+    await expect(generateContractPdf(data)).rejects.toThrow(/quadro_resumo_indisponivel/)
   })
 })

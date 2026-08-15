@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { PRICING } from '@/lib/pricing'
 
 // O rate limiter em memória (src/lib/rateLimit.ts) é compartilhado por todo o
 // processo de teste (mesma chave IP+pathname) — sem isso, os vários POSTs
@@ -438,5 +439,42 @@ describe('POST /api/leads/register — first-touch: Company herda Lead.partnerId
     const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
     expect(createCall.data.partnerId).toBeUndefined()
     expect(createCall.data.source).toBe('site')
+  })
+})
+
+describe('POST /api/leads/register — snapshot de implantacaoValorPadrao (Eixo B)', () => {
+  it('sem promoção: implantacaoValorPadrao == implantacaoValor == valor padrão do plano', async () => {
+    await POST(registerRequest({ planType: 'essencial' }))
+    const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
+    expect(createCall.data.implantacaoValorPadrao).toBe(PRICING.essencial.implantacao.padrao)
+    expect(createCall.data.implantacaoValor).toBe(PRICING.essencial.implantacao.padrao)
+  })
+
+  it('com promoção ativa: implantacaoValorPadrao permanece o valor NORMAL — só implantacaoValor reflete o desconto', async () => {
+    vi.mocked(prisma.lead.findUnique).mockResolvedValue({
+      id: 'lead_1',
+      cnpj: '12345678000199',
+      eligibilityAssessments: [{ employees: '1-5', resultShownAt: new Date() }],
+    } as any)
+
+    await POST(registerRequest({ planType: 'essencial' }))
+
+    const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
+    expect(createCall.data.implantacaoValorPadrao).toBe(PRICING.essencial.implantacao.padrao)
+    expect(createCall.data.implantacaoValor).toBe(PRICING.essencial.implantacao.promo)
+    expect(createCall.data.implantacaoValorPadrao).not.toBe(createCall.data.implantacaoValor)
+  })
+
+  it('Premium: implantacaoValorPadrao usa a tabela do Premium, não a do Essencial', async () => {
+    await POST(registerRequest({ planType: 'premium' }))
+    const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
+    expect(createCall.data.implantacaoValorPadrao).toBe(PRICING.premium.implantacao.padrao)
+  })
+
+  it('LTCAT contratado no Essencial: implantacaoValorPadrao NÃO inclui o adicional — só implantacaoValor (efetiva) inclui', async () => {
+    await POST(registerRequest({ planType: 'essencial', ltcatAddon: true }))
+    const createCall = vi.mocked(prisma.company.create).mock.calls[0][0] as any
+    expect(createCall.data.implantacaoValorPadrao).toBe(PRICING.essencial.implantacao.padrao)
+    expect(createCall.data.implantacaoValor).toBeGreaterThan(createCall.data.implantacaoValorPadrao)
   })
 })

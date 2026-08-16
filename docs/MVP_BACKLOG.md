@@ -23,10 +23,9 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Remoção das regras públicas antigas (6 mensalidades, avisos de 30/60 dias) de `/termos`, do PDF, de `/digital` e de `/elegibilidade`
   - Testes automatizados de correspondência do Eixo A (versão, cláusulas, ausência de frases proibidas, seleção de versão)
   - Smoke test read-only em Produção (2026-08-05): `/termos`, `/digital` e `/elegibilidade` respondendo 200 com o conteúdo vigente; vigência de 12 meses e regras de cancelamento publicadas conforme aprovado
+  - Snapshot histórico de mensalidade, faixa e valor normal da implantação no PDF, com preservação do valor efetivamente contratado (Eixo B — PR #38)
+  - Quadro-resumo completo no comprovante, incluindo LTCAT e demais adicionais (Eixo B — PR #38)
 - **Pendente:**
-  - Snapshot histórico de mensalidade e faixa no PDF (hoje recalculados de `pricing.ts`/dado atual, não de um valor congelado no aceite)
-  - Quadro-resumo completo no comprovante (Eixo B)
-  - LTCAT adicional e demais adicionais no comprovante (Eixo B)
   - Lógica financeira de cancelamento migrada para a regra de 12 meses aprovada
   - Layout, formatação e paginação do PDF (Eixo D)
   - Validação ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/portal)

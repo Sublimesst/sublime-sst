@@ -156,7 +156,7 @@ describe('processDueCancellations — caminho feliz', () => {
 })
 
 describe('processDueCancellations — falha da Asaas (fail-closed, retryable)', () => {
-  it('falha real → pedido permanece pending, nenhuma mutação local, lastProcessingError registrado, resultado failed', async () => {
+  it('falha real → pedido permanece pending, nenhuma mutação local, lastProcessingError registrado com código controlado (nunca a mensagem bruta), resultado failed', async () => {
     vi.mocked(prisma.cancellationRequest.findMany).mockResolvedValue([dueRequest()] as any)
     vi.mocked(cancelSubscription).mockRejectedValue(new Error('Asaas API error 500: {}'))
 
@@ -166,7 +166,7 @@ describe('processDueCancellations — falha da Asaas (fail-closed, retryable)', 
     expect(prisma.company.updateMany).not.toHaveBeenCalled()
     expect(prisma.cancellationRequest.updateMany).toHaveBeenCalledWith({
       where: { id: 'cr_1', status: 'pending' },
-      data:  { lastProcessingError: expect.stringContaining('Asaas API error 500') },
+      data:  { lastProcessingError: 'asaas_subscription_cancel_failed:500' },
     })
     expect(sendCancellationConfirmedClient).not.toHaveBeenCalled()
   })
@@ -192,6 +192,83 @@ describe('processDueCancellations — falha da Asaas (fail-closed, retryable)', 
     const second = await processDueCancellations(NOW)
     expect(second.processed).toBe(1)
     expect(prisma.company.updateMany).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ── Sanitização do diagnóstico de falha (revisão pré-merge da PR #40) ──────
+describe('processDueCancellations — lastProcessingError e logs nunca carregam payload externo da Asaas', () => {
+  const SENSITIVE_MARKER = 'synthetic-sensitive-marker'
+  // Cenário exato pedido na revisão: corpo JSON sintético da Asaas embutido
+  // na mensagem de erro, como cancelSubscription() realmente produz hoje
+  // (ver src/lib/asaas.ts).
+  const SYNTHETIC_ASAAS_ERROR = new Error(`Asaas API error 500: {"externalId":"${SENSITIVE_MARKER}"}`)
+
+  function loggedText(spy: { mock: { calls: unknown[][] } }): string {
+    return spy.mock.calls
+      .flat()
+      .map(arg => (typeof arg === 'string' ? arg : arg instanceof Error ? `${arg.message}` : JSON.stringify(arg)))
+      .join(' | ')
+  }
+
+  it('CancellationRequest permanece pending, retry continua possível, e lastProcessingError contém só o código seguro da aplicação — nunca o marcador sintético nem o JSON externo', async () => {
+    vi.mocked(prisma.cancellationRequest.findMany).mockResolvedValue([dueRequest()] as any)
+    vi.mocked(cancelSubscription).mockRejectedValue(SYNTHETIC_ASAAS_ERROR)
+
+    const result = await processDueCancellations(NOW)
+
+    expect(result).toEqual({ processed: 0, failed: 1, skipped: 0 })
+    // "permanece pending" = nenhuma mutação de Company, e o único update de
+    // CancellationRequest é a gravação do diagnóstico (guardado por
+    // status:'pending' no where) — nunca uma transição para outro status.
+    expect(prisma.company.updateMany).not.toHaveBeenCalled()
+    const crUpdateCall = vi.mocked(prisma.cancellationRequest.updateMany).mock.calls[0]
+    expect(crUpdateCall[0]).toEqual({
+      where: { id: 'cr_1', status: 'pending' },
+      data:  { lastProcessingError: 'asaas_subscription_cancel_failed:500' },
+    })
+    const persistedValue = (crUpdateCall[0] as any).data.lastProcessingError as string
+    expect(persistedValue).not.toContain(SENSITIVE_MARKER)
+    expect(persistedValue).not.toContain('externalId')
+    expect(persistedValue).not.toContain('{')
+    expect(persistedValue).not.toContain(SYNTHETIC_ASAAS_ERROR.message)
+  })
+
+  it('nenhum console.error chamado durante a falha carrega o marcador sintético ou o corpo JSON externo', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(prisma.cancellationRequest.findMany).mockResolvedValue([dueRequest()] as any)
+    vi.mocked(cancelSubscription).mockRejectedValue(SYNTHETIC_ASAAS_ERROR)
+
+    try {
+      await processDueCancellations(NOW)
+      const logged = loggedText(errorSpy)
+      expect(logged).not.toContain(SENSITIVE_MARKER)
+      expect(logged).not.toContain('externalId')
+      expect(logged).toContain('asaas_subscription_cancel_failed:500')
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
+  it('erro sem o prefixo reconhecido (formato inesperado) cai no código genérico, sem tentar extrair nada da mensagem', async () => {
+    vi.mocked(prisma.cancellationRequest.findMany).mockResolvedValue([dueRequest()] as any)
+    vi.mocked(cancelSubscription).mockRejectedValue(new Error(`network timeout — ${SENSITIVE_MARKER}`))
+
+    await processDueCancellations(NOW)
+
+    const crUpdateCall = vi.mocked(prisma.cancellationRequest.updateMany).mock.calls[0]
+    expect((crUpdateCall[0] as any).data.lastProcessingError).toBe('asaas_subscription_cancel_failed')
+  })
+
+  it('rejeição não-Error (ex.: string/objeto lançado diretamente) também nunca vaza para lastProcessingError', async () => {
+    vi.mocked(prisma.cancellationRequest.findMany).mockResolvedValue([dueRequest()] as any)
+    vi.mocked(cancelSubscription).mockRejectedValue({ externalId: SENSITIVE_MARKER })
+
+    await processDueCancellations(NOW)
+
+    const crUpdateCall = vi.mocked(prisma.cancellationRequest.updateMany).mock.calls[0]
+    const persisted = JSON.stringify((crUpdateCall[0] as any).data)
+    expect(persisted).not.toContain(SENSITIVE_MARKER)
+    expect((crUpdateCall[0] as any).data.lastProcessingError).toBe('asaas_subscription_cancel_failed')
   })
 })
 

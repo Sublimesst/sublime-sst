@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { processDueCancellations } from '@/lib/cancellationProcessor'
+import { verifyCronSecret } from '@/lib/cronAuth'
 
 // Called daily to apply the effective closure of cancellation requests whose
 // effectiveAt has already arrived (regra de vigência de 12 meses — ver
 // src/lib/cancellationProcessor.ts).
 export async function GET(req: NextRequest) {
-  const token = req.headers.get('authorization')
-  if (token !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyCronSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

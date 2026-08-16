@@ -28,11 +28,14 @@
 //     updateMany condicional — só quem "vence" essa transição envia os
 //     e-mails de conclusão, nunca duas notificações para a mesma corrida.
 //
-// Commission: deliberadamente NÃO mutada aqui. Não há regra oficial
-// inequívoca sobre o que fazer, no encerramento efetivo, com uma Commission
-// ainda em_carencia referente a uma mensalidade legitimamente paga durante a
-// vigência — inventar um clawback automático é proibido (ver relatório da
-// tranche). Gate empresarial isolado, registrado como pendência.
+// Commission: deliberadamente NÃO mutada aqui. Decisão já encerrada (ver
+// docs/DECISIONS.md e o histórico de revisão da tranche): uma mensalidade
+// legitimamente paga e não estornada mantém a Commission correspondente —
+// o simples encerramento posterior do contrato do cliente NÃO gera clawback
+// por si só. O evento que desfaz uma Commission continua sendo exclusivamente
+// o refund/chargeback/estorno do Payment correspondente (ver
+// src/app/api/webhooks/asaas/route.ts, eventos PAYMENT_REFUNDED/
+// PAYMENT_CHARGEBACK_*), nunca o encerramento efetivo do cancelamento.
 // ═══════════════════════════════════════════════════════════
 
 import type { Prisma } from '@prisma/client'
@@ -50,13 +53,21 @@ type DueCancellationRequest = Prisma.CancellationRequestGetPayload<{
   include: { company: { include: { partner: true } } }
 }>
 
-const MAX_ERROR_MESSAGE_LENGTH = 500
+// Código estável controlado pela aplicação — NUNCA a mensagem bruta de
+// cancelSubscription(), que pode conter o corpo JSON retornado pela Asaas
+// (ver src/lib/asaas.ts: `Asaas API error ${status}: ${JSON.stringify(err)}`).
+// lastProcessingError é só para diagnóstico operacional interno; nunca deve
+// carregar payload externo, IDs de assinatura/pagamento/cliente, stack ou URL.
+const ASAAS_CANCEL_FAILED_CODE = 'asaas_subscription_cancel_failed'
+// Extrai SOMENTE o status HTTP numérico de 3 dígitos do prefixo controlado
+// da mensagem de erro (formato fixo já usado por asaas.ts) — nunca captura
+// nem repassa o que vem depois dos dois-pontos (o corpo JSON externo).
+const ASAAS_ERROR_STATUS_RE = /^Asaas API error (\d{3}):/
 
-function sanitizeErrorMessage(err: unknown): string {
-  // Nunca payload/stack completo — só a mensagem, cortada, para diagnóstico
-  // manual sem risco de vazar dado sensível em campo de banco.
-  const message = err instanceof Error ? err.message : String(err)
-  return message.slice(0, MAX_ERROR_MESSAGE_LENGTH)
+function describeAsaasCancelFailure(err: unknown): string {
+  const message = err instanceof Error ? err.message : ''
+  const statusMatch = ASAAS_ERROR_STATUS_RE.exec(message)
+  return statusMatch ? `${ASAAS_CANCEL_FAILED_CODE}:${statusMatch[1]}` : ASAAS_CANCEL_FAILED_CODE
 }
 
 export async function processDueCancellations(now: Date = new Date()): Promise<ProcessCancellationsResult> {
@@ -89,10 +100,15 @@ async function processSingleCancellation(request: DueCancellationRequest, now: D
       try {
         await cancelSubscription(company.asaasSubscriptionId)
       } catch (err) {
-        console.error(`[CANCELLATION-PROCESSOR] Falha ao cancelar assinatura na Asaas (cancellationRequestId=${request.id}, companyId=${company.id}) — pedido permanece pending para retry:`, err)
+        const reason = describeAsaasCancelFailure(err)
+        // Nunca loga `err` bruto — a mensagem de cancelSubscription() pode
+        // conter o corpo JSON devolvido pela Asaas. Só o código controlado
+        // pela aplicação (com o status HTTP, quando extraível) vai para o
+        // log e para lastProcessingError.
+        console.error(`[CANCELLATION-PROCESSOR] Falha ao cancelar assinatura na Asaas (cancellationRequestId=${request.id}, companyId=${company.id}) — pedido permanece pending para retry. motivo=${reason}`)
         await prisma.cancellationRequest.updateMany({
           where: { id: request.id, status: 'pending' },
-          data: { lastProcessingError: sanitizeErrorMessage(err) },
+          data: { lastProcessingError: reason },
         }).catch(logErr => console.error('[CANCELLATION-PROCESSOR] Falha ao registrar lastProcessingError:', logErr))
         return 'failed'
       }

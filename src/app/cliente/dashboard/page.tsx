@@ -39,6 +39,15 @@ async function getCompany() {
       },
       onboardingData: true,
       documents: { orderBy: { uploadedAt: 'desc' } },
+      // Só o essencial para exibir um aviso de não renovação pendente
+      // (regra de vigência de 12 meses) — nunca bloqueia acesso ao portal
+      // por si só; enquanto pending, Company.status permanece o mesmo que
+      // teria sem o aviso.
+      cancellationRequests: {
+        where: { status: 'pending' },
+        select: { effectiveAt: true },
+        take: 1,
+      },
     },
   })
 
@@ -127,6 +136,21 @@ export default async function DashboardPage() {
           </h1>
           <p className="text-[14px] text-gray-500">{company.razaoSocial} · CNPJ {company.cnpj}</p>
         </div>
+
+        {/* Aviso de não renovação registrado — contrato continua vigente até effectiveAt */}
+        {company.cancellationRequests[0]?.effectiveAt && (
+          <div className="mb-6 card border-amber-300 bg-amber-50 p-5 flex items-start gap-4">
+            <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={20} />
+            <div>
+              <p className="font-medium text-gray-900 text-[15px]">Solicitação de cancelamento registrada</p>
+              <p className="text-[13px] text-gray-600">
+                Seu contrato continua vigente e os serviços seguem normalmente até{' '}
+                {company.cancellationRequests[0].effectiveAt.toLocaleDateString('pt-BR')}, data em que o
+                encerramento será efetivado.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Alert: action needed */}
         {needsOnboarding && (

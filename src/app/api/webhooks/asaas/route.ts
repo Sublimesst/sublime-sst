@@ -6,7 +6,8 @@ import { sendWelcomeEmail, notifyPaymentConfirmed, notifyPaymentOverdue, notifyC
 import { generateContractPdf } from '@/lib/contractPdf'
 import { persistContractPdf, isContractPersisted } from '@/lib/contractPersistence'
 import { CONTRACT_VERSION } from '@/lib/pricing'
-import { safeCheckoutUrl } from '@/lib/paymentPresentation'
+import { safeCheckoutUrl, deriveFinancialActivationState, PAYMENT_SELECT } from '@/lib/paymentPresentation'
+import { markCompanyActivatedIfComplete } from '@/lib/companyActivation'
 
 // Backfill atômico de URL (P0): cada campo é protegido pela própria condição
 // de nulidade no where — nunca por uma leitura anterior — então duas
@@ -105,24 +106,50 @@ export async function POST(req: NextRequest) {
 
       // asaasId é @unique: uma 2ª entrega concorrente do mesmo evento colide
       // aqui e cai no catch — tratado como idempotente, sem duplicar.
+      //
+      // Criação do Payment (já confirmed — mensalidade materializada direto
+      // pelo webhook) e a gravação de Company.activatedAt (quando aplicável)
+      // acontecem na MESMA transação: se a ativação falhar, o Payment criado
+      // é desfeito junto (a linha simplesmente deixa de existir). Uma
+      // reentrega do mesmo evento encontra `dbPayment` ainda null (não achou
+      // por asaasId) e refaz a dupla (criação + ativação) do zero — mesma
+      // garantia do ramo "Payment já existente" acima.
       try {
-        const created = await prisma.payment.create({
-          data: {
-            companyId:         resolvedCompany.id,
-            asaasId:           payment.id,
-            externalReference: payment.externalReference ?? null,
-            type:              'mensalidade',
-            amount:            Math.round((payment.value ?? 0) * 100),
-            status:            'confirmed',
-            paidAt:            new Date(),
-            billingType:       payment.billingType ?? null,
-            checkoutUrl:       validInvoiceUrl,
-            invoiceUrl:        validInvoiceUrl,
-          },
-        })
-        dbPayment = await prisma.payment.findUniqueOrThrow({
-          where: { id: created.id },
-          include: { company: { include: { lead: true } } },
+        const now = new Date()
+        dbPayment = await prisma.$transaction(async tx => {
+          const created = await tx.payment.create({
+            data: {
+              companyId:         resolvedCompany.id,
+              asaasId:           payment.id,
+              externalReference: payment.externalReference ?? null,
+              type:              'mensalidade',
+              amount:            Math.round((payment.value ?? 0) * 100),
+              status:            'confirmed',
+              paidAt:            now,
+              billingType:       payment.billingType ?? null,
+              checkoutUrl:       validInvoiceUrl,
+              invoiceUrl:        validInvoiceUrl,
+            },
+          })
+          const full = await tx.payment.findUniqueOrThrow({
+            where: { id: created.id },
+            include: { company: { include: { lead: true } } },
+          })
+          // Mesmo guard do ramo acima: uma mensalidade recém-criada é sempre
+          // candidata (nunca há "reentrega" possível neste ramo — se já
+          // existisse, teria caído no ramo `else` em vez de chegar aqui).
+          if (full.company.activatedAt === null) {
+            const companyPayments = await tx.payment.findMany({
+              where: { companyId: full.companyId, type: { in: ['implantacao', 'mensalidade'] } },
+              select: PAYMENT_SELECT,
+            })
+            const { primeiraMensalidade } = deriveFinancialActivationState(full.company.status, companyPayments)
+            const isRelevantConfirmation = full.type === 'implantacao' || primeiraMensalidade?.id === full.id
+            if (isRelevantConfirmation) {
+              await markCompanyActivatedIfComplete(full.companyId, { client: tx, now })
+            }
+          }
+          return full
         })
       } catch (err) {
         // Só um conflito real de unicidade (2ª entrega concorrente) é
@@ -145,18 +172,55 @@ export async function POST(req: NextRequest) {
       // Idempotência atômica: só o primeiro webhook consegue fazer a transição
       // pending → confirmed. Entregas simultâneas (Asaas reenvia) retornam aqui
       // sem duplicar comissão nem reenviar e-mail.
-      const transition = await prisma.payment.updateMany({
-        where: { id: dbPayment.id, status: { not: 'confirmed' } },
-        data: {
-          status:      'confirmed',
-          paidAt:      new Date(),
-          billingType: payment.billingType ?? null,
-        },
+      //
+      // A transição do Payment e a gravação de Company.activatedAt (quando
+      // aplicável) acontecem na MESMA transação de banco: se a gravação de
+      // activatedAt falhar, a transição do Payment é desfeita junto — nunca
+      // fica um Payment confirmed "órfão" de ativação. O handler não tem
+      // try/catch ao redor desta chamada: um erro aqui propaga, vira um 500
+      // padrão do Next.js (mesma convenção já usada no resto deste arquivo —
+      // ver o create abaixo) e permite o Asaas reentregar o mesmo evento; na
+      // reentrega, como nada foi commitado, o Payment ainda está pending e a
+      // dupla (confirmação + ativação) é refeita do zero — nunca fica presa
+      // atrás do atalho "already processed" logo abaixo, que só é alcançado
+      // quando a transição já foi commitada com sucesso antes.
+      const currentPayment = dbPayment
+      const now = new Date()
+      const transition = await prisma.$transaction(async tx => {
+        const t = await tx.payment.updateMany({
+          where: { id: currentPayment.id, status: { not: 'confirmed' } },
+          data: {
+            status:      'confirmed',
+            paidAt:      now,
+            billingType: payment.billingType ?? null,
+          },
+        })
+        // Só avalia ativação quando ESTA chamada realmente fez a transição
+        // (t.count > 0) — uma reentrega de um Payment já confirmed antes
+        // (t.count === 0) nunca entra aqui, mesmo que o guard abaixo também
+        // filtre por isRelevantConfirmation. Isso é o que impede uma
+        // Company legada de ganhar ativação tardia inventada por um webhook
+        // histórico reenviado (ver companyActivation.ts).
+        if (t.count > 0 && currentPayment.company.activatedAt === null) {
+          const companyPayments = await tx.payment.findMany({
+            where: { companyId: currentPayment.companyId, type: { in: ['implantacao', 'mensalidade'] } },
+            select: PAYMENT_SELECT,
+          })
+          const { primeiraMensalidade } = deriveFinancialActivationState(currentPayment.company.status, companyPayments)
+          const isRelevantConfirmation =
+            currentPayment.type === 'implantacao' || primeiraMensalidade?.id === currentPayment.id
+          if (isRelevantConfirmation) {
+            await markCompanyActivatedIfComplete(currentPayment.companyId, { client: tx, now })
+          }
+        }
+        return t
       })
       // Backfill (P0): atômico por campo (ver backfillPaymentUrls), independente
       // da transição de status acima — roda mesmo numa reentrega, pra recuperar
-      // um registro legado que nunca teve URL preenchida.
-      await backfillPaymentUrls(dbPayment.id, validInvoiceUrl).catch(backfillErr =>
+      // um registro legado que nunca teve URL preenchida. Fora da transação de
+      // propósito: é só recuperação de metadado, nunca deve travar/reverter a
+      // confirmação do pagamento nem a ativação.
+      await backfillPaymentUrls(currentPayment.id, validInvoiceUrl).catch(backfillErr =>
         console.error('[WEBHOOK] Falha ao aplicar backfill em Payment existente:', backfillErr)
       )
       if (transition.count === 0) {
@@ -172,6 +236,10 @@ export async function POST(req: NextRequest) {
       valorCentavos: dbPayment.amount,
       planType:      dbPayment.company.planType,
     })
+
+    // Ativação (docs/DECISIONS.md, Contrato §1-2, regra de vigência de 12
+    // meses) já foi decidida acima, atomicamente com a confirmação do
+    // Payment (ver os dois ramos if/else acima) — nunca repetida aqui.
 
     // Commission engine: create Commission record for mensalidade payments with a partner
     // (empresa cancelada não gera comissão nova — P0 cancelamento)

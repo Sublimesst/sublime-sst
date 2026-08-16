@@ -160,6 +160,17 @@ model Company {
   asaasSubscriptionId String? @unique
   subscriptionStatus  String? // active | overdue | inactive — null = assinatura nunca criada
 
+  // Marco imutável da ativação contratual (Contrato §1-2, docs/DECISIONS.md):
+  // instante em que implantação e primeira mensalidade ficam confirmadas
+  // simultaneamente pela primeira vez
+  // (deriveFinancialActivationState(...).financiallyComplete == true),
+  // gravado uma única vez pelo webhook Asaas. NUNCA sobrescrito depois —
+  // ativação já ocorrida é fato histórico, mesmo que um pagamento futuro
+  // seja estornado/disputado. Nullable: nunca recebe data inventada para
+  // Company legada; a ausência é o sinal fail-closed para qualquer cálculo
+  // de vigência de 12 meses (ver src/lib/cancellationSchedule.ts).
+  activatedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -297,10 +308,12 @@ model DbStorageObject {
   @@map("storage_objects_db")
 }
 
-// ── CANCELAMENTO ANTECIPADO (P0) ───────────────────────────────
-// Trilha mínima do pedido de cancelamento. Valores (feeCents/pendingCents)
-// são calculados manualmente pelo admin (regra da Cláusula 5ª do /termos) —
-// sem cálculo automático nesta etapa.
+// ── CANCELAMENTO (regra de vigência de 12 meses — docs/DECISIONS.md,
+// docs/CONTRACT_MVP_V1.md §3) ───────────────────────────────────
+// Trilha do pedido de cancelamento. feeCents/pendingCents continuam sendo
+// preenchidos manualmente pelo admin para casos excepcionais (ex.: débitos
+// já vencidos) — a regra nova NÃO gera multa/rescisão antecipada automática
+// para um aviso de não renovação (as parcelas restantes já cobrem isso).
 model CancellationRequest {
   id           String   @id @default(cuid())
   companyId    String
@@ -313,9 +326,47 @@ model CancellationRequest {
   notes        String?
   createdAt    DateTime @default(now())
 
+  // Distingue o fluxo que originou o pedido:
+  //   pre_activation_withdrawal — Company.activatedAt ainda null e
+  //     financeiramente incompleta: desistência antes da ativação (Contrato
+  //     §2), processada imediatamente (mesma semântica fail-closed da
+  //     PR #23: Asaas cancelada antes da transição local).
+  //   non_renewal_notice — Company já ativada: aviso de não renovação, só
+  //     produz efeito em effectiveAt, sem interromper cobrança/acesso antes
+  //     disso (Contrato §3).
+  // null = pedido criado antes desta migração (o único registro real já
+  // existente em Produção) — nunca reclassificado retroativamente.
+  kind String?
+
+  // Snapshot imutável de Company.activatedAt no instante em que effectiveAt
+  // foi calculado — nunca relido depois. null para pre_activation_withdrawal
+  // (não há ativação) e para pedidos legados.
+  activatedAtSnapshot DateTime?
+
+  // Data em que o encerramento produz efeito — calculada uma única vez no
+  // momento do pedido (ver src/lib/cancellationSchedule.ts) e nunca
+  // recalculada depois, mesmo que a regra de cálculo mude no futuro. Para
+  // pre_activation_withdrawal, igual a requestedAt (processamento
+  // imediato). null só para pedidos legados anteriores a esta migração.
+  effectiveAt DateTime?
+
+  // pending (aguardando effectiveAt) | processed (encerramento já aplicado
+  // — inclui pre_activation_withdrawal, sempre concluído na própria
+  // requisição). Default "processed" reflete um fato estrutural: todo
+  // pedido criado antes desta migração só podia ser imediato, logo já
+  // nasceu processado — não é um valor inventado.
+  status String @default("processed")
+
+  processedAt DateTime?
+
+  // Último erro ao tentar aplicar o encerramento efetivo (ex.: falha da
+  // Asaas) — só para diagnóstico/retry manual; nunca payload sensível.
+  lastProcessingError String?
+
   company Company @relation(fields: [companyId], references: [id])
 
   @@index([companyId])
+  @@index([status, effectiveAt])
   @@map("cancellation_requests")
 }
 

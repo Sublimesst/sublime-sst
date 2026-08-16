@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { createOrFindCustomer, createImplantacaoCharge, createSubscription, isAsaasMock, configurePaymentCallback, getCheckoutContinuationCallbackUrl, type ConfigureCallbackResult } from '@/lib/asaas'
 import { syncFirstSubscriptionPayment } from '@/lib/subscriptionSync'
+import { markCompanyActivatedIfComplete } from '@/lib/companyActivation'
 import { issueCheckoutSessionToken, CHECKOUT_SESSION_COOKIE, CHECKOUT_SESSION_MAX_AGE_SECONDS } from '@/lib/checkoutSession'
 import { notifySubscriptionFailed } from '@/lib/mailer'
 import { getPromoDeadline } from '@/lib/utils'
@@ -400,6 +401,27 @@ export async function POST(req: NextRequest) {
       } catch (syncErr) {
         console.error(`[LEADS/REGISTER] Falha ao sincronizar 1ª mensalidade — companyId=${company.id}:`, syncErr)
       }
+
+      // Defesa em profundidade, NÃO um mecanismo de recovery: o sync acima
+      // pode em tese criar a mensalidade já com status='confirmed' (mapeado
+      // direto do status retornado pela Asaas), sem passar pelo webhook —
+      // este é o único ponto do código onde isso acontece. Na prática, porém,
+      // isso nunca completa a ativação HOJE: a implantação é sempre 'pending'
+      // neste exato instante do cadastro (criada linhas acima, e o
+      // checkoutUrl só é devolvido ao cliente na resposta desta mesma
+      // requisição, bem depois deste ponto — o cliente fisicamente não pode
+      // ainda ter pago a implantação). Esta chamada é só uma rede de
+      // segurança caso um refator futuro quebre essa ordem — por isso
+      // best-effort (.catch) é aceitável aqui, diferente do webhook (ver
+      // markCompanyActivatedIfComplete): não há nada de fato "em risco de
+      // ficar faltando" neste call site hoje, então não precisa da garantia
+      // transacional. Company recém-criada nesta mesma requisição, então
+      // também não há risco de "ativação tardia inventada" de Company legada
+      // (esse risco só existe no webhook, que audita pagamentos de Companies
+      // já existentes há tempo — ver o guard isRelevantConfirmation em
+      // src/app/api/webhooks/asaas/route.ts).
+      await markCompanyActivatedIfComplete(company.id)
+        .catch(err => console.error(`[LEADS/REGISTER] Falha ao verificar ativação após sync — companyId=${company.id}:`, err))
     } catch (err) {
       subscriptionCreated = false
       console.error('[LEADS/REGISTER] Falha ao criar assinatura recorrente:', err)

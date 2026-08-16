@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { NextRequest } from 'next/server'
 import { PRICING } from '@/lib/pricing'
 
@@ -30,6 +30,10 @@ vi.mock('@/lib/subscriptionSync', () => ({
   syncFirstSubscriptionPayment: vi.fn(async () => ({ outcome: 'synced', paymentId: 'payment_mock_1', asaasId: 'pay_mensalidade_mock_1' })),
 }))
 
+vi.mock('@/lib/companyActivation', () => ({
+  markCompanyActivatedIfComplete: vi.fn(async () => {}),
+}))
+
 vi.mock('@/lib/mailer', () => ({
   notifySubscriptionFailed: vi.fn(async () => {}),
 }))
@@ -46,6 +50,15 @@ const { POST } = await import('./route')
 const { prisma } = await import('@/lib/prisma')
 const { createSubscription, createImplantacaoCharge, configurePaymentCallback, getCheckoutContinuationCallbackUrl } = await import('@/lib/asaas')
 const { syncFirstSubscriptionPayment } = await import('@/lib/subscriptionSync')
+
+// Único import deste arquivo via beforeAll (em vez de top-level await, como
+// os demais acima) — evita introduzir um NOVO erro TS1378 no tsc (os 5 já
+// existentes neste arquivo são pré-existentes à tranche; este import é
+// posterior e não precisa herdar o mesmo padrão).
+let markCompanyActivatedIfComplete: typeof import('@/lib/companyActivation').markCompanyActivatedIfComplete
+beforeAll(async () => {
+  ;({ markCompanyActivatedIfComplete } = await import('@/lib/companyActivation'))
+})
 const { issueCheckoutSessionToken } = await import('@/lib/checkoutSession')
 
 function registerRequest(overrides: Record<string, unknown> = {}) {
@@ -198,6 +211,25 @@ describe('POST /api/leads/register — callback de continuação (Etapa 2B.1/2B.
     await POST(registerRequest())
     expect(configurePaymentCallback).toHaveBeenCalledTimes(1)
     expect(configurePaymentCallback).toHaveBeenCalledWith('pay_mock_123', 'https://www.sublimesst.com/cadastro/continuar')
+  })
+
+  it('regra de vigência de 12 meses: após syncFirstSubscriptionPayment, verifica ativação centralizada (markCompanyActivatedIfComplete) pela mesma Company — defesa contra a mensalidade já nascer confirmed via sync, fora do webhook', async () => {
+    await POST(registerRequest())
+    expect(markCompanyActivatedIfComplete).toHaveBeenCalledTimes(1)
+    expect(markCompanyActivatedIfComplete).toHaveBeenCalledWith('company_mock_1')
+  })
+
+  it('sync falhando (outcome not_found) ainda assim verifica ativação — no-op seguro, nunca quebra o cadastro', async () => {
+    vi.mocked(syncFirstSubscriptionPayment).mockResolvedValue({ outcome: 'not_found' } as any)
+    const res = await POST(registerRequest())
+    expect(res.status).toBe(200)
+    expect(markCompanyActivatedIfComplete).toHaveBeenCalledWith('company_mock_1')
+  })
+
+  it('falha ao verificar ativação nunca derruba o cadastro (best-effort, mesmo padrão dos demais efeitos colaterais desta rota)', async () => {
+    vi.mocked(markCompanyActivatedIfComplete).mockRejectedValueOnce(new Error('falha simulada'))
+    const res = await POST(registerRequest())
+    expect(res.status).toBe(200)
   })
 
   it('nenhum callback é aplicado à assinatura — createSubscription nunca recebe callback', async () => {

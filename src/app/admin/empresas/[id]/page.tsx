@@ -56,6 +56,13 @@ interface CancellationRequest {
   pendingCents?: number | null
   notes?: string | null
   createdAt: string
+  // Regra de vigência de 12 meses — ver docs/DECISIONS.md.
+  kind?: 'pre_activation_withdrawal' | 'non_renewal_notice' | null
+  activatedAtSnapshot?: string | null
+  effectiveAt?: string | null
+  status?: string // pending | processed (default "processed" para pedidos legados)
+  processedAt?: string | null
+  lastProcessingError?: string | null
 }
 
 interface EsocialLog {
@@ -111,6 +118,7 @@ interface Company {
   reviewedBy?: string | null
   reviewedAt?: string | null
   contractAcceptedAt?: string | null
+  activatedAt?: string | null
   createdAt: string
   source?: string | null
   partner?: { id: string; name: string; office: string; code: string } | null
@@ -284,7 +292,13 @@ export default function EmpresaDetailPage() {
       setCancelError('Motivo e responsável pelo pedido são obrigatórios.')
       return
     }
-    if (!window.confirm(`Confirma o cancelamento do contrato de ${company?.razaoSocial}? Essa ação não pode ser desfeita por aqui.`)) return
+    if (!window.confirm(
+      `Confirma a solicitação de cancelamento do contrato de ${company?.razaoSocial}?\n\n` +
+      `Se a empresa ainda não foi ativada (implantação/1ª mensalidade não confirmadas), o cancelamento é imediato ` +
+      `e cancela a assinatura na Asaas agora.\n\n` +
+      `Se já ativada, isso registra um AVISO DE NÃO RENOVAÇÃO com efeito na data calculada pela regra de vigência ` +
+      `de 12 meses — a Asaas e o serviço continuam normalmente até lá, sem cancelamento imediato.`
+    )) return
 
     setCancelling(true)
     setCancelError('')
@@ -303,26 +317,48 @@ export default function EmpresaDetailPage() {
         }),
       })
       const data = await res.json()
-      if (data.success) {
+      if (!data.success) {
+        setCancelError(data.error ?? 'Falha ao cancelar.')
+        return
+      }
+      if (data.data.alreadyCancelled) {
+        setCompany(c => c ? { ...c, status: 'cancelled' } : c)
+        return
+      }
+      if (data.data.alreadyRequested) {
         setCompany(c => c ? {
-          ...c, status: 'cancelled',
+          ...c,
           cancellationRequests: [data.data.cancellationRequest, ...(c.cancellationRequests ?? [])],
         } : c)
-        setCancelEmailStatus(data.data.emailSent)
-      } else {
-        setCancelError(data.error ?? 'Falha ao cancelar.')
+        return
       }
+      const cr = data.data.cancellationRequest as CancellationRequest
+      setCompany(c => c ? {
+        ...c,
+        // Só entra em "cancelled" de fato quando o pedido já nasceu
+        // processado (desistência pré-ativação, imediata). Um aviso de não
+        // renovação (kind=non_renewal_notice, status=pending) não altera o
+        // status operacional — o contrato continua vigente até effectiveAt.
+        status: cr.status === 'processed' ? 'cancelled' : c.status,
+        cancellationRequests: [cr, ...(c.cancellationRequests ?? [])],
+      } : c)
+      setCancelEmailStatus(data.data.emailSent)
     } finally { setCancelling(false) }
   }
 
   function AsaasManualAlert() {
     return (
       <div className="bg-blue-50 border border-blue-200 rounded-[8px] p-3 mb-4 text-[12px] text-blue-800">
-        <p className="font-semibold mb-1">ℹ️ Cancelamento também cancela a assinatura na Asaas</p>
+        <p className="font-semibold mb-1">ℹ️ Vigência de 12 meses a partir da ativação</p>
         <p>
-          Esta ação cancela automaticamente a assinatura recorrente na Asaas antes de aplicar o
-          cancelamento local. Se a chamada à Asaas falhar, nada é alterado e o cancelamento pode
-          ser tentado novamente.
+          Se a empresa ainda <strong>não foi ativada</strong> (implantação/1ª mensalidade ainda não confirmadas),
+          o cancelamento é imediato: a assinatura na Asaas é cancelada antes de qualquer alteração local. Se a
+          chamada à Asaas falhar, nada é alterado e pode ser tentado novamente.
+        </p>
+        <p className="mt-1">
+          Se a empresa <strong>já foi ativada</strong>, o pedido só registra um aviso de não renovação — a Asaas
+          NÃO é cancelada agora, o serviço e as mensalidades continuam normalmente até a data de efeito calculada
+          pela regra de vigência de 12 meses, e o encerramento real só é aplicado automaticamente nessa data.
         </p>
         {company!.asaasSubscriptionId ? (
           <p className="mt-1">ID da assinatura: <span className="font-mono font-semibold">{company!.asaasSubscriptionId}</span></p>
@@ -368,6 +404,11 @@ export default function EmpresaDetailPage() {
 
   if (!company) return <div className="p-8 text-[13px] text-gray-400">Carregando…</div>
 
+  // Aviso de não renovação já registrado e ainda não aplicado (regra de
+  // vigência de 12 meses) — distinto de um cancelamento já concluído
+  // (company.status === 'cancelled', tratado separadamente acima).
+  const pendingCancellation = company.cancellationRequests?.find(cr => cr.status === 'pending')
+
   return (
     <div className="p-8 max-w-[900px]">
       <a href="/admin/empresas" className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-teal mb-6">
@@ -383,6 +424,9 @@ export default function EmpresaDetailPage() {
           <span className="text-[12px] text-gray-500 capitalize">{company.planType ?? '—'}</span>
           {company.ltcatAddon && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">+LTCAT</span>}
           {company.status === 'cancelled' && <span className="ml-2 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">CANCELADO</span>}
+          {company.status !== 'cancelled' && pendingCancellation && (
+            <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">AVISO DE NÃO RENOVAÇÃO</span>
+          )}
           <p className="text-[11px] text-gray-400 mt-0.5">Cadastro: {formatDate(company.createdAt)}</p>
         </div>
       </div>
@@ -584,12 +628,47 @@ export default function EmpresaDetailPage() {
                 {company.cancellationRequests[0].notes && (
                   <p><span className="text-gray-400">Observações:</span> {company.cancellationRequests[0].notes}</p>
                 )}
+                {company.cancellationRequests[0].effectiveAt && (
+                  <p><span className="text-gray-400">Encerramento efetivo aplicado em:</span> {formatDate(company.cancellationRequests[0].effectiveAt)}</p>
+                )}
               </div>
             )}
             {cancelEmailStatus && (
               <p className="text-[11px] text-gray-500 mt-3">
                 E-mail cliente: {cancelEmailStatus.cliente ? '✅ enviado' : '⚠️ falhou'} ·
                 {' '}E-mail parceiro: {cancelEmailStatus.parceiro === null ? 'não aplicável' : cancelEmailStatus.parceiro ? '✅ enviado' : '⚠️ falhou'}
+              </p>
+            )}
+          </div>
+        ) : pendingCancellation ? (
+          <div>
+            <p className="text-[12px] text-amber-600 font-semibold mb-3">⏳ Aviso de não renovação registrado — contrato ainda vigente</p>
+            <div className="text-[12px] text-gray-600 space-y-1">
+              <p><span className="text-gray-400">Data do pedido:</span> {formatDate(pendingCancellation.requestedAt)}</p>
+              <p><span className="text-gray-400">Motivo:</span> {pendingCancellation.reason}</p>
+              <p><span className="text-gray-400">Solicitado por:</span> {pendingCancellation.requestedBy}</p>
+              <p>
+                <span className="text-gray-400">Data de efeito do encerramento:</span>{' '}
+                {pendingCancellation.effectiveAt ? formatDate(pendingCancellation.effectiveAt) : '—'}
+              </p>
+              {pendingCancellation.activatedAtSnapshot && (
+                <p><span className="text-gray-400">Ativação considerada no cálculo:</span> {formatDate(pendingCancellation.activatedAtSnapshot)}</p>
+              )}
+            </div>
+            {pendingCancellation.lastProcessingError && (
+              <div className="mt-3 bg-red-50 border border-red-200 rounded-[8px] p-3 text-[11px] text-red-700">
+                <p className="font-semibold mb-0.5">⚠️ Falha na última tentativa de processamento (retry automático agendado)</p>
+                <p className="font-mono break-all">{pendingCancellation.lastProcessingError}</p>
+              </div>
+            )}
+            <p className="text-[11px] text-gray-400 mt-3">
+              O contrato continua vigente até a data acima — mensalidades e serviço seguem normalmente. O
+              encerramento efetivo (Asaas + status local) é aplicado automaticamente nessa data pelo processo
+              agendado. Um novo pedido não pode ser registrado enquanto este estiver pendente.
+            </p>
+            {cancelEmailStatus && (
+              <p className="text-[11px] text-gray-500 mt-3">
+                E-mail cliente: {cancelEmailStatus.cliente ? '✅ enviado' : '⚠️ falhou'}
               </p>
             )}
           </div>
@@ -677,11 +756,13 @@ export default function EmpresaDetailPage() {
               onClick={cancelCompany}
               disabled={cancelling}
             >
-              {cancelling ? 'Cancelando…' : <><Ban size={13} /> Cancelar contrato</>}
+              {cancelling ? 'Processando…' : <><Ban size={13} /> Solicitar cancelamento</>}
             </button>
             <p className="text-[11px] text-gray-400 mt-2">
-              Ao confirmar: empresa marcada como cancelada, comissões em carência são estornadas
-              (liberadas/pagas não são afetadas), e-mails enviados ao cliente e ao parceiro (se houver).
+              Empresa ainda não ativada: cancelamento imediato (comissões em carência são estornadas, liberadas/
+              pagas não são afetadas, e-mail enviado ao cliente e ao parceiro, se houver). Empresa já ativada: só
+              registra o aviso de não renovação com a data de efeito calculada — nenhuma mutação financeira ou de
+              Asaas acontece agora.
             </p>
           </>
         )}

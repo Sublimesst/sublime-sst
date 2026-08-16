@@ -119,7 +119,8 @@ const IMPLANTACAO_PENDING_COMPANY = {
   id: 'company_pdf', razaoSocial: 'Empresa PDF Teste', cnpj: '98765432000188',
   responsavel: 'Responsável Teste', email: 'contrato-teste@example.com',
   endereco: 'Rua Sintética, 100', cidade: 'Rio de Janeiro', estado: 'RJ', cep: '20000-000',
-  numFuncionarios: 4, planType: 'essencial', implantacaoValor: 19900, implantacaoPromo: false,
+  numFuncionarios: 4, planType: 'essencial', mensalidadeValor: 19900,
+  implantacaoValor: 19900, implantacaoValorPadrao: 19900, implantacaoPromo: false, ltcatAddon: false,
   contractAcceptedAt: new Date('2026-07-20T14:33:02.123Z'),
   contractAcceptanceIp: '203.0.113.10', contractAcceptanceUa: 'vitest-agent',
   contractVersion: '2026-07-04',
@@ -617,5 +618,16 @@ describe('POST /api/webhooks/asaas — persistência do contrato e controle do a
     expect(persistContractPdf).toHaveBeenCalledTimes(1)
     const persistArgs = vi.mocked(persistContractPdf).mock.calls[0][0]
     expect(persistArgs.pdfBuffer).toBe(FAKE_PDF) // mesmo Buffer da geração, nunca regenerado
+  })
+
+  it('generateContractPdf recebe mensalidadeValor/implantacaoValorPadrao/ltcatAddon exatamente como gravados na Company — nunca omitidos (Eixo B)', async () => {
+    mockImplantacaoBranch({ outcome: 'created', documentId: 'doc-1', storageKey: 'k', hash: 'h' })
+
+    await postImplantacaoConfirmed()
+
+    const pdfArgs = vi.mocked(generateContractPdf).mock.calls[0][0] as any
+    expect(pdfArgs.mensalidadeValor).toBe(IMPLANTACAO_PENDING_COMPANY.mensalidadeValor)
+    expect(pdfArgs.implantacaoValorPadrao).toBe(IMPLANTACAO_PENDING_COMPANY.implantacaoValorPadrao)
+    expect(pdfArgs.ltcatAddon).toBe(IMPLANTACAO_PENDING_COMPANY.ltcatAddon)
   })
 })

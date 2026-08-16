@@ -122,6 +122,17 @@ model Company {
   implantacaoValor Int       @default(19900)
   implantacaoPromo Boolean   @default(false)
   promoDeadline    DateTime?
+  // Snapshot do valor "normal" (sem promoção, sem LTCAT) da implantação no
+  // momento do cadastro (Eixo B) — congelado uma única vez, NUNCA relido de
+  // pricing.ts depois. implantacaoValor acima já é o valor EFETIVAMENTE
+  // contratado (com promo/LTCAT aplicados); este campo existe só para o
+  // quadro-resumo poder mostrar os dois lado a lado sem recalcular o valor
+  // normal a partir do pricing.ts vigente no momento da geração do PDF.
+  // Nullable: Companies criadas antes deste campo não têm esse dado
+  // histórico confiável — nesse caso a montagem do quadro-resumo falha
+  // explicitamente (ver src/lib/contract/quadroResumo.ts) em vez de
+  // inventar o valor a partir do pricing.ts atual.
+  implantacaoValorPadrao Int?
   // Snapshot da mensalidade contratada (centavos) — congelado no cadastro,
   // NUNCA relido de pricing.ts depois. Reprecificar pricing.ts só afeta
   // contratações novas; clientes existentes mantêm este valor para sempre.

@@ -199,6 +199,10 @@ export async function POST(req: NextRequest) {
     const employees = assessment.employees as FaixaKey
     const plan = PRICING[planType]
 
+    // Valor "normal" (sem promo, sem LTCAT) congelado à parte do valor base
+    // efetivamente usado na cobrança — snapshot histórico do Eixo B, nunca
+    // relido de pricing.ts depois (ver Company.implantacaoValorPadrao).
+    const implantacaoPadraoCentavos = plan.implantacao.padrao
     const implantacaoBaseCentavos = isPromo ? plan.implantacao.promo : plan.implantacao.padrao
     // LTCAT só é um adicional pago no Essencial — no Premium já vem incluso
     // (ltcatIncluido:true em pricing.ts), então cobrar de novo seria duplicar
@@ -293,7 +297,8 @@ export async function POST(req: NextRequest) {
           cargos:               data.cargos,
           observations:         data.observations,
           planType,
-          implantacaoValor:     implantacaoValorCentavos,
+          implantacaoValor:       implantacaoValorCentavos,
+          implantacaoValorPadrao: implantacaoPadraoCentavos,
           mensalidadeValor,
           implantacaoPromo:     isPromo,
           promoDeadline:        isPromo ? getPromoDeadline(24) : null,

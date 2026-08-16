@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `e9feabb15843dec1c4861579f57c4dcd52997c98`
-**Data de validação:** 2026-08-14
+**SHA:** `50d85a24fdfb14417658ed3b9c1ee6be9ebd3ebc`
+**Data de validação:** 2026-08-15
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -380,6 +380,30 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   desta mudança, com CNPJ salvo em formato mascarado (não normalizado),
   podem não ser encontrados pela nova checagem de duplicidade por CNPJ
   normalizado — nenhum backfill/migration foi feito para esse caso.
+- **Contrato — Eixo B (quadro-resumo e snapshot histórico do comprovante de
+  aceite) — PR #38 mergeada por merge commit e implantada em Produção
+  (`50d85a24fdfb14417658ed3b9c1ee6be9ebd3ebc`, 2026-08-15):** o PDF do
+  comprovante de aceite passou a incluir o quadro-resumo completo da
+  contratação (Seção 5 de `docs/CONTRACT_MVP_V1.md`), com snapshot histórico
+  da mensalidade e do valor normal da implantação, preservação do valor
+  efetivamente contratado, faixa histórica versionada por `contractVersion`
+  (nunca recalculada de `pricing.ts` atual), label histórico do plano,
+  indicação Sim/Não de promoção conforme o produto efetivamente contratado,
+  situação do LTCAT e demais adicionais (fixo "Nenhum" no MVP atual, sem
+  inventar dado). Novo campo `Company.implantacaoValorPadrao Int?` no schema.
+  Comportamento **fail-closed**: ausência de histórico confiável para
+  reconstruir o quadro-resumo interrompe a geração do PDF explicitamente, em
+  vez de cair silenciosamente em valor atual de `pricing.ts`. Também corrigiu
+  a escala monetária exibida no PDF. O rollout do schema em Produção e o
+  deployment da PR #38 foram executados e validados por smokes read-only
+  antes deste handoff documental, incluindo backup lógico fresco e
+  recuperável como proteção específica da operação de rollout (o P0 de
+  backup automático/DR permanece separado e pendente — ver
+  `docs/MVP_BACKLOG.md`). Nenhuma operação financeira ou chamada à Asaas foi
+  realizada nesta validação. **Esta validação não exercitou contratação
+  financeira ponta a ponta real** — o caminho completo aceite → pagamento →
+  PDF → e-mail/Portal com geração real de PDF em Produção continua pendente
+  (ver "Em andamento" abaixo).
 
 ---
 
@@ -390,11 +414,10 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   - Conteúdo MVP 1.0: **congelado documentalmente** em `docs/CONTRACT_MVP_V1.md`
   - Eixo A (fonte única `/termos` × PDF): **concluído e mergeado** (PR #18),
     validado em Produção por smoke read-only
-  - Eixo B (comprovante e arquitetura do aceite): pendente
+  - Eixo B (comprovante e arquitetura do aceite): **concluído**, mergeado
+    pela PR #38, com quadro-resumo, snapshot histórico de mensalidade e
+    faixa, LTCAT e demais adicionais no comprovante
   - Eixo D (formatação e paginação do PDF): pendente
-  - Snapshot histórico de mensalidade e faixa no PDF: pendente (hoje
-    recalculados de `pricing.ts`/dado atual, não de um valor congelado no
-    aceite)
   - Lógica financeira de cancelamento (regra de 12 meses aprovada em
     `docs/DECISIONS.md`): ainda não migrada — segue operando pela regra
     anterior de 6 mensalidades
@@ -406,11 +429,12 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 ## Próximo passo prioritário
 
-O Eixo A está concluído e validado em Produção. A próxima prioridade entre
-lógica financeira de cancelamento (12 meses), Eixo B e Eixo D deve ser
-definida pela Administração de Desenvolvimento. Novo cliente real continua
-bloqueado até a conclusão de todas essas pendências do bloqueador Contrato
-e PDF.
+Os Eixos A e B estão concluídos. A próxima prioridade entre lógica
+financeira de cancelamento (12 meses) e Eixo D deve ser definida pela
+Administração de Desenvolvimento. Novo cliente real continua bloqueado até
+a conclusão de todas essas pendências do bloqueador Contrato e PDF, e a
+validação ponta a ponta do fluxo completo (aceite → pagamento → PDF →
+e-mail/Portal) com geração real de PDF em Produção continua pendente.
 
 O Onboarding Individual dos Trabalhadores (PR #26), Admin Workers
 (visualização/listagem read-only no backoffice, PR #28) e a Exportação

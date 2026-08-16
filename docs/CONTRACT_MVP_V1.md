@@ -24,10 +24,10 @@ texto comercial da promoção, expressamente aprovado (Seção 5).
 | Status comercial/operacional | **Aprovado** |
 | Status técnico (SST) | **Validado tecnicamente pela responsável de SST** |
 | Status jurídico | **Revisão jurídica formal por advogado externo: ainda NÃO realizada.** Não bloqueadora do MVP — risco reconhecido e registrado (ver Seção 18 e `docs/DECISIONS.md`) |
-| Status de implementação | **Ainda NÃO implementado** em `/termos` nem em `src/lib/contractPdf.ts` |
+| Status de implementação | **Parcialmente implementado** — Eixos A, B e C concluídos; Eixo D pendente |
 | Eixo C (persistência e recuperação do PDF) | **Concluído** — mergeado pela PR #16 |
-| Eixo A (fonte única `/termos` × PDF) | **Pendente** |
-| Eixo B (comprovante e arquitetura do aceite) | **Pendente** |
+| Eixo A (fonte única `/termos` × PDF) | **Concluído** — mergeado pela PR #18, validado em Produção |
+| Eixo B (comprovante e arquitetura do aceite) | **Concluído** — mergeado pela PR #38 |
 | Eixo D (formatação e paginação do PDF) | **Pendente** |
 
 Este documento é a especificação de conteúdo aprovada — **não** uma peça

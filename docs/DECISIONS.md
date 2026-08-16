@@ -197,8 +197,8 @@ aprovado, substituindo expressamente o modelo atualmente publicado em
 **O escopo e os limites dos planos Digital Essencial e Digital Premium
 (incluindo LTCAT do Premium) estão aprovados no nível de conteúdo.**
 - Status: aprovado; **conteúdo implementado em `/termos` e no PDF pelo Eixo A**
-  (PR #18); **quadro-resumo e demais adicionais no comprovante seguem
-  pendentes — Eixo B**
+  (PR #18); **quadro-resumo e demais adicionais no comprovante implementados
+  pelo Eixo B (PR #38)**
 - Motivo: alinhar o texto contratual ao escopo técnico real entregue pela
   operação, incluindo exclusões e condicionantes que hoje não constam do
   contrato publicado
@@ -208,8 +208,8 @@ aprovado, substituindo expressamente o modelo atualmente publicado em
 corrigindo o comprovante atualmente gerado pelo PDF.**
 - Status: aprovado; frases proibidas ("implantação paga", "prova suficiente
   para todos os fins legais") já removidas do PDF pelo Eixo A; **arquitetura
-  completa do comprovante (quadro-resumo, LTCAT, demais adicionais) segue
-  pendente — Eixo B**
+  do comprovante (quadro-resumo, LTCAT, demais adicionais) implementada pelo
+  Eixo B (PR #38)**
 - Motivo: separar claramente o registro do aceite (anterior ao pagamento) do
   estado financeiro da contratação, e remover do comprovante qualquer
   linguagem de recibo ou de prova legal absoluta

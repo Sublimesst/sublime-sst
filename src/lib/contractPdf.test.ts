@@ -1,11 +1,37 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { inflateSync } from 'zlib'
 import { generateContractPdf } from './contractPdf'
 import * as contractContentModule from './contract/content'
 import { getContractContent } from './contract/content'
 import * as quadroResumoModule from './contract/quadroResumo'
 import { CONTRACT_VERSION, PRICING, getMonthlyPrice, getImplantacaoPrice } from './pricing'
+
+// Extrai o tamanho (em bytes, já descomprimido) do content stream de cada
+// página do PDF gerado — sem depender de nenhuma coordenada específica.
+// Uma página "quase vazia"/só com rodapé produz um content stream muito
+// menor que o de uma página com conteúdo real, então o tamanho por página
+// é um proxy direto e estável de "a página tem conteúdo de verdade",
+// mesmo sem um parser de PDF completo disponível no projeto.
+function pageContentStreamSizes(buffer: Buffer): number[] {
+  const text = buffer.toString('latin1')
+  const re = /\d+ 0 obj\s*<<([^>]*)>>\s*stream\r?\n/g
+  const sizes: number[] = []
+  let match: RegExpExecArray | null
+  while ((match = re.exec(text))) {
+    if (!/FlateDecode/.test(match[1])) continue
+    const start = match.index + match[0].length
+    const end = text.indexOf('endstream', start)
+    const raw = buffer.subarray(start, end)
+    try {
+      sizes.push(inflateSync(raw).length)
+    } catch {
+      // Não é um stream de página (ex.: objeto de fonte) — ignora.
+    }
+  }
+  return sizes
+}
 
 function syntheticData(overrides: Partial<Parameters<typeof generateContractPdf>[0]> = {}) {
   return {
@@ -257,5 +283,125 @@ describe('generateContractPdf — imutabilidade histórica (Eixo B, prova de alt
   it('rejeita a geração quando contractVersion não tem regra estrutural conhecida de faixa/plano', async () => {
     const data = syntheticData({ contractVersion: 'inexistente-2000-01-01' })
     await expect(generateContractPdf(data)).rejects.toThrow(/versao_contratual_desconhecida/)
+  })
+})
+
+describe('generateContractPdf — Eixo D: paginação e ausência de páginas vazias', () => {
+  // Faixa plausível de páginas para o contrato integral (16 cláusulas +
+  // quadro-resumo + comprovante) no tamanho de fonte/margens atuais. O
+  // limite superior é a guarda de regressão mais importante deste bloco:
+  // um rodapé que volte a disparar paginação automática do PDFKit (bug já
+  // corrigido no Eixo D — texto de rodapé desenhado abaixo da margem
+  // inferior) dobra o número de páginas com páginas fantasmas só de
+  // rodapé; esse teste falha antes que isso volte a acontecer sem exigir
+  // nenhuma coordenada específica.
+  const MIN_PLAUSIBLE_PAGES = 4
+  const MAX_PLAUSIBLE_PAGES = 14
+  // Uma página com conteúdo real (título de cláusula + parágrafos/listas,
+  // ou o quadro-resumo, ou o comprovante) sempre produz um content stream
+  // bem maior que uma página só com cabeçalho+rodapé — o limiar abaixo
+  // fica confortavelmente acima do que uma página "quase vazia" produziria.
+  const MIN_REAL_CONTENT_BYTES = 1200
+
+  it('produz um número de páginas plausível — nem colapsado nem inflado por páginas fantasmas de rodapé', async () => {
+    const buffer = await generateContractPdf(syntheticData())
+    const sizes = pageContentStreamSizes(buffer)
+    expect(sizes.length).toBeGreaterThanOrEqual(MIN_PLAUSIBLE_PAGES)
+    expect(sizes.length).toBeLessThanOrEqual(MAX_PLAUSIBLE_PAGES)
+  })
+
+  it('nenhuma página fica quase vazia (sem justificativa) — inclusive as criadas automaticamente pelo PDFKit no meio de uma cláusula longa', async () => {
+    const buffer = await generateContractPdf(syntheticData())
+    const sizes = pageContentStreamSizes(buffer)
+    for (const size of sizes) {
+      expect(size).toBeGreaterThanOrEqual(MIN_REAL_CONTENT_BYTES)
+    }
+  })
+
+  it('a versão contratual histórica (2026-07-04) também pagina de forma plausível, sem página quase vazia', async () => {
+    const buffer = await generateContractPdf(syntheticData({ contractVersion: '2026-07-04' }))
+    const sizes = pageContentStreamSizes(buffer)
+    expect(sizes.length).toBeGreaterThanOrEqual(MIN_PLAUSIBLE_PAGES)
+    expect(sizes.length).toBeLessThanOrEqual(MAX_PLAUSIBLE_PAGES)
+    for (const size of sizes) {
+      expect(size).toBeGreaterThanOrEqual(MIN_REAL_CONTENT_BYTES)
+    }
+  })
+
+  it('cenário Premium + LTCAT + faixa 11-20 (conteúdo mais longo no quadro-resumo/comprovante) também pagina sem página quase vazia', async () => {
+    const buffer = await generateContractPdf(syntheticData({
+      planType: 'premium',
+      numFuncionarios: 18,
+      mensalidadeValor: getMonthlyPrice('premium', '11-20'),
+      implantacaoValor: getImplantacaoPrice('premium', false),
+      implantacaoValorPadrao: getImplantacaoPrice('premium', false),
+      ltcatAddon: true,
+      contractAcceptanceUa: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    }))
+    const sizes = pageContentStreamSizes(buffer)
+    expect(sizes.length).toBeGreaterThanOrEqual(MIN_PLAUSIBLE_PAGES)
+    expect(sizes.length).toBeLessThanOrEqual(MAX_PLAUSIBLE_PAGES)
+    for (const size of sizes) {
+      expect(size).toBeGreaterThanOrEqual(MIN_REAL_CONTENT_BYTES)
+    }
+  })
+
+  it('endereço/razão social/UA muito longos não quebram a paginação nem criam página quase vazia', async () => {
+    const buffer = await generateContractPdf(syntheticData({
+      razaoSocial: 'EMPRESA SINTETICA COM RAZAO SOCIAL EXTREMAMENTE LONGA PARA TESTE DE QUEBRA DE LINHA E TRANSBORDO LTDA - ME',
+      responsavel: 'Responsavel Sintetico Com Nome Completo Muito Longo Para Teste De Layout Da Silva Pereira Nascimento',
+      endereco: 'Avenida de Teste com Nome Muito Extenso Para Verificar Quebra de Linha no Endereço da Contratante, número 12345, Bloco C, Sala 6789',
+      contractAcceptanceUa: 'Mozilla/5.0 (Linux; Android 13; SM-G990B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36 EdgA/119.0.2151.97 SyntheticTestSuffixForLineWrap/1.0',
+    }))
+    const sizes = pageContentStreamSizes(buffer)
+    expect(sizes.length).toBeGreaterThanOrEqual(MIN_PLAUSIBLE_PAGES)
+    expect(sizes.length).toBeLessThanOrEqual(MAX_PLAUSIBLE_PAGES)
+    for (const size of sizes) {
+      expect(size).toBeGreaterThanOrEqual(MIN_REAL_CONTENT_BYTES)
+    }
+  })
+
+  it('a página final não fica desproporcionalmente vazia em relação ao restante do documento (bloco CONTRATADA + aviso deve ficar na página do comprovante sempre que couber)', async () => {
+    // Checagem relativa (não um número fixo de páginas): a última página do
+    // cenário padrão deve ter conteúdo real comparável às demais, nunca só
+    // uma fração pequena — isso protege contra o bloco final (assinatura +
+    // aviso de autenticidade) voltar a forçar uma página nova desnecessária
+    // quando ainda havia espaço na página do comprovante.
+    const buffer = await generateContractPdf(syntheticData())
+    const sizes = pageContentStreamSizes(buffer)
+    const sorted = [...sizes].sort((a, b) => a - b)
+    const median = sorted[Math.floor(sorted.length / 2)]
+    const lastPageSize = sizes[sizes.length - 1]
+    expect(lastPageSize).toBeGreaterThanOrEqual(median * 0.3)
+  })
+
+  it('o número de páginas é estável entre duas gerações com os mesmos dados (paginação determinística)', async () => {
+    const data = syntheticData()
+    const bufferA = await generateContractPdf(data)
+    const bufferB = await generateContractPdf(data)
+    expect(pageContentStreamSizes(bufferA).length).toBe(pageContentStreamSizes(bufferB).length)
+  })
+})
+
+describe('generateContractPdf — Eixo D: aviso de autenticidade (verificação estática)', () => {
+  const source = readFileSync(join(process.cwd(), 'src/lib/contractPdf.ts'), 'utf-8')
+
+  it('não contém o glifo de alerta "⚠" — a fonte padrão Helvetica do PDFKit não cobre esse caractere e o renderizava como um caractere solto incorreto', () => {
+    expect(source).not.toMatch(/⚠/)
+  })
+
+  it('o aviso de autenticidade é renderizado numa única chamada .text(), sem dividir o texto em dois trechos com `continued`', () => {
+    const noteCalls = source.match(/\.text\(AUTENTICIDADE_TEXT\b/g) ?? []
+    expect(noteCalls).toHaveLength(1)
+    // A chamada de `.text(AUTENTICIDADE_TEXT` não deve estar em modo
+    // `continued` (dividir em dois trechos foi a causa do texto colado na
+    // junção, ex.: "comprovante,onsulte").
+    const noteCallMatch = source.match(/\.text\(AUTENTICIDADE_TEXT,[^)]*\)/)
+    expect(noteCallMatch).not.toBeNull()
+    expect(noteCallMatch![0]).not.toMatch(/continued/)
+  })
+
+  it('o texto do aviso preserva a semântica esperada (mensagem íntegra, sem alterar o conteúdo)', () => {
+    expect(source).toMatch(/Documento gerado automaticamente\. Para verificar a autenticidade deste comprovante, consulte o portal do cliente em sublimesst\.com\/cliente\/login com o e-mail cadastrado\./)
   })
 })

@@ -22,9 +22,34 @@ import type { ContractFaixaKey, ContractLtcatSituacao, ContractPlanKey, QuadroRe
 const CONTRATADA_RAZAO_SOCIAL = 'SUBLIME SEGURANCA E SAUDE OCUPACIONAL LTDA'
 const CONTRATADA_CNPJ = '65.051.167/0001-27'
 
-const VIGENCIA_INICIAL = '12 (doze) meses, a partir da ativação'
-const RENOVACAO = 'Automática, por prazo indeterminado, após o período inicial'
-const AVISO_PREVIO = 'Durante a vigência inicial: qualquer solicitação produz efeito ao final do 12º mês (Cláusula 10ª). Após a renovação: 90 dias.'
+// Termos temporais (vigência/renovação/aviso) por versão contratual — mesmo
+// raciocínio de FAIXAS_POR_VERSAO/PLANO_LABEL_POR_VERSAO: cada versão tem sua
+// própria entrada imutável, nunca reaproveitada por outra. A entrada de
+// 2026-07-04 resume a Cláusula 5ª ("Do Prazo e da Rescisão"); a de
+// 2026-08-05 resume a Cláusula 10ª ("Vigência, Renovação e Cancelamento") —
+// ambas em src/lib/contract/content.ts. O compromisso de completar as 6
+// mensalidades mínimas do 1º ao 6º mês (2026-07-04) é uma obrigação de
+// pagamento, não um prazo de aviso prévio, e por isso não é rotulado como tal.
+const TERMOS_TEMPORAIS_POR_VERSAO: Readonly<Record<string, Readonly<{ vigenciaInicial: string; renovacao: string; avisoPrevio: string }>>> = Object.freeze({
+  '2026-07-04': Object.freeze({
+    vigenciaInicial: '12 meses, a partir da confirmação do pagamento da implantação',
+    renovacao: 'Automática, por períodos iguais, salvo aviso de rescisão com antecedência mínima de 30 dias',
+    avisoPrevio: 'Rescisão entre o 1º e o 6º mês: pagamento das mensalidades remanescentes até completar as 6 (seis) mensalidades mínimas (Cláusula 5ª). Entre o 7º e o 12º mês: aviso prévio de 60 (sessenta) dias. Após a primeira renovação: aviso prévio de 30 (trinta) dias.',
+  }),
+  '2026-08-05': Object.freeze({
+    vigenciaInicial: '12 (doze) meses, a partir da ativação',
+    renovacao: 'Automática, por prazo indeterminado, após o período inicial',
+    avisoPrevio: 'Durante a vigência inicial: qualquer solicitação produz efeito ao final do 12º mês (Cláusula 10ª). Após a renovação: 90 dias.',
+  }),
+})
+
+// Falha explícita quando `contractVersion` não tem entrada conhecida nesta
+// tabela — nunca cai nos termos de 2026-08-05 como substituto silencioso.
+export function deriveTermosTemporais(contractVersion: string): Readonly<{ vigenciaInicial: string; renovacao: string; avisoPrevio: string }> {
+  const termos = TERMOS_TEMPORAIS_POR_VERSAO[contractVersion]
+  if (!termos) throw new VersaoContratualDesconhecidaError(contractVersion)
+  return termos
+}
 
 // Falha explícita quando `contractVersion` não é uma das versões
 // contratuais oficialmente suportadas pelas regras estruturais deste
@@ -121,6 +146,8 @@ export function buildQuadroResumo(source: QuadroResumoSource): QuadroResumo {
     throw new QuadroResumoIndisponivelError('implantacaoValorPadrao ausente (Company anterior a este snapshot)')
   }
 
+  const termosTemporais = deriveTermosTemporais(source.contractVersion)
+
   return {
     razaoSocialContratada: CONTRATADA_RAZAO_SOCIAL,
     cnpjContratada: CONTRATADA_CNPJ,
@@ -140,9 +167,9 @@ export function buildQuadroResumo(source: QuadroResumoSource): QuadroResumo {
     ltcat: deriveLtcatSituacao(source.planType, source.ltcatAddon),
     demaisAdicionais: [],
     versaoContratual: source.contractVersion,
-    vigenciaInicial: VIGENCIA_INICIAL,
-    renovacao: RENOVACAO,
-    avisoPrevio: AVISO_PREVIO,
+    vigenciaInicial: termosTemporais.vigenciaInicial,
+    renovacao: termosTemporais.renovacao,
+    avisoPrevio: termosTemporais.avisoPrevio,
   }
 }
 

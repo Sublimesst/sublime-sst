@@ -241,6 +241,50 @@ describe('generateContractPdf — imutabilidade histórica (Eixo B, prova de alt
     }))
   })
 
+  it('repassa contractVersion intacto para buildQuadroResumo — é essa a chave que faz o quadro-resumo/comprovante refletir os termos temporais (vigência/renovação/aviso) da versão contratual aceita, nunca da vigente (PR #42, src/lib/contract/quadroResumo.ts)', async () => {
+    const spy = vi.spyOn(quadroResumoModule, 'buildQuadroResumo')
+    await generateContractPdf(syntheticData({ contractVersion: '2026-07-04' }))
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ contractVersion: '2026-07-04' }))
+
+    spy.mockClear()
+    await generateContractPdf(syntheticData({ contractVersion: '2026-08-05' }))
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ contractVersion: '2026-08-05' }))
+  })
+
+  it('usa o buildQuadroResumo real (não mockado) para confirmar que 2026-07-04 e 2026-08-05 produzem vigenciaInicial/renovacao/avisoPrevio diferentes entre si — a árvore de composição contractPdf.ts → quadroResumo.ts entrega, de fato, o termo histórico ou o vigente conforme a versão aceita', async () => {
+    const resumoHistorico = quadroResumoModule.buildQuadroResumo({
+      razaoSocialContratante: 'X', cnpjContratante: 'X', nomeResponsavel: 'X', emailCadastrado: 'x@x.com',
+      enderecoEstabelecimento: 'X', numFuncionarios: 4, planType: 'essencial',
+      mensalidadeValor: getMonthlyPrice('essencial', '1-5'),
+      implantacaoValor: getImplantacaoPrice('essencial', false),
+      implantacaoValorPadrao: getImplantacaoPrice('essencial', false),
+      implantacaoPromo: false, ltcatAddon: false, contractVersion: '2026-07-04',
+    })
+    const resumoVigente = quadroResumoModule.buildQuadroResumo({
+      razaoSocialContratante: 'X', cnpjContratante: 'X', nomeResponsavel: 'X', emailCadastrado: 'x@x.com',
+      enderecoEstabelecimento: 'X', numFuncionarios: 4, planType: 'essencial',
+      mensalidadeValor: getMonthlyPrice('essencial', '1-5'),
+      implantacaoValor: getImplantacaoPrice('essencial', false),
+      implantacaoValorPadrao: getImplantacaoPrice('essencial', false),
+      implantacaoPromo: false, ltcatAddon: false, contractVersion: CONTRACT_VERSION,
+    })
+    expect(resumoHistorico.vigenciaInicial).not.toBe(resumoVigente.vigenciaInicial)
+    expect(resumoHistorico.renovacao).not.toBe(resumoVigente.renovacao)
+    expect(resumoHistorico.avisoPrevio).not.toBe(resumoVigente.avisoPrevio)
+    // Termos da versão vigente nunca podem vazar para o resumo histórico.
+    expect(resumoHistorico.vigenciaInicial).not.toMatch(/a partir da ativação/)
+    expect(resumoHistorico.renovacao).not.toMatch(/prazo indeterminado/)
+    expect(resumoHistorico.avisoPrevio).not.toMatch(/90 \(noventa\) dias|Cláusula 10ª/)
+    // Termos históricos nunca podem vazar para o resumo vigente.
+    expect(resumoVigente.avisoPrevio).not.toMatch(/60 \(sessenta\) dias|Cláusula 5ª/)
+
+    // generateContractPdf() usa exatamente essa mesma função (não uma cópia
+    // local) — coberto estaticamente acima ("monta os dados comerciais
+    // exclusivamente via buildQuadroResumo") e pelo teste de repasse de
+    // contractVersion logo acima.
+    await expect(generateContractPdf(syntheticData({ contractVersion: '2026-07-04' }))).resolves.toBeInstanceOf(Buffer)
+  })
+
   it('snapshot X + pricing corrente Y (alterado em runtime) → geração usa X, nunca lança nem reflete Y', async () => {
     // Simula pricing.ts tendo mudado depois do aceite: corrompe o preço
     // vigente do mesmo plano/faixa da fixture em runtime. Se

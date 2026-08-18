@@ -9,7 +9,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Contrato
 
-- **Estado:** Eixos A, B, C e D tecnicamente concluídos — bloqueador Contrato/PDF ainda não fechado
+- **Estado:** Eixos A, B, C e D e a lógica financeira de cancelamento (12 meses) concluídos — bloqueador Contrato/PDF ainda não fechado
 - **Concluído:**
   - Persistência idempotente e recuperável do PDF do contrato (Eixo C — PR #16)
   - Decisões comerciais do MVP 1.0 aprovadas (vigência, cancelamento, promoções — `docs/DECISIONS.md`)
@@ -27,8 +27,8 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Quadro-resumo completo no comprovante, incluindo LTCAT e demais adicionais (Eixo B — PR #38)
   - Versionamento por `contractVersion` de `vigenciaInicial`/`renovacao`/`avisoPrevio` no quadro-resumo, corrigindo o `LEGACY_MISMATCH_PREEXISTENTE` (Eixo B — PR #42, mergeada em `73be188`, 2026-08-17)
   - Layout, formatação e paginação do PDF — cabeçalhos, rodapés, "Página X de Y", páginas fantasma/footer-only, títulos órfãos, listas, quadro-resumo, comprovante, bloco CONTRATADA, aviso de autenticidade e cenários de campos extensos (Eixo D — PR #41, mergeada e implantada em Produção em 2026-08-17, SHA `d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`; validação estrutural/visual sobre matriz sintética concluída antes do merge, deployment Production `success` e smoke read-only de disponibilidade aprovados após o merge — sem geração real de PDF em Produção nesta validação)
+  - Lógica financeira de cancelamento migrada para a regra de vigência de 12 meses aprovada (`docs/DECISIONS.md`) — PR #40, mergeada por merge commit e implantada em Produção em 2026-08-18 (SHA `1423ebe9f740b2bd98de8942b5eb913426fb089f`), reconciliada sem conflito contra a main vigente antes do merge. Smoke pós-deploy aprovado com ressalva observacional: `/` e `/termos` responderam 200, e a única chamada `GET /api/cron/process-cancellations` sem autenticação retornou o 401 esperado (fail-closed), mas a sessão não tinha acesso a logs de runtime da Vercel para confirmar por log a não-execução do processor — evidência aceita por HTTP + revisão estrutural do código, sem confirmação independente por log. Nenhum cancelamento real, chamada Asaas ou cron autenticado foi exercitado sob a nova regra em Produção nesta tranche (ver `docs/PROJECT_STATE.md`)
 - **Pendente:**
-  - Lógica financeira de cancelamento migrada para a regra de 12 meses aprovada — implementação em `PR #40`, ainda aberta (não reconciliada nesta frente documental)
   - Validação ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/portal) com geração real de PDF em Produção
 - **Critério de aceite:**
   - Conteúdo comercial e operacional alinhado com o produto atual
@@ -37,7 +37,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - PDF legível gerado automaticamente
   - Comprovante eletrônico persistido
 - **Dependências:** `docs/CONTRACT_MVP_V1.md` (conteúdo já aprovado)
-- **Bloqueia novo cliente:** sim — bloqueio permanece enquanto a lógica financeira de cancelamento (PR #40) e a validação ponta a ponta não forem concluídas
+- **Bloqueia novo cliente:** sim — a lógica financeira de cancelamento (PR #40) já está concluída; o bloqueio permanece exclusivamente pela validação ponta a ponta do fluxo completo com geração real de PDF em Produção, ainda não concluída, e pelos demais critérios P0 pendentes ("Fechamento técnico", abaixo)
 
 ### Documentos do cliente
 

@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`
-**Data de validação:** 2026-08-17
+**SHA:** `1423ebe9f740b2bd98de8942b5eb913426fb089f`
+**Data de validação:** 2026-08-18
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -442,6 +442,66 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   B, C e D da frente Contrato/PDF estão tecnicamente concluídos** — isso
   não representa Go-Live geral liberado nem validação E2E completa (ver
   "Em andamento" abaixo e `docs/MVP_BACKLOG.md`).
+- **Lógica financeira de cancelamento — regra de vigência de 12 meses — PR
+  #40 mergeada por merge commit e implantada em Produção
+  (`1423ebe9f740b2bd98de8942b5eb913426fb089f`, 2026-08-18):** substitui a
+  regra anterior de 6 mensalidades (`docs/DECISIONS.md`) pela vigência
+  inicial mínima de 12 meses de calendário a partir da ativação.
+  `Company.activatedAt` passou a ser o marco imutável de ativação, gravado
+  atomicamente com a confirmação do `Payment` relevante (implantação ou 1ª
+  mensalidade) no webhook Asaas, protegido contra corrida/retry e nunca
+  inferido por `createdAt`, aceite contratual, entrega documental ou
+  pagamento posterior; `Company` legada sem `activatedAt` confiável
+  permanece fail-closed (bloqueio explícito com erro estruturado, exigindo
+  revisão humana, sem operação automática). Cancelamento solicitado durante
+  os 12 meses iniciais é tratado como aviso de não renovação, com efeito
+  exatamente ao final do 12º mês — nunca antes, nunca somando 90 dias
+  adicionais — enquanto serviço e cobrança continuam normalmente até a data
+  efetiva; após a renovação automática por prazo indeterminado, passa a
+  valer o aviso prévio único de 90 dias; desistência pré-ativação continua
+  fluxo distinto, processada imediatamente. O encerramento efetivo é
+  aplicado por um processor idempotente, acionado por cron diário
+  autenticado (`CRON_SECRET`, comparação de tempo constante, fail-closed se
+  o segredo estiver ausente/vazio), sempre Asaas-first (assinatura
+  cancelada na Asaas antes de qualquer transição local). `Payment` não é
+  alterado apenas pelo agendamento do cancelamento; `Commission` não sofre
+  clawback só pelo encerramento contratual — a reversão continua sendo
+  responsabilidade exclusiva de refund/chargeback via webhook, já validada
+  pela PR #23. **Reconciliação pré-merge:** a branch da PR #40 foi
+  incorporada localmente contra a main vigente (então em
+  `b6c596fbd8c3a7da6ef0050ba9945f13eb4f05c6`, após os Eixos A-D de
+  Contrato/PDF) sem conflitos e sem nenhuma correção funcional adicional
+  necessária; 264/264 testes focados e 953/958 da suíte ampla (as mesmas 5
+  falhas pré-existentes de `eligibility.test.ts`, sem relação com esta
+  tranche), TypeScript nos mesmos 23 erros pré-existentes sem nenhum novo,
+  build de produção aprovado, `git diff --check` limpo. **Gate A (schema):**
+  o schema aditivo desta tranche (`Company.activatedAt` e os 6 novos campos
+  de `CancellationRequest`) já havia sido aplicado e validado em Produção
+  antes deste merge; a reconciliação confirmou que o schema candidato final
+  permaneceu byte-idêntico ao delta já aplicado, sem exigir nova
+  migration/DDL no rollout. **Gate B:** `DUE_PENDING_CANCELLATIONS=0`
+  confirmado imediatamente antes do merge. **Gate C:** `CRON_SECRET` já
+  configurado em Produção; valor nunca lido, exibido ou alterado em nenhuma
+  etapa desta tranche. **Smoke pós-deploy em Produção (2026-08-18):** main
+  confirmada estável no SHA do merge; deployment Vercel de Produção
+  associado ao mesmo SHA, ambiente Production, status `success`; `/` e
+  `/termos` responderam HTTP 200; exatamente uma chamada `GET
+  /api/cron/process-cancellations` sem `Authorization`, sem cookie e sem
+  `CRON_SECRET` retornou HTTP 401 com o corpo padrão de erro — o
+  comportamento fail-closed esperado, correspondente ao retorno antecipado
+  do código antes de `processDueCancellations()`; nenhum HTTP 5xx foi
+  observado em nenhuma das requisições do smoke. **Limitação aceita desta
+  validação:** a sessão que executou o smoke não tinha acesso a logs de
+  runtime da Vercel — a ausência de execução do processor após a chamada
+  não autenticada é sustentada estruturalmente pela ordem do código já
+  revisado e pelo HTTP 401/corpo observado, mas **não foi confirmada
+  independentemente por log de runtime**; essa limitação foi aceita para
+  encerramento desta tranche e não exigiu criação de token/acesso adicional
+  à Vercel. **Esta validação não exercitou nenhum cancelamento real sob a
+  nova regra de 12 meses** — nenhum pedido de cancelamento, nenhuma chamada
+  Asaas e nenhum cron autenticado foram executados em Produção nesta
+  tranche; a cobertura da lógica financeira em si vem exclusivamente dos
+  264 testes automatizados focados e da revisão estrutural do código.
 
 ---
 
@@ -463,9 +523,10 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
     deployment Production `success` e smoke read-only de disponibilidade
     aprovados após o merge, sem geração nem inspeção de PDF real em
     Produção
-  - Lógica financeira de cancelamento (regra de 12 meses aprovada em
-    `docs/DECISIONS.md`): ainda não migrada — segue operando pela regra
-    anterior de 6 mensalidades
+  - Lógica financeira de cancelamento (regra de 12 meses): **concluída**,
+    mergeada pela PR #40 e implantada em Produção (2026-08-18) — ver item
+    acima em "Funcionalidades implantadas e validadas"; nenhum cancelamento
+    real sob a nova regra foi exercitado em Produção
   - Validação ponta a ponta do fluxo completo com geração real de PDF em
     Produção: ainda não exercitada (o smoke read-only não gera PDF, por
     exigir evento real com efeitos persistentes)
@@ -475,12 +536,14 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 ## Próximo passo prioritário
 
 Os Eixos A, B, C e D da frente Contrato/PDF estão concluídos (PR #18, #38,
-#42, #16 e #41). Isso **não** representa o fechamento geral do bloqueador
-Contrato e PDF: seguem pendentes a lógica financeira de cancelamento pela
-regra de 12 meses (implementação em `PR #40`, ainda aberta — `open`, não
-mergeada, sem reconciliação nesta frente documental) e a validação ponta a
-ponta do fluxo completo (aceite → pagamento → PDF → e-mail/Portal) com
-geração real de PDF em Produção. Novo cliente real continua bloqueado até a
+#42, #16 e #41), e a lógica financeira de cancelamento pela regra de 12
+meses também está concluída e implantada em Produção (PR #40, mergeada e
+validada por smoke em 2026-08-18 — ver "Funcionalidades implantadas e
+validadas" acima). Isso **não** representa o fechamento geral do bloqueador
+Contrato e PDF: segue pendente a validação ponta a ponta do fluxo completo
+(aceite → pagamento → PDF → e-mail/Portal) com geração real de PDF em
+Produção, e nenhum cancelamento real sob a nova regra de 12 meses foi
+exercitado em Produção. Novo cliente real continua bloqueado até a
 conclusão dessas pendências e dos demais P0 restantes (ver
 `docs/MVP_BACKLOG.md`).
 

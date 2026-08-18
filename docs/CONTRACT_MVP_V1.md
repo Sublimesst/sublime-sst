@@ -23,7 +23,7 @@ texto comercial da promoção, expressamente aprovado (Seção 5).
 | Status comercial/operacional | **Aprovado** |
 | Status técnico (SST) | **Validado tecnicamente pela responsável de SST** |
 | Status jurídico | **Revisão jurídica formal por advogado externo: ainda NÃO realizada.** Não bloqueadora do MVP — risco reconhecido e registrado (ver Seção 18 e `docs/DECISIONS.md`) |
-| Status de implementação | **Eixos A, B, C e D tecnicamente concluídos** — validação ponta a ponta e lógica financeira de cancelamento (PR #40) permanecem pendentes fora desta frente |
+| Status de implementação | **Eixos A, B, C e D tecnicamente concluídos**; lógica financeira de cancelamento de 12 meses também concluída (PR #40, mergeada e implantada em Produção) — validação ponta a ponta do fluxo completo em Produção permanece pendente fora desta frente |
 | Eixo C (persistência e recuperação do PDF) | **Concluído** — mergeado pela PR #16 |
 | Eixo A (fonte única `/termos` × PDF) | **Concluído** — mergeado pela PR #18, validado em Produção |
 | Eixo B (comprovante e arquitetura do aceite) | **Concluído** — mergeado pela PR #38; versionamento histórico do quadro-resumo (`vigenciaInicial`/`renovacao`/`avisoPrevio` por `contractVersion`) concluído pela PR #42 (2026-08-17), corrigindo o `LEGACY_MISMATCH_PREEXISTENTE` |
@@ -35,15 +35,14 @@ jurídica finalizada. Qualquer alteração de conteúdo aprovado aqui exige uma
 retroativa desta especificação ou de um contrato já aceito.
 
 **Novo cliente real permanece bloqueado.** Os Eixos A, B, C e D estão
-tecnicamente concluídos, mas isso não representa Go-Live liberado: o
-bloqueio permanece enquanto a lógica financeira de cancelamento de 12 meses
-(implementação em `PR #40`, ainda aberta e não reconciliada nesta frente
-documental) e a validação ponta a ponta do fluxo completo (aceite →
-pagamento → PDF → e-mail/Portal, com geração real de PDF em Produção) não
-forem concluídas, além dos demais P0 restantes registrados em
-`docs/MVP_BACKLOG.md`. O congelamento documental registrado neste documento
-**não significa**, por si só, que o contrato esteja apto para uso com um
-novo cliente real.
+tecnicamente concluídos, e a lógica financeira de cancelamento de 12 meses
+também está concluída (PR #40, mergeada e implantada em Produção), mas isso
+não representa Go-Live liberado: o bloqueio permanece enquanto a validação
+ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/Portal,
+com geração real de PDF em Produção) não for concluída, além dos demais P0
+restantes registrados em `docs/MVP_BACKLOG.md`. O congelamento documental
+registrado neste documento **não significa**, por si só, que o contrato
+esteja apto para uso com um novo cliente real.
 
 ---
 

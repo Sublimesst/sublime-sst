@@ -563,6 +563,12 @@ export async function sendPartnerActivated(data: {
   )
 }
 
+// Cancelamento CONCLUÍDO de fato — usada só quando o encerramento já foi
+// efetivamente aplicado: desistência pré-ativação (imediata) ou encerramento
+// efetivo processado na data de efeito (regra de vigência de 12 meses, ver
+// src/lib/cancellationProcessor.ts). NUNCA no momento de um simples pedido/
+// aviso de não renovação — ver sendCancellationNoticeRegisteredClient
+// abaixo para esse caso (Contrato §3, docs/DECISIONS.md).
 // ATENÇÃO: propaga erros (sem catch interno) — o chamador precisa saber se o
 // e-mail realmente saiu, para reportar `emailSent` na resposta da rota.
 export async function sendCancellationConfirmedClient(data: {
@@ -578,7 +584,7 @@ export async function sendCancellationConfirmedClient(data: {
       row('Data do pedido', dataStr) +
       row('Motivo informado', escapeHtml(data.reason)) +
       `<p style="font-size:13px;color:#64748b;margin:16px 0 0">
-        Eventuais valores pendentes seguem as condições da Cláusula 5ª do contrato aceito no cadastro.
+        Eventuais valores pendentes seguem as condições da Cláusula 10ª do contrato aceito no cadastro.
         Qualquer dúvida, fale com a gente no WhatsApp
         <a href="https://wa.me/5521997248630" style="color:#1a9e8c">(21) 99724-8630</a>.
       </p>`
@@ -586,7 +592,44 @@ export async function sendCancellationConfirmedClient(data: {
   )
 }
 
+// Pedido de cancelamento REGISTRADO (aviso de não renovação) — Contrato §3:
+// durante a vigência inicial ou já em prazo indeterminado, o pedido não
+// encerra o contrato de imediato. Distinta de sendCancellationConfirmedClient
+// (só disparada quando o encerramento é efetivamente concluído, na data de
+// efeito) — nunca deve dizer "cancelamento confirmado"/"contrato encerrado"
+// aqui, sob risco de comunicar ao cliente um encerramento que ainda não
+// ocorreu enquanto ele continua sendo cobrado normalmente.
 // ATENÇÃO: propaga erros (sem catch interno) — mesmo motivo da função acima.
+export async function sendCancellationNoticeRegisteredClient(data: {
+  to: string; responsavel: string; companyName: string; requestedAt: Date; reason: string; effectiveAt: Date
+}) {
+  const requestedStr = data.requestedAt.toLocaleDateString('pt-BR')
+  const effectiveStr = data.effectiveAt.toLocaleDateString('pt-BR')
+  await sendEmail(data.to, `Solicitação de cancelamento registrada — ${data.companyName}`,
+    baseHtml('Solicitação de cancelamento registrada',
+      `<p style="font-size:15px;color:#334155;margin:0 0 12px">
+        Olá, <strong>${escapeHtml(data.responsavel)}</strong>. Registramos a solicitação de cancelamento do
+        contrato da <strong>${escapeHtml(data.companyName)}</strong> com a Sublime SST.
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 12px">
+        Conforme a Cláusula 10ª do contrato aceito no cadastro, o contrato continua vigente até a data de
+        efeito abaixo — os serviços permanecem disponíveis e as mensalidades continuam sendo cobradas
+        normalmente até lá.
+      </p>` +
+      row('Data do pedido', requestedStr) +
+      row('Motivo informado', escapeHtml(data.reason)) +
+      row('Data de efeito do encerramento', effectiveStr) +
+      `<p style="font-size:13px;color:#64748b;margin:16px 0 0">
+        Qualquer dúvida, fale com a gente no WhatsApp
+        <a href="https://wa.me/5521997248630" style="color:#1a9e8c">(21) 99724-8630</a>.
+      </p>`
+    )
+  )
+}
+
+// ATENÇÃO: propaga erros (sem catch interno) — mesmo motivo das funções acima.
+// Só deve ser chamada quando o cancelamento já foi efetivamente concluído
+// (nunca no momento de um simples aviso/pedido pendente).
 export async function notifyPartnerCompanyCancelled(data: {
   to: string; partnerName: string; companyName: string
 }) {

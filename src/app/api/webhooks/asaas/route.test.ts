@@ -8,10 +8,16 @@ import type { PersistContractResult } from '@/lib/contractPersistence'
 const WEBHOOK_SECRET = 'test-webhook-secret-nao-real-0123456789'
 process.env.ASAAS_WEBHOOK_TOKEN = WEBHOOK_SECRET
 
-vi.mock('@/lib/prisma', () => ({
-  prisma: {
+// A confirmação do Payment e a gravação de activatedAt (quando aplicável)
+// rodam dentro de prisma.$transaction — no mock, tx === prisma (mesmo padrão
+// já usado em src/app/api/partners/route.test.ts e no cancel/route.test.ts
+// desta mesma tranche), então os mocks de payment/company abaixo servem
+// tanto para o caminho normal quanto para dentro da transação.
+vi.mock('@/lib/prisma', () => {
+  const prisma: any = {
     payment: {
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       updateMany: vi.fn(),
       findUniqueOrThrow: vi.fn(),
@@ -29,8 +35,10 @@ vi.mock('@/lib/prisma', () => ({
       update: vi.fn(),
       updateMany: vi.fn(),
     },
-  },
-}))
+  }
+  prisma.$transaction = vi.fn(async (cb: any) => cb(prisma))
+  return { prisma }
+})
 
 vi.mock('@/lib/mailer', () => ({
   sendWelcomeEmail: vi.fn(async () => {}),
@@ -629,5 +637,360 @@ describe('POST /api/webhooks/asaas — persistência do contrato e controle do a
     expect(pdfArgs.mensalidadeValor).toBe(IMPLANTACAO_PENDING_COMPANY.mensalidadeValor)
     expect(pdfArgs.implantacaoValorPadrao).toBe(IMPLANTACAO_PENDING_COMPANY.implantacaoValorPadrao)
     expect(pdfArgs.ltcatAddon).toBe(IMPLANTACAO_PENDING_COMPANY.ltcatAddon)
+  })
+})
+
+// ── Ativação (regra de vigência de 12 meses) ──────────────────────────────
+describe('POST /api/webhooks/asaas — gravação de Company.activatedAt', () => {
+  function companyWithActivation(overrides: Partial<{ id: string; activatedAt: Date | null; status: string; partnerId: string | null }> = {}) {
+    return { ...COMPANY, activatedAt: null, ...overrides }
+  }
+
+  function paymentRow(overrides: Partial<{ id: string; type: string; status: string; dueDate: Date | null; createdAt: Date; amount: number; checkoutUrl: string | null }> = {}) {
+    return {
+      id: 'pay_row', type: 'mensalidade', status: 'pending', amount: 19900,
+      dueDate: new Date('2026-05-01'), createdAt: new Date('2026-04-01'), checkoutUrl: null,
+      ...overrides,
+    }
+  }
+
+  it('mensalidade confirmada é a primeira e implantação já confirmada → grava activatedAt uma única vez, com o instante ATUAL (nunca createdAt/dueDate do pagamento)', async () => {
+    const company = companyWithActivation({ id: 'company_1', activatedAt: null })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'pending', company } as any) as any
+    )
+    // markCompanyActivatedIfComplete (src/lib/companyActivation.ts) faz sua
+    // própria leitura fresca de Company — mesma fonte compartilhada usada
+    // pelo cadastro (src/app/api/leads/register/route.ts).
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ status: company.status, activatedAt: null } as any)
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([
+      paymentRow({ id: 'implantacao_1', type: 'implantacao', status: 'confirmed', dueDate: null, createdAt: new Date('2026-03-01') }),
+      paymentRow({ id: 'payment_1', type: 'mensalidade', status: 'confirmed', dueDate: new Date('2026-05-01'), createdAt: new Date('2026-04-01') }),
+    ] as any)
+
+    vi.useFakeTimers()
+    const frozenNow = new Date('2026-06-15T12:00:00.000Z')
+    vi.setSystemTime(frozenNow)
+    try {
+      await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+    } finally {
+      vi.useRealTimers()
+    }
+
+    // Valor gravado é o instante do processamento (now) — nunca createdAt/
+    // dueDate do payment (que seriam datas passadas, bem anteriores à
+    // ativação real de fato).
+    expect(prisma.company.updateMany).toHaveBeenCalledWith({
+      where: { id: 'company_1', activatedAt: null },
+      data:  { activatedAt: frozenNow },
+    })
+  })
+
+  it('mensalidade confirmada mas implantação ainda não confirmada → NÃO grava activatedAt', async () => {
+    const company = companyWithActivation({ id: 'company_1', activatedAt: null })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'pending', company } as any) as any
+    )
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ status: company.status, activatedAt: null } as any)
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([
+      paymentRow({ id: 'implantacao_1', type: 'implantacao', status: 'pending', dueDate: null, createdAt: new Date('2026-03-01') }),
+      paymentRow({ id: 'payment_1', type: 'mensalidade', status: 'confirmed', dueDate: new Date('2026-05-01'), createdAt: new Date('2026-04-01') }),
+    ] as any)
+
+    await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+
+    const activationCalls = vi.mocked(prisma.company.updateMany).mock.calls.filter(c => 'activatedAt' in (c[0] as any).data)
+    expect(activationCalls).toHaveLength(0)
+  })
+
+  it('Company legada: activatedAt já null, implantação e primeira mensalidade já confirmadas ANTES desta migração — confirmação de uma 3ª mensalidade NÃO inventa activatedAt tardio', async () => {
+    const company = companyWithActivation({ id: 'company_legado', activatedAt: null })
+    // O pagamento que está confirmando agora é a 3ª mensalidade (dueDate
+    // mais recente) — não é a "primeira mensalidade" (dueDate mais antiga,
+    // já confirmada há muito tempo).
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_3', status: 'pending', company } as any) as any
+    )
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([
+      paymentRow({ id: 'implantacao_1', type: 'implantacao', status: 'confirmed', dueDate: null, createdAt: new Date('2026-01-01') }),
+      paymentRow({ id: 'payment_1', type: 'mensalidade', status: 'confirmed', dueDate: new Date('2026-02-01'), createdAt: new Date('2026-01-05') }),
+      paymentRow({ id: 'payment_2', type: 'mensalidade', status: 'confirmed', dueDate: new Date('2026-03-01'), createdAt: new Date('2026-02-05') }),
+      paymentRow({ id: 'payment_3', type: 'mensalidade', status: 'confirmed', dueDate: new Date('2026-04-01'), createdAt: new Date('2026-03-05') }),
+    ] as any)
+
+    await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_3', value: 199 } }))
+
+    const activationCalls = vi.mocked(prisma.company.updateMany).mock.calls.filter(c => 'activatedAt' in (c[0] as any).data)
+    expect(activationCalls).toHaveLength(0)
+  })
+
+  it('Company já com activatedAt preenchido → nunca chama updateMany para activatedAt de novo (guard evita nova consulta/sobrescrita)', async () => {
+    const company = companyWithActivation({ id: 'company_ja_ativa', activatedAt: new Date('2026-01-10') })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_5', status: 'pending', company } as any) as any
+    )
+
+    await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_5', value: 199 } }))
+
+    expect(prisma.payment.findMany).not.toHaveBeenCalled()
+    const activationCalls = vi.mocked(prisma.company.updateMany).mock.calls.filter(c => 'activatedAt' in (c[0] as any).data)
+    expect(activationCalls).toHaveLength(0)
+  })
+
+  it('implantação confirmada com mensalidade já confirmada → grava activatedAt (ordem inversa: implantação chega por último)', async () => {
+    const company = { ...IMPLANTACAO_PENDING_COMPANY, id: 'company_pdf', activatedAt: null }
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      { ...implantacaoPendingPaymentFixture(), company } as any
+    )
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ status: company.status, activatedAt: null } as any)
+    vi.mocked(prisma.payment.findMany).mockResolvedValue([
+      paymentRow({ id: 'payment_pdf', type: 'implantacao', status: 'confirmed', dueDate: null, createdAt: new Date('2026-03-01') }),
+      paymentRow({ id: 'mensalidade_pdf', type: 'mensalidade', status: 'confirmed', dueDate: new Date('2026-03-05'), createdAt: new Date('2026-03-05') }),
+    ] as any)
+    vi.mocked(generateContractPdf).mockResolvedValue(Buffer.from('x'))
+    vi.mocked(persistContractPdf).mockResolvedValue({ outcome: 'created', documentId: 'doc-1', storageKey: 'k', hash: 'h' })
+
+    await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_implantacao', value: 199 } }))
+
+    expect(prisma.company.updateMany).toHaveBeenCalledWith({
+      where: { id: 'company_pdf', activatedAt: null },
+      data:  { activatedAt: expect.any(Date) },
+    })
+  })
+
+  it('redelivery de um pagamento já confirmado (transition.count=0) nunca reavalia activatedAt', async () => {
+    const company = companyWithActivation({ id: 'company_1', activatedAt: null })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'confirmed', company } as any) as any
+    )
+    vi.mocked(prisma.payment.updateMany).mockResolvedValue({ count: 0 } as any)
+
+    const res = await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+    const body = await res.json()
+
+    expect(body.note).toBe('already processed')
+    expect(prisma.payment.findMany).not.toHaveBeenCalled()
+  })
+})
+
+// ── Confiabilidade de activatedAt: falha transitória + recovery por retry
+// (revisão pós-jornada — Correção final pré-commit) ─────────────────────────
+describe('POST /api/webhooks/asaas — activatedAt é atômico com a confirmação do Payment (falha transitória + retry)', () => {
+  function companyWithActivation(overrides: Partial<{ id: string; activatedAt: Date | null; status: string; partnerId: string | null }> = {}) {
+    return { ...COMPANY, activatedAt: null, ...overrides }
+  }
+
+  function paymentRow(overrides: Partial<{ id: string; type: string; status: string; dueDate: Date | null; createdAt: Date; amount: number; checkoutUrl: string | null }> = {}) {
+    return {
+      id: 'pay_row', type: 'mensalidade', status: 'pending', amount: 19900,
+      dueDate: new Date('2026-05-01'), createdAt: new Date('2026-04-01'), checkoutUrl: null,
+      ...overrides,
+    }
+  }
+
+  const COMPLETING_PAYMENTS = [
+    paymentRow({ id: 'implantacao_1', type: 'implantacao', status: 'confirmed', dueDate: null, createdAt: new Date('2026-03-01') }),
+    paymentRow({ id: 'payment_1', type: 'mensalidade', status: 'confirmed', dueDate: new Date('2026-05-01'), createdAt: new Date('2026-04-01') }),
+  ]
+
+  // (A) Falha transitória na gravação de activation não pode virar sucesso
+  // silencioso: a transação inteira (Payment + activation) precisa falhar
+  // junto, propagando o erro (nunca .catch(console.error) engolindo).
+  it('(A) falha na transação de confirmação+ativação propaga (nunca sucesso silencioso) e nenhum side effect posterior roda', async () => {
+    const company = companyWithActivation({ id: 'company_1', activatedAt: null })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'pending', company } as any) as any
+    )
+    vi.mocked(prisma.$transaction).mockRejectedValueOnce(new Error('falha transitória simulada'))
+
+    await expect(
+      POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+    ).rejects.toThrow('falha transitória simulada')
+
+    expect(notifyPaymentConfirmed).not.toHaveBeenCalled()
+    expect(prisma.commission.create).not.toHaveBeenCalled()
+  })
+
+  // (B)+(C)+(D) Retry do MESMO evento: como nada foi commitado na tentativa
+  // que falhou (Payment ainda pending — nesta simulação, o mock de
+  // payment.findFirst permanece devolvendo status:'pending' entre as duas
+  // chamadas, representando o rollback real), a 2ª chamada refaz a dupla
+  // (confirmação + ativação) do zero, sem duplicar Commission nem
+  // notificação (que só rodam depois da transação, isto é, só na tentativa
+  // que efetivamente teve sucesso).
+  it('(B)(C)(D) retry após falha recupera activatedAt e não duplica Commission nem notificação', async () => {
+    const company = companyWithActivation({ id: 'company_1', activatedAt: null, partnerId: 'partner_1' })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'pending', company } as any) as any
+    )
+    vi.mocked(prisma.commission.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.commission.create).mockResolvedValue({} as any)
+    vi.mocked(prisma.payment.count).mockResolvedValue(1)
+
+    // 1ª tentativa: a transação falha por inteiro.
+    vi.mocked(prisma.$transaction).mockRejectedValueOnce(new Error('falha transitória simulada'))
+    await expect(
+      POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+    ).rejects.toThrow()
+
+    // 2ª tentativa (retry do MESMO evento Asaas): $transaction volta ao
+    // comportamento padrão do mock (cb(prisma)) — sucesso completo.
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ status: company.status, activatedAt: null } as any)
+    vi.mocked(prisma.payment.findMany).mockResolvedValue(COMPLETING_PAYMENTS as any)
+
+    const res = await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+    expect(res.status).toBe(200)
+
+    expect(prisma.company.updateMany).toHaveBeenCalledWith({
+      where: { id: 'company_1', activatedAt: null },
+      data:  { activatedAt: expect.any(Date) },
+    })
+    // Só a tentativa bem-sucedida chega a notificar/criar Commission — a
+    // tentativa que falhou nunca chegou lá.
+    expect(notifyPaymentConfirmed).toHaveBeenCalledTimes(1)
+    expect(prisma.commission.create).toHaveBeenCalledTimes(1)
+  })
+
+  // (E) Conflito de criação concorrente (P2002) no ramo de mensalidade nova:
+  // já coberto pelos testes P2002 existentes (a criação + ativação roda
+  // dentro da mesma transação; o catch de P2002 é externo à transação e
+  // continua funcionando sem alteração). Este teste reforça especificamente
+  // que o perdedor da corrida NUNCA tenta gravar activatedAt.
+  it('(E) P2002 no ramo de criação — perdedor da corrida nunca tenta gravar activatedAt', async () => {
+    vi.mocked(prisma.payment.findFirst)
+      .mockResolvedValueOnce(null) // 1ª busca por asaasId: ainda não existe
+      .mockResolvedValueOnce({ id: 'payment_vencedor', companyId: 'company_1', type: 'mensalidade' } as any) // backfillAfterCreateConflict
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ id: 'company_1' } as any)
+    vi.mocked(prisma.payment.create).mockRejectedValue(p2002())
+
+    const res = await POST(webhookRequest({
+      event: 'PAYMENT_CONFIRMED',
+      payment: { id: 'pay_race', value: 199, externalReference: 'company_1' },
+    }))
+    const body = await res.json()
+
+    expect(body.note).toBe('already processed (race)')
+    // markCompanyActivatedIfComplete só é alcançável de dentro da transação
+    // (que lançou P2002 antes de chegar lá) — nenhuma tentativa de leitura
+    // de Company para fins de ativação parte do caminho de conflito.
+    const activationCalls = vi.mocked(prisma.company.updateMany).mock.calls.filter(c => 'activatedAt' in (c[0] as any).data)
+    expect(activationCalls).toHaveLength(0)
+  })
+
+  // (F) Duas "entregas" concorrentes (simuladas sequencialmente, já que o
+  // teste roda num único processo): a 2ª só vê activatedAt ainda null se a
+  // 1ª genuinamente não tiver commitado — com o guard atômico
+  // (activatedAt: null no WHERE), no máximo uma das duas välidamente grava.
+  it('(F) duas confirmações concorrentes (simuladas em sequência) — no máximo um activatedAt gravado', async () => {
+    const company1 = companyWithActivation({ id: 'company_1', activatedAt: null })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'pending', company: company1 } as any) as any
+    )
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ status: company1.status, activatedAt: null } as any)
+    vi.mocked(prisma.payment.findMany).mockResolvedValue(COMPLETING_PAYMENTS as any)
+
+    await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+    expect(vi.mocked(prisma.company.updateMany).mock.calls.filter(c => 'activatedAt' in (c[0] as any).data)).toHaveLength(1)
+
+    // "2ª entrega": a Company já reflete a ativação da 1ª (activatedAt não
+    // é mais null) — o guard de leitura em markCompanyActivatedIfComplete
+    // já impede qualquer nova tentativa de escrita.
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ status: company1.status, activatedAt: new Date() } as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'pending', company: { ...company1, activatedAt: new Date() } } as any) as any
+    )
+    await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+
+    // Ainda só 1 escrita de activatedAt no total, entre as duas "entregas".
+    expect(vi.mocked(prisma.company.updateMany).mock.calls.filter(c => 'activatedAt' in (c[0] as any).data)).toHaveLength(1)
+  })
+
+  // (G) Reentrega HISTÓRICA (Payment já confirmed antes) de Company legada
+  // — mesmo sendo implantação (sempre "relevante" estruturalmente), o guard
+  // t.count > 0 nunca deixa a reentrega alcançar a checagem de ativação.
+  it('(G) reentrega de implantação já confirmed de Company legada NÃO aciona nenhuma checagem de ativação', async () => {
+    const company = companyWithActivation({ id: 'company_legado', activatedAt: null })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      { ...implantacaoPendingPaymentFixture(), status: 'confirmed', company } as any
+    )
+    vi.mocked(prisma.payment.updateMany).mockResolvedValue({ count: 0 } as any)
+
+    const res = await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_implantacao', value: 199 } }))
+    const body = await res.json()
+
+    expect(body.note).toBe('already processed')
+    expect(prisma.payment.findMany).not.toHaveBeenCalled()
+    expect(prisma.company.findUnique).not.toHaveBeenCalled()
+    const activationCalls = vi.mocked(prisma.company.updateMany).mock.calls.filter(c => 'activatedAt' in (c[0] as any).data)
+    expect(activationCalls).toHaveLength(0)
+  })
+
+  // (I) Timestamp: paidAt do Payment e activatedAt da Company usam
+  // EXATAMENTE o mesmo instante — nunca dois `new Date()` divergentes, e
+  // nunca o horário de um retry tardio (aqui simulado indiretamente: um
+  // único `now` é capturado uma vez e reaproveitado nos dois campos).
+  it('(I) paidAt do Payment e activatedAt da Company são gravados com o MESMO instante, mesmo que o tempo avance entre as duas escritas (detecta um `now` recalculado em vez de reaproveitado)', async () => {
+    const company = companyWithActivation({ id: 'company_1', activatedAt: null })
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(
+      dbPaymentFixture({ id: 'payment_1', status: 'pending', company } as any) as any
+    )
+    vi.mocked(prisma.company.findUnique).mockResolvedValue({ status: company.status, activatedAt: null } as any)
+    vi.mocked(prisma.payment.findMany).mockResolvedValue(COMPLETING_PAYMENTS as any)
+
+    vi.useFakeTimers()
+    const frozenNow = new Date('2026-07-01T08:00:00.000Z')
+    vi.setSystemTime(frozenNow)
+    // Simula um gap real de tempo ENTRE a escrita de paidAt (já concluída
+    // antes desta chamada) e a leitura/escrita de ativação logo depois, na
+    // MESMA transação — se o código capturasse `now` uma única vez ANTES
+    // do início da transação (como deve) e reaproveitasse, activatedAt sai
+    // igual a `frozenNow`; se em vez disso recalculasse um `new Date()`
+    // próprio depois deste ponto (mutação a detectar), sairia 5s adiante.
+    vi.mocked(prisma.payment.findMany).mockImplementationOnce((async () => {
+      vi.advanceTimersByTime(5000)
+      return COMPLETING_PAYMENTS
+    }) as any)
+    try {
+      await POST(webhookRequest({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', value: 199 } }))
+    } finally {
+      vi.useRealTimers()
+    }
+
+    const paidAtCall = vi.mocked(prisma.payment.updateMany).mock.calls.find(c => 'paidAt' in (c[0] as any).data)
+    const activationCall = vi.mocked(prisma.company.updateMany).mock.calls.find(c => 'activatedAt' in (c[0] as any).data)
+    expect((paidAtCall![0] as any).data.paidAt).toEqual(frozenNow)
+    expect((activationCall![0] as any).data.activatedAt).toEqual(frozenNow)
+    expect((activationCall![0] as any).data.activatedAt).not.toEqual(new Date(frozenNow.getTime() + 5000))
+  })
+})
+
+// ── Commission: comportamento de refund/chargeback preservado (não alterado
+// por esta tranche) — trava de regressão explícita, já que nenhum teste
+// cobria isso antes desta migração (ver relatório da revisão pós-jornada).
+describe('POST /api/webhooks/asaas — PAYMENT_REFUNDED continua estornando a Commission vinculada (comportamento histórico, não tocado por esta tranche)', () => {
+  it('marca o Payment como refunded e estorna a Commission em_carencia/liberada/bloqueada vinculada a ele', async () => {
+    vi.mocked(prisma.payment.updateMany).mockResolvedValue({ count: 1 } as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue({ id: 'payment_refunded_1' } as any)
+    vi.mocked(prisma.commission.updateMany).mockResolvedValue({ count: 1 } as any)
+
+    await POST(webhookRequest({ event: 'PAYMENT_REFUNDED', payment: { id: 'pay_refund_1', value: 199 } }))
+
+    expect(prisma.payment.updateMany).toHaveBeenCalledWith({
+      where: { asaasId: 'pay_refund_1' },
+      data:  { status: 'refunded' },
+    })
+    expect(prisma.commission.updateMany).toHaveBeenCalledWith({
+      where: { paymentId: 'payment_refunded_1', status: { in: ['em_carencia', 'liberada', 'bloqueada'] } },
+      data:  { status: 'estornada' },
+    })
+  })
+
+  it('nenhum Payment local correspondente → não tenta estornar Commission nenhuma (no-op seguro)', async () => {
+    vi.mocked(prisma.payment.updateMany).mockResolvedValue({ count: 0 } as any)
+    vi.mocked(prisma.payment.findFirst).mockResolvedValue(null)
+
+    await POST(webhookRequest({ event: 'PAYMENT_REFUNDED', payment: { id: 'pay_refund_desconhecido', value: 199 } }))
+
+    expect(prisma.commission.updateMany).not.toHaveBeenCalled()
   })
 })

@@ -540,3 +540,60 @@ aplicável" do quadro-resumo enquanto essa condição se mantiver.**
   fora desta tranche
 - Fonte: `src/lib/contract/quadroResumo.ts`, `docs/CONTRACT_MVP_V1.md`
   (Seção 5)
+
+---
+
+## PR #42 — versionamento histórico dos termos temporais do quadro-resumo (2026-08-17)
+
+**`vigenciaInicial`, `renovacao` e `avisoPrevio` do quadro-resumo/comprovante
+derivam de `contractVersion`, pelo mesmo padrão de mapa versionado já usado
+para faixa e plano — nunca de uma constante global vigente.**
+- Status: implantada — PR #42 mergeada (`73be188`, 2026-08-17)
+- Corrigiu o `LEGACY_MISMATCH_PREEXISTENTE`: esses três campos eram
+  constantes globais que refletiam somente a regra vigente (`2026-08-05`),
+  de modo que um aceite com `contractVersion=2026-07-04` selecionava
+  corretamente cláusulas, faixa e plano históricos, mas ainda podia exibir
+  os termos temporais da versão vigente
+- A versão `2026-07-04` preserva sua própria regra histórica, a versão
+  `2026-08-05` preserva a regra vigente, e `fail-closed` via
+  `VersaoContratualDesconhecidaError` se aplica a versão contratual
+  desconhecida — nenhuma cláusula histórica foi reescrita
+- Motivo: manter o mesmo princípio já registrado para faixa/plano (acima):
+  o quadro-resumo de um contrato já aceito nunca deve refletir a regra
+  vigente do código, só a regra da versão efetivamente aceita
+- Fonte: `src/lib/contract/quadroResumo.ts`, `src/lib/contract/quadroResumo.test.ts`
+
+---
+
+## Eixo D — layout e paginação do PDF (PR #41, 2026-08-17)
+
+**O layout, a formatação e a paginação do PDF do contrato (cabeçalhos,
+rodapés, numeração de página, quadro-resumo, comprovante e bloco
+CONTRATADA) estão tecnicamente concluídos e implantados em Produção; a
+validação funcional/visual do PDF em si foi feita antes do merge, sobre
+matriz sintética — não pela geração de um PDF real em Produção.**
+- Status: implantada — PR #41 mergeada em `main`
+  (`d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`, 2026-08-17)
+- **Antes do merge:** matriz sintética de PDFs reconciliada com a PR #42 —
+  cenários 01–06 com 8 páginas, cenário 07 (extremo) com 9 páginas
+  justificadas pelo conteúdo, cenário 08 (histórico `2026-07-04`) com 7
+  páginas — validação estrutural, validação visual humana, testes
+  automatizados e build aprovados
+- **Depois do merge:** deployment Production Vercel `success`; smoke
+  read-only de disponibilidade aprovado (`/`, `/termos`, `/digital`,
+  `/elegibilidade` → 200; `/api/contratacao/status` sem sessão → 401) —
+  este smoke confirma disponibilidade das rotas, não gera nem inspeciona
+  nenhum PDF real em Produção
+- **Pendente:** a validação ponta a ponta do fluxo completo com geração
+  real de um PDF em Produção ainda não foi exercitada (ver
+  `docs/PROJECT_STATE.md`)
+- Nenhuma escrita em Produção, banco, schema, Asaas ou operação financeira
+  nesta validação
+- Motivo: encerrar a última pendência técnica dos Eixos A–D da frente
+  Contrato/PDF, sem alterar conteúdo contratual nem regra de negócio
+- **Esta decisão não altera o bloqueio de novo cliente real:** a lógica
+  financeira de cancelamento de 12 meses (implementação em `PR #40`, ainda
+  aberta e não reconciliada por esta frente) e a validação ponta a ponta do
+  fluxo completo continuam pendentes — ver `docs/PROJECT_STATE.md` e
+  `docs/MVP_BACKLOG.md`
+- Fonte: `docs/PROJECT_STATE.md`, `docs/CONTRACT_MVP_V1.md`

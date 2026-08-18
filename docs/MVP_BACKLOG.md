@@ -9,7 +9,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Contrato
 
-- **Estado:** parcialmente concluído
+- **Estado:** Eixos A, B, C e D tecnicamente concluídos — bloqueador Contrato/PDF ainda não fechado
 - **Concluído:**
   - Persistência idempotente e recuperável do PDF do contrato (Eixo C — PR #16)
   - Decisões comerciais do MVP 1.0 aprovadas (vigência, cancelamento, promoções — `docs/DECISIONS.md`)
@@ -25,18 +25,19 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Smoke test read-only em Produção (2026-08-05): `/termos`, `/digital` e `/elegibilidade` respondendo 200 com o conteúdo vigente; vigência de 12 meses e regras de cancelamento publicadas conforme aprovado
   - Snapshot histórico de mensalidade, faixa e valor normal da implantação no PDF, com preservação do valor efetivamente contratado (Eixo B — PR #38)
   - Quadro-resumo completo no comprovante, incluindo LTCAT e demais adicionais (Eixo B — PR #38)
+  - Versionamento por `contractVersion` de `vigenciaInicial`/`renovacao`/`avisoPrevio` no quadro-resumo, corrigindo o `LEGACY_MISMATCH_PREEXISTENTE` (Eixo B — PR #42, mergeada em `73be188`, 2026-08-17)
+  - Layout, formatação e paginação do PDF — cabeçalhos, rodapés, "Página X de Y", páginas fantasma/footer-only, títulos órfãos, listas, quadro-resumo, comprovante, bloco CONTRATADA, aviso de autenticidade e cenários de campos extensos (Eixo D — PR #41, mergeada e implantada em Produção em 2026-08-17, SHA `d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`; validação estrutural/visual sobre matriz sintética concluída antes do merge, deployment Production `success` e smoke read-only de disponibilidade aprovados após o merge — sem geração real de PDF em Produção nesta validação)
 - **Pendente:**
-  - Lógica financeira de cancelamento migrada para a regra de 12 meses aprovada
-  - Layout, formatação e paginação do PDF (Eixo D)
-  - Validação ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/portal)
+  - Lógica financeira de cancelamento migrada para a regra de 12 meses aprovada — implementação em `PR #40`, ainda aberta (não reconciliada nesta frente documental)
+  - Validação ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/portal) com geração real de PDF em Produção
 - **Critério de aceite:**
   - Conteúdo comercial e operacional alinhado com o produto atual
   - Correspondência verificada com `/termos`
   - Mecanismo de imutabilidade do aceite implementado
   - PDF legível gerado automaticamente
   - Comprovante eletrônico persistido
-- **Dependências:** `docs/CONTRACT_MVP_V1.md` (conteúdo já aprovado, aguardando implementação)
-- **Bloqueia novo cliente:** sim
+- **Dependências:** `docs/CONTRACT_MVP_V1.md` (conteúdo já aprovado)
+- **Bloqueia novo cliente:** sim — bloqueio permanece enquanto a lógica financeira de cancelamento (PR #40) e a validação ponta a ponta não forem concluídas
 
 ### Documentos do cliente
 

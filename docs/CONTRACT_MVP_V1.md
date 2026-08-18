@@ -4,10 +4,9 @@ Especificação oficial do conteúdo do Contrato de Prestação de Serviços do
 produto Sublime Digital, aprovada para o MVP.
 
 Este documento **não é código, não é `/termos`, não é o PDF gerado** — é a
-fonte de verdade documental que as implementações futuras (Eixos A, B e D)
-devem seguir. Enquanto não implementado, `/termos` e `src/lib/contractPdf.ts`
-continuam sendo o texto efetivamente publicado e gerado, mesmo onde divergir
-do que está registrado aqui.
+fonte de verdade documental que as implementações dos Eixos A, B, C e D
+seguiram. Onde a implementação divergir do registrado aqui, o código e as
+evidências de Produção prevalecem (ver `docs/DECISIONS.md`).
 
 Preços e valores monetários: consultar exclusivamente `src/lib/pricing.ts`.
 Este documento não fixa nem duplica valores em cláusulas gerais, exceto o
@@ -24,22 +23,27 @@ texto comercial da promoção, expressamente aprovado (Seção 5).
 | Status comercial/operacional | **Aprovado** |
 | Status técnico (SST) | **Validado tecnicamente pela responsável de SST** |
 | Status jurídico | **Revisão jurídica formal por advogado externo: ainda NÃO realizada.** Não bloqueadora do MVP — risco reconhecido e registrado (ver Seção 18 e `docs/DECISIONS.md`) |
-| Status de implementação | **Parcialmente implementado** — Eixos A, B e C concluídos; Eixo D pendente |
+| Status de implementação | **Eixos A, B, C e D tecnicamente concluídos** — validação ponta a ponta e lógica financeira de cancelamento (PR #40) permanecem pendentes fora desta frente |
 | Eixo C (persistência e recuperação do PDF) | **Concluído** — mergeado pela PR #16 |
 | Eixo A (fonte única `/termos` × PDF) | **Concluído** — mergeado pela PR #18, validado em Produção |
-| Eixo B (comprovante e arquitetura do aceite) | **Concluído** — mergeado pela PR #38 |
-| Eixo D (formatação e paginação do PDF) | **Pendente** |
+| Eixo B (comprovante e arquitetura do aceite) | **Concluído** — mergeado pela PR #38; versionamento histórico do quadro-resumo (`vigenciaInicial`/`renovacao`/`avisoPrevio` por `contractVersion`) concluído pela PR #42 (2026-08-17), corrigindo o `LEGACY_MISMATCH_PREEXISTENTE` |
+| Eixo D (formatação e paginação do PDF) | **Concluído** — mergeado pela PR #41 e implantado em Produção (2026-08-17, SHA `d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`); validação estrutural/visual sobre matriz sintética concluída antes do merge, deployment Production `success` e smoke read-only de disponibilidade aprovados após o merge — sem geração real de PDF em Produção |
 
 Este documento é a especificação de conteúdo aprovada — **não** uma peça
 jurídica finalizada. Qualquer alteração de conteúdo aprovado aqui exige uma
 **nova versão contratual** (nova `CONTRACT_VERSION`), nunca uma edição
 retroativa desta especificação ou de um contrato já aceito.
 
-**Novo cliente real permanece bloqueado.** O bloqueio somente poderá ser
-revisto após a conclusão dos Eixos A, B e D e das validações previstas para
-cada um deles. O congelamento documental registrado neste documento **não
-significa** que o contrato já esteja implementado, nem que esteja apto para
-uso com um novo cliente real.
+**Novo cliente real permanece bloqueado.** Os Eixos A, B, C e D estão
+tecnicamente concluídos, mas isso não representa Go-Live liberado: o
+bloqueio permanece enquanto a lógica financeira de cancelamento de 12 meses
+(implementação em `PR #40`, ainda aberta e não reconciliada nesta frente
+documental) e a validação ponta a ponta do fluxo completo (aceite →
+pagamento → PDF → e-mail/Portal, com geração real de PDF em Produção) não
+forem concluídas, além dos demais P0 restantes registrados em
+`docs/MVP_BACKLOG.md`. O congelamento documental registrado neste documento
+**não significa**, por si só, que o contrato esteja apto para uso com um
+novo cliente real.
 
 ---
 
@@ -519,8 +523,8 @@ Registradas para priorização quando a revisão jurídica formal (Seção 0 e
 
 ## 18. Correspondência técnica futura
 
-Requisitos obrigatórios para a implementação desta especificação (Eixos A,
-B e D — não implementados nesta etapa):
+Requisitos obrigatórios para a implementação desta especificação, atendidos
+pelos Eixos A, B, C e D já concluídos:
 
 - uma **única fonte versionada** de conteúdo contratual;
 - `/termos` e o PDF do contrato consumindo essa **mesma fonte** (nunca dois
@@ -544,4 +548,6 @@ B e D — não implementados nesta etapa):
 *Este documento é a especificação de conteúdo do Contrato Sublime Digital —
 MVP 1.0. Não substitui aconselhamento jurídico. Não deve ser citado como o
 contrato vigente perante clientes — o contrato vigente permanece sendo o
-texto publicado em `/termos` até a conclusão dos Eixos A, B e D.*
+texto publicado em `/termos`. Os Eixos A, B, C e D estão tecnicamente
+concluídos, mas isso não representa Go-Live liberado nem revisão jurídica
+formal (ver Seção 0 e `docs/DECISIONS.md`).*

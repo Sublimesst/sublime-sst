@@ -7,8 +7,8 @@ Commits exclusivamente documentais não invalidam este estado.
 
 ## Commit funcional validado em Produção
 
-**SHA:** `50d85a24fdfb14417658ed3b9c1ee6be9ebd3ebc`
-**Data de validação:** 2026-08-15
+**SHA:** `d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`
+**Data de validação:** 2026-08-17
 
 **Regra de integridade:** este commit deve ser ancestral da main atual.
 Qualquer commit funcional posterior exige revalidação e atualização deste arquivo.
@@ -404,6 +404,44 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
   financeira ponta a ponta real** — o caminho completo aceite → pagamento →
   PDF → e-mail/Portal com geração real de PDF em Produção continua pendente
   (ver "Em andamento" abaixo).
+- **Contrato — versionamento histórico do quadro-resumo — PR #42 mergeada
+  (`73be188`, 2026-08-17):** corrigiu o `LEGACY_MISMATCH_PREEXISTENTE`
+  identificado após a PR #38 — `vigenciaInicial`, `renovacao` e
+  `avisoPrevio` do quadro-resumo eram constantes globais que refletiam
+  somente a regra vigente (`2026-08-05`), mesmo quando o aceite tinha
+  `contractVersion=2026-07-04`. Esses três campos passaram a derivar de
+  `contractVersion` pelo mesmo padrão de mapa versionado já usado para
+  faixa e plano (`src/lib/contract/quadroResumo.ts`), com `fail-closed`
+  via `VersaoContratualDesconhecidaError` para versão desconhecida. A
+  versão `2026-07-04` preserva sua regra histórica própria, a versão
+  `2026-08-05` preserva a regra vigente, e nenhuma cláusula histórica foi
+  reescrita.
+- **Contrato — Eixo D (layout e paginação do PDF) — PR #41 mergeada e
+  implantada em Produção (`d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`,
+  2026-08-17):** estabilizou layout, formatação, paginação, cabeçalhos,
+  rodapés, numeração "Página X de Y", páginas fantasma/footer-only,
+  títulos órfãos, listas/bullets, uso de espaço, quadro-resumo,
+  comprovante, bloco CONTRATADA, aviso de autenticidade, caracteres
+  inválidos e cenários de campos extensos no PDF do contrato. **Antes do
+  merge:** matriz sintética de PDFs reconciliada com a PR #42 (cenários
+  01–06 com 8 páginas, cenário 07 extremo com 9 páginas justificadas pelo
+  conteúdo, cenário 08 histórico `2026-07-04` com 7 páginas, revalidado
+  após a PR #42), validação estrutural, validação visual humana, testes
+  automatizados e build aprovados. **Depois do merge:** deployment
+  Production Vercel `success` associado ao SHA acima; smoke read-only de
+  disponibilidade — `/` → 200, `/termos` → 200, `/digital` → 200,
+  `/elegibilidade` → 200, `/api/contratacao/status` sem sessão → 401
+  esperado — sem gerar nem inspecionar nenhum PDF real em Produção.
+  Nenhuma escrita em Produção, nenhuma alteração de banco, schema ou
+  migration, nenhuma chamada à Asaas, nenhum pagamento e nenhuma
+  contratação ou cancelamento real nesta validação. **Este smoke não
+  constitui validação funcional do layout do PDF em Produção** — essa
+  evidência é a matriz sintética pré-merge; a geração real de um PDF
+  dentro do fluxo E2E completo em Produção continua pendente (ver "Em
+  andamento" abaixo). **Com a conclusão da PR #42 e da PR #41, os Eixos A,
+  B, C e D da frente Contrato/PDF estão tecnicamente concluídos** — isso
+  não representa Go-Live geral liberado nem validação E2E completa (ver
+  "Em andamento" abaixo e `docs/MVP_BACKLOG.md`).
 
 ---
 
@@ -416,8 +454,15 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
     validado em Produção por smoke read-only
   - Eixo B (comprovante e arquitetura do aceite): **concluído**, mergeado
     pela PR #38, com quadro-resumo, snapshot histórico de mensalidade e
-    faixa, LTCAT e demais adicionais no comprovante
-  - Eixo D (formatação e paginação do PDF): pendente
+    faixa, LTCAT e demais adicionais no comprovante — versionamento
+    histórico dos campos de vigência/renovação/aviso prévio do
+    quadro-resumo **concluído pela PR #42**
+  - Eixo D (formatação e paginação do PDF): **tecnicamente concluído**,
+    mergeado pela PR #41 e implantado em Produção (2026-08-17) — validação
+    estrutural/visual sobre matriz sintética concluída antes do merge;
+    deployment Production `success` e smoke read-only de disponibilidade
+    aprovados após o merge, sem geração nem inspeção de PDF real em
+    Produção
   - Lógica financeira de cancelamento (regra de 12 meses aprovada em
     `docs/DECISIONS.md`): ainda não migrada — segue operando pela regra
     anterior de 6 mensalidades
@@ -429,12 +474,15 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 ## Próximo passo prioritário
 
-Os Eixos A e B estão concluídos. A próxima prioridade entre lógica
-financeira de cancelamento (12 meses) e Eixo D deve ser definida pela
-Administração de Desenvolvimento. Novo cliente real continua bloqueado até
-a conclusão de todas essas pendências do bloqueador Contrato e PDF, e a
-validação ponta a ponta do fluxo completo (aceite → pagamento → PDF →
-e-mail/Portal) com geração real de PDF em Produção continua pendente.
+Os Eixos A, B, C e D da frente Contrato/PDF estão concluídos (PR #18, #38,
+#42, #16 e #41). Isso **não** representa o fechamento geral do bloqueador
+Contrato e PDF: seguem pendentes a lógica financeira de cancelamento pela
+regra de 12 meses (implementação em `PR #40`, ainda aberta — `open`, não
+mergeada, sem reconciliação nesta frente documental) e a validação ponta a
+ponta do fluxo completo (aceite → pagamento → PDF → e-mail/Portal) com
+geração real de PDF em Produção. Novo cliente real continua bloqueado até a
+conclusão dessas pendências e dos demais P0 restantes (ver
+`docs/MVP_BACKLOG.md`).
 
 O Onboarding Individual dos Trabalhadores (PR #26), Admin Workers
 (visualização/listagem read-only no backoffice, PR #28) e a Exportação

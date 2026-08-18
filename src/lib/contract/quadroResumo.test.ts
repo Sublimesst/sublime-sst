@@ -5,6 +5,7 @@ import {
   deriveLtcatSituacao,
   deriveFaixaHistorica,
   derivePlanoLabel,
+  deriveTermosTemporais,
   QuadroResumoIndisponivelError,
   VersaoContratualDesconhecidaError,
   type QuadroResumoSource,
@@ -159,6 +160,102 @@ describe('derivePlanoLabel — nome do plano por regra estrutural versionada', (
 
   it('versão contratual desconhecida falha explicitamente', () => {
     expect(() => derivePlanoLabel('essencial', '1999-01-01')).toThrow(VersaoContratualDesconhecidaError)
+  })
+})
+
+describe('deriveTermosTemporais — vigência/renovação/aviso por versão contratual', () => {
+  describe('2026-08-05 (vigente) — exato, para impedir mudança acidental nesta tranche', () => {
+    it('produz exatamente os termos vigentes já publicados', () => {
+      const termos = deriveTermosTemporais('2026-08-05')
+      expect(termos.vigenciaInicial).toBe('12 (doze) meses, a partir da ativação')
+      expect(termos.renovacao).toBe('Automática, por prazo indeterminado, após o período inicial')
+      expect(termos.avisoPrevio).toBe('Durante a vigência inicial: qualquer solicitação produz efeito ao final do 12º mês (Cláusula 10ª). Após a renovação: 90 dias.')
+    })
+  })
+
+  describe('2026-07-04 (histórica) — regra própria da Cláusula 5ª, nunca a regra vigente', () => {
+    it('vigência reflete o pagamento da implantação, nunca "a partir da ativação"', () => {
+      const termos = deriveTermosTemporais('2026-07-04')
+      expect(termos.vigenciaInicial).toMatch(/confirmação do pagamento da implantação/)
+      expect(termos.vigenciaInicial).not.toMatch(/a partir da ativação/)
+    })
+
+    it('renovação é automática por períodos iguais, nunca "prazo indeterminado"', () => {
+      const termos = deriveTermosTemporais('2026-07-04')
+      expect(termos.renovacao).toMatch(/períodos iguais/)
+      expect(termos.renovacao).not.toMatch(/indeterminado/)
+    })
+
+    it('aviso/rescisão preserva as três situações históricas sem perda material', () => {
+      const termos = deriveTermosTemporais('2026-07-04')
+      // 1º-6º mês: obrigação de completar as mensalidades mínimas — não é
+      // rotulada como "aviso prévio" para não distorcer seu significado.
+      expect(termos.avisoPrevio).toMatch(/1º e o 6º mês/)
+      expect(termos.avisoPrevio).toMatch(/completar as 6 \(seis\) mensalidades mínimas/)
+      // 7º-12º mês: 60 dias
+      expect(termos.avisoPrevio).toMatch(/7º e o 12º mês/)
+      expect(termos.avisoPrevio).toMatch(/aviso prévio de 60 \(sessenta\) dias/)
+      // Após a primeira renovação: 30 dias
+      expect(termos.avisoPrevio).toMatch(/primeira renovação/)
+      expect(termos.avisoPrevio).toMatch(/aviso prévio de 30 \(trinta\) dias/)
+    })
+
+    it('não contém nenhum termo da regra vigente de 2026-08-05', () => {
+      const termos = deriveTermosTemporais('2026-07-04')
+      const combinado = `${termos.vigenciaInicial} ${termos.renovacao} ${termos.avisoPrevio}`
+      expect(combinado).not.toMatch(/90 \(noventa\) dias/)
+      expect(combinado).not.toMatch(/90 dias/)
+      expect(combinado).not.toMatch(/Cláusula 10ª/)
+      expect(combinado).not.toMatch(/encerramento produz efeitos ao final do 12º mês/)
+    })
+  })
+
+  it('versão contratual desconhecida falha explicitamente, nunca usa os termos vigentes como fallback', () => {
+    expect(() => deriveTermosTemporais('1999-01-01')).toThrow(VersaoContratualDesconhecidaError)
+  })
+
+  it('isolamento entre versões: chamadas intercaladas não vazam termos de uma versão para outra', () => {
+    const historica1 = deriveTermosTemporais('2026-07-04')
+    const vigente = deriveTermosTemporais('2026-08-05')
+    const historica2 = deriveTermosTemporais('2026-07-04')
+
+    expect(historica1).toEqual(historica2)
+    expect(historica1.vigenciaInicial).not.toBe(vigente.vigenciaInicial)
+    expect(historica1.renovacao).not.toBe(vigente.renovacao)
+    expect(historica1.avisoPrevio).not.toBe(vigente.avisoPrevio)
+  })
+})
+
+describe('buildQuadroResumo — termos temporais versionados por contractVersion', () => {
+  it('2026-07-04: resumo recebe os termos históricos da Cláusula 5ª, nunca os termos vigentes', () => {
+    const resumo = buildQuadroResumo(sourceFixture({ contractVersion: '2026-07-04' }))
+    expect(resumo.vigenciaInicial).toMatch(/confirmação do pagamento da implantação/)
+    expect(resumo.renovacao).toMatch(/períodos iguais/)
+    expect(resumo.avisoPrevio).toMatch(/1º e o 6º mês/)
+    expect(resumo.avisoPrevio).not.toMatch(/90 dias/)
+    expect(resumo.avisoPrevio).not.toMatch(/Cláusula 10ª/)
+  })
+
+  it('2026-08-05: resumo continua recebendo exatamente os termos vigentes já publicados', () => {
+    const resumo = buildQuadroResumo(sourceFixture({ contractVersion: '2026-08-05' }))
+    expect(resumo.vigenciaInicial).toBe('12 (doze) meses, a partir da ativação')
+    expect(resumo.renovacao).toBe('Automática, por prazo indeterminado, após o período inicial')
+    expect(resumo.avisoPrevio).toBe('Durante a vigência inicial: qualquer solicitação produz efeito ao final do 12º mês (Cláusula 10ª). Após a renovação: 90 dias.')
+  })
+
+  it('a ordem das chamadas não contamina uma versão com a outra (2026-07-04 → 2026-08-05 → 2026-07-04)', () => {
+    const primeiraHistorica = buildQuadroResumo(sourceFixture({ contractVersion: '2026-07-04' }))
+    buildQuadroResumo(sourceFixture({ contractVersion: '2026-08-05' }))
+    const segundaHistorica = buildQuadroResumo(sourceFixture({ contractVersion: '2026-07-04' }))
+
+    expect(segundaHistorica.vigenciaInicial).toBe(primeiraHistorica.vigenciaInicial)
+    expect(segundaHistorica.renovacao).toBe(primeiraHistorica.renovacao)
+    expect(segundaHistorica.avisoPrevio).toBe(primeiraHistorica.avisoPrevio)
+  })
+
+  it('falha explicitamente para versão contratual desconhecida, mesmo com faixa/plano válidos', () => {
+    expect(() => buildQuadroResumo(sourceFixture({ contractVersion: '1999-01-01' })))
+      .toThrow(VersaoContratualDesconhecidaError)
   })
 })
 

@@ -9,7 +9,7 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Contrato
 
-- **Estado:** Eixos A, B, C e D e a lógica financeira de cancelamento (12 meses) concluídos — bloqueador Contrato/PDF ainda não fechado
+- **Estado:** Eixos A, B, C e D e a lógica financeira de cancelamento (12 meses) concluídos. O critério pré-Go-Live que exigia uma nova contratação financeira artificial completa foi atendido por decisão de evidência composta (`docs/DECISIONS.md`, decisão `ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`, 2026-08-22) — isso não significa que a lacuna de integração ponta a ponta esteja tecnicamente concluída: ela permanece `RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE` e sua validação residual foi transferida para o `CONTROLLED_FIRST_CUSTOMER` (ver "Pendente" abaixo)
 - **Concluído:**
   - Persistência idempotente e recuperável do PDF do contrato (Eixo C — PR #16)
   - Decisões comerciais do MVP 1.0 aprovadas (vigência, cancelamento, promoções — `docs/DECISIONS.md`)
@@ -29,15 +29,33 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   - Layout, formatação e paginação do PDF — cabeçalhos, rodapés, "Página X de Y", páginas fantasma/footer-only, títulos órfãos, listas, quadro-resumo, comprovante, bloco CONTRATADA, aviso de autenticidade e cenários de campos extensos (Eixo D — PR #41, mergeada e implantada em Produção em 2026-08-17, SHA `d794ae9e44bbffd0b1b32a5ee0e6f12f4128761a`; validação estrutural/visual sobre matriz sintética concluída antes do merge, deployment Production `success` e smoke read-only de disponibilidade aprovados após o merge — sem geração real de PDF em Produção nesta validação)
   - Lógica financeira de cancelamento migrada para a regra de vigência de 12 meses aprovada (`docs/DECISIONS.md`) — PR #40, mergeada por merge commit e implantada em Produção em 2026-08-18 (SHA `1423ebe9f740b2bd98de8942b5eb913426fb089f`), reconciliada sem conflito contra a main vigente antes do merge. Smoke pós-deploy aprovado com ressalva observacional: `/` e `/termos` responderam 200, e a única chamada `GET /api/cron/process-cancellations` sem autenticação retornou o 401 esperado (fail-closed), mas a sessão não tinha acesso a logs de runtime da Vercel para confirmar por log a não-execução do processor — evidência aceita por HTTP + revisão estrutural do código, sem confirmação independente por log. Nenhum cancelamento real, chamada Asaas ou cron autenticado foi exercitado sob a nova regra em Produção nesta tranche (ver `docs/PROJECT_STATE.md`)
 - **Pendente:**
-  - Validação ponta a ponta do fluxo completo (aceite → pagamento → PDF → e-mail/portal) com geração real de PDF em Produção
+  - **Nova contratação financeira artificial completa dispensada** como
+    bloqueador isolado do MVP (decisão `ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`,
+    `docs/DECISIONS.md`, 2026-08-22) — um novo E2E real acrescentaria, sim,
+    evidência de integração ponta a ponta genuinamente nova, mas a
+    Administração avaliou que o custo, o risco operacional e os registros
+    artificiais de obtê-la artificialmente agora não se justificam frente à
+    soma das evidências independentes já existentes (ver `docs/DECISIONS.md`
+    para o racional completo)
+  - **Isso não equivale a afirmar que a cadeia integrada atual —
+    `PAYMENT_CONFIRMED`/`RECEIVED` → `financiallyComplete` →
+    `Company.activatedAt` → `generateContractPdf` → `persistContractPdf` →
+    `Document`/`DbStorageObject`/`contractHash` → `sendWelcomeEmail` com PDF
+    anexado — já foi exercitada ponta a ponta numa única contratação real
+    com o código atual.** Essa lacuna integrada permanece
+    `RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE` (`docs/DECISIONS.md`) e será
+    observada no primeiro cliente real (`CONTROLLED_FIRST_CUSTOMER`, ver
+    `docs/PROJECT_STATE.md` para o checklist crítico e a condição de parada
+    `PAUSE_NEW_CUSTOMERS`)
 - **Critério de aceite:**
   - Conteúdo comercial e operacional alinhado com o produto atual
   - Correspondência verificada com `/termos`
   - Mecanismo de imutabilidade do aceite implementado
   - PDF legível gerado automaticamente
   - Comprovante eletrônico persistido
+  - **Critério de encerramento da validação integrada residual** (não é pré-condição para iniciar o `CONTROLLED_FIRST_CUSTOMER`, é o critério para encerrar formalmente a lacuna `RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE` depois dele): cadeia integrada observada com sucesso durante o `CONTROLLED_FIRST_CUSTOMER` (evidência real, não sintética); falha crítica aciona `PAUSE_NEW_CUSTOMERS` em vez de encerrar este critério
 - **Dependências:** `docs/CONTRACT_MVP_V1.md` (conteúdo já aprovado)
-- **Bloqueia novo cliente:** sim — a lógica financeira de cancelamento (PR #40) já está concluída; o bloqueio permanece exclusivamente pela validação ponta a ponta do fluxo completo com geração real de PDF em Produção, ainda não concluída, e pelos demais critérios P0 pendentes ("Fechamento técnico", abaixo)
+- **Bloqueia novo cliente:** não isoladamente — os Eixos A-D e a lógica financeira de cancelamento (PR #40) estão concluídos, e o critério de Go-Live passou a aceitar evidência composta (`docs/DECISIONS.md`); o primeiro cliente real é tratado como `CONTROLLED_FIRST_CUSTOMER` sob observação obrigatória, com `PAUSE_NEW_CUSTOMERS` como condição de parada em caso de falha crítica (ver `docs/PROJECT_STATE.md`). Os demais critérios P0 pendentes ("Fechamento técnico", abaixo) continuam bloqueando independentemente desta decisão
 
 ### Documentos do cliente
 

@@ -597,3 +597,89 @@ matriz sintética — não pela geração de um PDF real em Produção.**
   fluxo completo continuam pendentes — ver `docs/PROJECT_STATE.md` e
   `docs/MVP_BACKLOG.md`
 - Fonte: `docs/PROJECT_STATE.md`, `docs/CONTRACT_MVP_V1.md`
+
+---
+
+## Critério de Go-Live — evidência composta aceita com primeiro cliente controlado (2026-08-22)
+
+**Decisão:** `ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`
+
+- Status: aprovada pela Administração (Supervisor) em 2026-08-22, no âmbito da
+  tarefa `MVP-FINAL-E2E-001`
+- **Racional:** as partes constituintes do fluxo (elegibilidade, criação de
+  customer/cobrança/assinatura na Asaas, confirmação financeira por webhook,
+  `Payment` local, cancelamento real de assinatura, refund real,
+  `PAYMENT_REFUNDED`, magic link, Portal do Cliente, listagem/download de
+  documentos e `DocumentAccessLog`) já têm evidência independente e
+  específica em Produção de episódios/testes controlados anteriores.
+  Separadamente, o conteúdo, a estrutura, o versionamento, o quadro-resumo,
+  a persistência idempotente, o `storageKey`, o hash e o layout/paginação do
+  contrato/PDF atuais (Eixos A, B, C e D) têm cobertura técnica validada —
+  sintética e estrutural, nunca por dinheiro real. **Um novo E2E financeiro
+  real acrescentaria, sim, uma evidência genuinamente nova: a prova da
+  integração ponta a ponta dessas peças atuais numa única execução real —
+  isso não é negado nem minimizado por esta decisão.** O que a
+  Administração avaliou é que, para obter essa evidência adicional de forma
+  artificial, seria necessário criar uma `Company` nova e movimentar
+  dinheiro real de novo, e que o ganho incremental dessa repetição — frente
+  ao que a soma das evidências independentes já cobre separadamente — não
+  justifica, neste estágio do MVP, o custo, o risco operacional e os
+  registros artificiais adicionais em Produção que essa repetição exigiria.
+  Por isso a lacuna de integração ponta a ponta permanece explicitamente
+  aceita como risco (ver abaixo), e não eliminada ou considerada
+  irrelevante — ela será observada no primeiro cliente real
+  (`CONTROLLED_FIRST_CUSTOMER`).
+- **Evidência já existente considerada (por categoria, nunca reafirmada como
+  mais forte do que é):**
+  - `VALIDATED_IN_PRODUCTION` (observada de fato em Produção, em
+    episódios/testes controlados distintos, não necessariamente no mesmo
+    evento):
+    - fluxo financeiro com dinheiro real (elegibilidade/cadastro, criação
+      de customer/cobrança/assinatura Asaas, movimentação financeira real,
+      confirmação financeira por webhook, `Payment` local, cancelamento
+      real de assinatura, refund real, `PAYMENT_REFUNDED`) — episódio
+      financeiro real anterior;
+    - magic link e Portal do Cliente — validado na correção de atribuição
+      de sessão (2026-08-06) e reforçado no gate de visibilidade de
+      documentos técnicos (PR #32, 2026-08-14), com fixture sintética não
+      financeira nesta última;
+    - listagem/download de documentos e `DocumentAccessLog` — mesmas
+      validações acima, não necessariamente sobre o mesmo `Document` nem
+      na mesma sessão do episódio financeiro.
+  - `VALIDATED_SYNTHETICALLY_OR_STRUCTURALLY` (cobertura técnica não
+    financeira — matriz sintética, testes automatizados, revisão
+    estrutural, nunca dinheiro real): contrato de 16 cláusulas, fonte única
+    `/termos` × PDF, versionamento (`CONTRACT_VERSION`), quadro-resumo,
+    snapshots comerciais, persistência idempotente, `storageKey`, hash,
+    layout, paginação, cenários extensos do PDF.
+- **Risco residual — `RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE`:** a cadeia
+  integrada atual —
+  `PAYMENT_CONFIRMED`/`RECEIVED` → atualização financeira atual →
+  `financiallyComplete` → `Company.activatedAt` (quando aplicável) →
+  `generateContractPdf` atual → `persistContractPdf` atual →
+  `Document`/`DbStorageObject`/`contractHash` → `sendWelcomeEmail` com o PDF
+  atual anexado —
+  **não foi exercitada ponta a ponta numa única contratação real depois das
+  alterações mais recentes** (em especial: Eixo A — PR #18; Eixo B — PR #38;
+  Eixo D — PR #41; e o mecanismo `Company.activatedAt`, introduzido do zero
+  pela PR #40 — não há evidência documentada de que esse campo tenha sido
+  gravado por um evento financeiro real até esta data).
+  Esta decisão **não afirma, e não deve ser lida como afirmando, que esse
+  encadeamento integrado já foi validado em Produção** — o risco permanece
+  explicitamente aceito, não eliminado.
+- **Mitigação — `CONTROLLED_FIRST_CUSTOMER`:** o primeiro cliente real após
+  esta decisão é tratado como Go-Live controlado; a cadeia crítica listada
+  acima é observada imediatamente durante essa primeira contratação real
+  (checklist em `docs/PROJECT_STATE.md`).
+- **Critério de parada — `PAUSE_NEW_CUSTOMERS`:** falha em qualquer etapa
+  crítica do checklist do `CONTROLLED_FIRST_CUSTOMER` (ver
+  `docs/PROJECT_STATE.md`) interrompe a entrada de novos clientes até
+  diagnóstico, correção, validação da correção e nova autorização explícita
+  de continuidade.
+- **Esta decisão dispensa, especificamente, a exigência de uma nova
+  contratação financeira artificial completa como bloqueador isolado do
+  MVP** — não dispensa, reduz ou reclassifica nenhum outro item pendente de
+  "Fechamento técnico" em `docs/MVP_BACKLOG.md`, que permanece como estava.
+- Data da decisão: 2026-08-22
+- Fonte: `docs/PROJECT_STATE.md`, `docs/MVP_BACKLOG.md`, análise técnica da
+  tarefa `MVP-FINAL-E2E-001`

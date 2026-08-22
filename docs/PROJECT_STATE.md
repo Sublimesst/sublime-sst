@@ -528,8 +528,17 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
     acima em "Funcionalidades implantadas e validadas"; nenhum cancelamento
     real sob a nova regra foi exercitado em Produção
   - Validação ponta a ponta do fluxo completo com geração real de PDF em
-    Produção: ainda não exercitada (o smoke read-only não gera PDF, por
-    exigir evento real com efeitos persistentes)
+    Produção: **nova contratação financeira artificial dispensada como
+    bloqueador isolado** (decisão `ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`,
+    `docs/DECISIONS.md`, 2026-08-22) — a cadeia integrada atual
+    (`PAYMENT_CONFIRMED`/`RECEIVED` → `financiallyComplete` →
+    `Company.activatedAt` → `generateContractPdf` → `persistContractPdf` →
+    `Document`/`DbStorageObject`/`contractHash` → `sendWelcomeEmail` com PDF
+    anexado) **continua sem ter sido exercitada ponta a ponta numa única
+    contratação real com o código atual** — isso permanece
+    `RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE`, não eliminado nem afirmado como
+    validado, e será observado no primeiro cliente real
+    (`CONTROLLED_FIRST_CUSTOMER`, ver seção própria abaixo)
 
 ---
 
@@ -539,23 +548,88 @@ Os Eixos A, B, C e D da frente Contrato/PDF estão concluídos (PR #18, #38,
 #42, #16 e #41), e a lógica financeira de cancelamento pela regra de 12
 meses também está concluída e implantada em Produção (PR #40, mergeada e
 validada por smoke em 2026-08-18 — ver "Funcionalidades implantadas e
-validadas" acima). Isso **não** representa o fechamento geral do bloqueador
-Contrato e PDF: segue pendente a validação ponta a ponta do fluxo completo
-(aceite → pagamento → PDF → e-mail/Portal) com geração real de PDF em
-Produção, e nenhum cancelamento real sob a nova regra de 12 meses foi
-exercitado em Produção. Novo cliente real continua bloqueado até a
-conclusão dessas pendências e dos demais P0 restantes (ver
-`docs/MVP_BACKLOG.md`).
+validadas" acima). Em 2026-08-22, a Administração aprovou a decisão
+`ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`
+(`docs/DECISIONS.md`): o bloqueador Contrato/PDF **deixa de exigir uma nova
+contratação financeira artificial completa** como pré-requisito isolado —
+um novo E2E real acrescentaria evidência de integração ponta a ponta
+genuinamente nova, mas a Administração avaliou que o custo, o risco
+operacional e os registros artificiais de obtê-la agora não se justificam
+frente à soma das evidências independentes já existentes (ver
+`docs/DECISIONS.md` para o racional completo). **Isso não significa que a
+cadeia integrada atual já foi validada ponta a ponta em Produção com o
+código vigente** — essa lacuna permanece `RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE`,
+explicitamente registrada, não apagada nem reclassificada como já
+comprovada. A validação integrada remanescente é transferida para o
+primeiro cliente real, tratado como `CONTROLLED_FIRST_CUSTOMER` sob
+observação obrigatória (ver seção própria abaixo), com `PAUSE_NEW_CUSTOMERS`
+como condição de parada em caso de falha crítica. Nenhum cancelamento real
+sob a nova regra de 12 meses foi exercitado em Produção — isso continua
+pendente, sem relação com esta decisão. Novo cliente real deixa de estar
+bloqueado isoladamente por este item; permanece bloqueado pelos demais P0
+pendentes (ver `docs/MVP_BACKLOG.md`).
 
 O Onboarding Individual dos Trabalhadores (PR #26), Admin Workers
 (visualização/listagem read-only no backoffice, PR #28) e a Exportação
 compatível com SOC (PR #30) estão concluídos e validados em Produção. O
 bloqueador "Backoffice completo" está concluído (ver
-`docs/MVP_BACKLOG.md`). Os demais bloqueadores P0 (Contrato e PDF,
-Fechamento técnico) permanecem conforme já priorizado nesse documento — a
+`docs/MVP_BACKLOG.md`). Contrato e PDF não bloqueia mais isoladamente o
+`CONTROLLED_FIRST_CUSTOMER`, pela decisão de evidência composta registrada
+acima; o bloqueador P0 "Fechamento técnico" permanece conforme já
+priorizado em `docs/MVP_BACKLOG.md`, sem alteração nesta tarefa — a
 importação efetiva do arquivo SOC dentro do software externo ainda não
 foi validada e segue como risco/validação operacional futura, sem
 bloquear novo cliente por esse motivo específico.
+
+---
+
+## CONTROLLED_FIRST_CUSTOMER — Go-Live controlado (decisão de 2026-08-22)
+
+Conforme `docs/DECISIONS.md` (decisão
+`ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`), o primeiro
+cliente real contratado após 2026-08-22 é tratado como Go-Live controlado.
+Nenhum monitoramento automatizado novo foi implementado para isso — este é
+o checklist conceitual a ser observado manualmente durante essa primeira
+contratação real.
+
+**Checklist crítico a observar durante o `CONTROLLED_FIRST_CUSTOMER`:**
+
+1. aceite contratual;
+2. `Company` criada normalmente;
+3. snapshots contratuais/comerciais congelados corretamente;
+4. cobrança de implantação criada;
+5. assinatura/primeira mensalidade criada;
+6. confirmação do pagamento (implantação e mensalidade);
+7. webhook(s) Asaas aceito(s) — evento correspondente a cada pagamento confirmado observado individualmente (`HTTP 200`), nunca presumindo um único evento cobrindo os dois pagamentos;
+8. `Payment` local reconciliado;
+9. `financiallyComplete` no momento esperado;
+10. `Company.activatedAt` no momento esperado;
+11. transição operacional da `Company` (`pending`→`onboarding_pending`);
+12. contrato gerado automaticamente;
+13. PDF persistido;
+14. `Document` criado;
+15. `contractHash` presente;
+16. recebimento do e-mail de boas-vindas confirmado (evidência humana na caixa postal, sem expor o endereço neste documento);
+17. anexo PDF recebido e abrível;
+18. magic link/Portal funcionando;
+19. contrato listado no Portal;
+20. download do contrato funcional.
+
+**Condição de parada — `PAUSE_NEW_CUSTOMERS`:** se ocorrer falha crítica em
+qualquer um dos itens abaixo, a entrada de novos clientes deve ser
+interrompida até diagnóstico, correção, validação da correção e nova
+autorização explícita de continuidade:
+
+- pagamento confirmado sem reconciliação local (`Payment` não atualizado);
+- `Company.activatedAt` ausente quando financeiramente completo;
+- contrato não gerado;
+- PDF não persistido;
+- `Document`/`contractHash` inconsistente;
+- e-mail crítico não entregue após investigação;
+- contrato indisponível no Portal do Cliente.
+
+Nenhuma automação foi implementada para detectar essas condições nesta
+tarefa — a observação do `CONTROLLED_FIRST_CUSTOMER` é manual.
 
 ---
 

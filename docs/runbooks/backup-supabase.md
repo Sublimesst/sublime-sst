@@ -88,7 +88,7 @@ Faça isso **só de leitura** — nenhum destes passos altera dados, é conferê
 2. **Verificar backups automáticos**
    - Menu lateral → **Database** → **Backups**
    - Veja se existe uma lista de backups diários já acontecendo (data/hora do mais recente)
-   - **Anote/print:** se há backups listados, data do mais recente, e se a tela menciona o plano atual (Free/Pro/Team) — o Supabase Free tier historicamente tem backup diário com retenção curta (dias), planos pagos têm retenção maior e PITR
+   - **Anote/print:** se há backups listados, data do mais recente, e se a tela menciona o plano atual (Free/Pro/Team) — frequência, retenção e disponibilidade de PITR variam por plano e não devem ser presumidas; confirmar diretamente na tela o que o plano atual oferece
 
 3. **Verificar retenção**
    - Na mesma tela de **Backups**, veja quantos dias/quantos backups ficam disponíveis para restore
@@ -115,10 +115,12 @@ Não é necessário fazer nada além de olhar e registrar essas 5 telas.
   migration) — mesmo método já usado e validado nas tranches anteriores (ver
   `docs/PROJECT_STATE.md`), com checksum conferido e listagem via
   `pg_restore --list` validada.
-- **Backup automático do Supabase (diário, o padrão do plano vigente) e sua
-  retenção:** não confirmados neste documento — não presumir nenhuma
-  capacidade específica do plano Free sem checar o painel (ver "Checklist de
-  configuração Supabase" acima). Não é pré-condição para o primeiro cliente.
+- **Backup automático do Supabase e sua frequência/retenção:** não
+  confirmados neste documento — disponibilidade, frequência e retenção não
+  devem ser presumidas para o plano atual sem checar o painel (ver
+  "Checklist de configuração Supabase" acima). Verificação só é necessária
+  quando houver necessidade operacional concreta de confirmar o mecanismo;
+  não é pré-condição para o primeiro cliente.
 - **PITR:** não é requisito do MVP — ver "Pós-MVP / gatilho de reavaliação"
   abaixo.
 - **Documentos em `storage_objects_db`:** como os bytes moram no mesmo
@@ -163,8 +165,8 @@ conforme `docs/DECISIONS.md` (2026-08-22).
 
 **Importante: nunca restaurar por cima do projeto de produção.** Este procedimento cria um projeto novo e descartável só para validar que o backup funciona.
 
-1. Criar um **novo projeto Supabase separado** (ex.: `sublime-sst-restore-test`), mesma região (sa-east-1), plano Free é suficiente para o teste
-2. No painel do projeto de **produção**, ir em **Database → Backups**, escolher o backup mais recente e usar a opção de restore **apontando para o projeto novo** (o Supabase permite restaurar um backup para um projeto diferente do de origem — confirmar essa opção existe no plano atual antes de prosseguir; se só permitir restore no próprio projeto de origem, anotar essa limitação como pendência P1, ver seção abaixo)
+1. Criar um **novo projeto Supabase separado** (ex.: `sublime-sst-restore-test`), mesma região (sa-east-1) — confirmar no painel se o plano a ser usado no projeto de teste é adequado para o volume atual de dados, sem presumir nenhuma capacidade específica
+2. No painel do projeto de **produção**, ir em **Database → Backups**, escolher o backup mais recente e verificar no próprio painel se existe a opção de restore **apontando para o projeto novo** (a disponibilidade dessa opção depende do plano atual e não deve ser presumida — confirmar antes de prosseguir; se só permitir restore no próprio projeto de origem, anotar essa limitação como pendência P1, ver seção abaixo)
 3. Aguardar o restore terminar (pode levar minutos)
 4. Pegar a nova `DATABASE_URL` do projeto de teste (**Project Settings → Database → Connection string**)
 5. **Não apontar a aplicação Vercel/produção para essa URL.** Rodar consultas de validação só localmente, com uma cópia separada de `.env.local` que aponte para o projeto de teste (nunca sobrescrever o `.env.local` real)

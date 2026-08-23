@@ -165,8 +165,9 @@ aprovado, substituindo expressamente o modelo atualmente publicado em
 `src/lib/contractPdf.ts` e `/digital`.**
 - Status: aprovado; **texto contratual implementado** em `/termos`, no PDF e
   em `/digital`/`/elegibilidade` (Eixo A); **lógica financeira de
-  cancelamento ainda não migrada** — continua operando pela regra anterior
-  de 6 mensalidades até tarefa própria
+  cancelamento migrada para a regra de 12 meses** — PR #40, mergeada e
+  implantada em Produção em 2026-08-18 (ver "Lógica financeira de
+  cancelamento — regra de vigência de 12 meses" em `docs/PROJECT_STATE.md`)
 - **Regras anteriores expressamente superadas por esta decisão:**
   - compromisso mínimo de 6 (seis) mensalidades, contado a partir da entrega
     dos documentos de implantação;
@@ -683,3 +684,36 @@ matriz sintética — não pela geração de um PDF real em Produção.**
 - Data da decisão: 2026-08-22
 - Fonte: `docs/PROJECT_STATE.md`, `docs/MVP_BACKLOG.md`, análise técnica da
   tarefa `MVP-FINAL-E2E-001`
+
+---
+
+## Backup do banco — mínimo aceito para o MVP (2026-08-22)
+
+**Decisão:** backup automático pago do Supabase (incluindo Point-in-Time
+Recovery) não é requisito do MVP; o backup lógico manual já
+utilizado/validado no projeto é aceito como estratégia mínima de
+recuperação neste estágio.
+
+- Status: aprovada pela Administração (Supervisor) em 2026-08-22, no âmbito
+  da tarefa `MVP-CLOSURE-20260821` / fechamento documental do P0
+- **Regras:**
+  - backup automático pago do Supabase e PITR não são pré-condição para
+    liberar o primeiro cliente;
+  - nenhum plano, ferramenta ou recurso pago deve ser contratado apenas
+    para destravar o Go-Live;
+  - o mínimo operacional aceito neste estágio é a estratégia de backup
+    lógico manual já utilizada/validada no projeto (`pg_dump` formato
+    custom, checksum conferido, `pg_restore --list` validado — mesmo método
+    já usado nas tranches de limpeza e nas validações de schema em
+    Produção, ver `docs/PROJECT_STATE.md`);
+  - automação de backup, maior retenção e/ou solução paga devem ser
+    reavaliadas pós-MVP, conforme crescimento da base de clientes, aumento
+    do risco financeiro de perda de dados e receita recorrente disponível
+    para custear a despesa;
+  - não afirmar que existe backup automático configurado enquanto isso não
+    estiver confirmado no painel do Supabase; não presumir capacidades do
+    plano Free do Supabase sem confirmação
+- **Motivo:** evitar novo custo fixo recorrente antes de haver receita que
+  o justifique — decisão consciente de trade-off, não uma omissão
+- Fonte: `docs/runbooks/backup-supabase.md`, `docs/MVP_BACKLOG.md`
+  ("Fechamento técnico")

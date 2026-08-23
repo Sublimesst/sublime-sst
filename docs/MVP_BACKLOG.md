@@ -132,13 +132,37 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 ### Fechamento técnico
 
-- **Estado:** pendente
-- **Critério de aceite:**
-  - Zero regressões confirmadas
-  - Build limpo, TypeScript sem erros novos
-  - Backup automático do Supabase configurado
-  - Smoke test do fluxo completo executado
-- **Bloqueia novo cliente:** sim
+- **Estado:** concluído
+- **Concluído (evidência da tarefa `MVP-CLOSURE-20260821`, aceita pelo
+  Supervisor — sem reexecução de testes/TypeScript/build nesta tarefa
+  documental):**
+  - Zero regressões confirmadas: suíte 953 passed / 958 total / 5 failed,
+    as 5 falhas as mesmas pré-existentes de `eligibility.test.ts`, zero
+    regressão nova
+  - Build limpo, TypeScript sem erros novos: `npm run build` PASS, 67 rotas
+    geradas; TypeScript com 23 erros, iguais à baseline documentada, todos
+    confinados a arquivos de teste, zero erro novo em código de Produção
+  - `npm ci` concluído com sucesso, `package.json`/`package-lock.json`
+    inalterados, working tree rastreada limpa
+  - Smoke test do fluxo completo: substituído pela decisão
+    `ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`
+    (`docs/DECISIONS.md`, tarefa `MVP-FINAL-E2E-001`, 2026-08-22) — uma nova
+    contratação financeira artificial completa deixou de ser requisito
+    pré-Go-Live; a cadeia integrada atual não deve ser declarada como já
+    validada ponta a ponta, permanece `RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE`,
+    e sua validação residual ocorre no `CONTROLLED_FIRST_CUSTOMER` (ver
+    `docs/PROJECT_STATE.md`); falha crítica nesse cliente aciona
+    `PAUSE_NEW_CUSTOMERS`
+  - Backup automático pago do Supabase: **deixou de ser critério do MVP por
+    decisão empresarial** (`docs/DECISIONS.md`, 2026-08-22) — a estratégia
+    mínima de recuperação aceita neste estágio é o backup lógico manual já
+    utilizado/validado no projeto (ver `docs/runbooks/backup-supabase.md`);
+    automação de backup, maior retenção e/ou solução paga (incluindo PITR)
+    ficam para reavaliação pós-MVP, conforme crescimento da base de clientes,
+    aumento do risco financeiro e receita disponível
+- **Fechamento técnico não bloqueia mais o primeiro cliente controlado**
+  (`CONTROLLED_FIRST_CUSTOMER`, ver `docs/PROJECT_STATE.md`)
+- **Bloqueia novo cliente:** não (concluído)
 
 ---
 

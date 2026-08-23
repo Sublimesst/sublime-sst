@@ -575,11 +575,33 @@ compatível com SOC (PR #30) estão concluídos e validados em Produção. O
 bloqueador "Backoffice completo" está concluído (ver
 `docs/MVP_BACKLOG.md`). Contrato e PDF não bloqueia mais isoladamente o
 `CONTROLLED_FIRST_CUSTOMER`, pela decisão de evidência composta registrada
-acima; o bloqueador P0 "Fechamento técnico" permanece conforme já
-priorizado em `docs/MVP_BACKLOG.md`, sem alteração nesta tarefa — a
-importação efetiva do arquivo SOC dentro do software externo ainda não
-foi validada e segue como risco/validação operacional futura, sem
-bloquear novo cliente por esse motivo específico.
+acima; a importação efetiva do arquivo SOC dentro do software externo
+ainda não foi validada e segue como risco/validação operacional futura,
+sem bloquear novo cliente por esse motivo específico.
+
+**Fechamento técnico — encerrado formalmente em 2026-08-22 (tarefa
+documental de fechamento do P0):** usando a evidência já produzida e
+aceita pelo Supervisor na tarefa `MVP-CLOSURE-20260821` (zero regressões
+novas — suíte 953/958 com as mesmas 5 falhas pré-existentes de
+`eligibility.test.ts`; TypeScript com os mesmos 23 erros pré-existentes,
+todos em arquivos de teste; `npm run build` PASS com 67 rotas; `npm ci`
+concluído sem alterar `package.json`/`package-lock.json`; working tree
+rastreada limpa), somada à decisão `ACCEPT_COMPOSITE_EVIDENCE_WITH_CONTROLLED_FIRST_CUSTOMER`
+(tarefa `MVP-FINAL-E2E-001`, que dispensa a exigência de smoke financeiro
+integrado artificial isolado) e à decisão de backup do MVP registrada em
+`docs/DECISIONS.md` (2026-08-22, backup automático pago do Supabase deixa
+de ser pré-condição — o mínimo aceito é o backup lógico manual já
+utilizado/validado no projeto, ver `docs/runbooks/backup-supabase.md`).
+Nenhuma dessas validações foi reexecutada nesta tarefa documental. Com
+isso, "Fechamento técnico" deixa de bloquear novo cliente (ver
+`docs/MVP_BACKLOG.md`). **Isso não constitui, e não deve ser lido como
+constituindo:** confirmação de que a cadeia integrada atual já foi
+validada ponta a ponta em Produção (permanece
+`RISK_ACCEPTED_FOR_CONTROLLED_GO_LIVE`, ver acima), nem confirmação de que
+o `CONTROLLED_FIRST_CUSTOMER` já ocorreu (não ocorreu). O próximo passo de
+negócio/Go-Live é preparar e captar o `CONTROLLED_FIRST_CUSTOMER`,
+aplicando integralmente o checklist já documentado abaixo durante a
+contratação real; falha crítica aciona `PAUSE_NEW_CUSTOMERS`.
 
 ---
 

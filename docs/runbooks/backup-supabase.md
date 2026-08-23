@@ -7,9 +7,20 @@
 
 ## Objetivo
 
-Garantir que existe backup automático configurado e testado do banco de produção
-(Supabase Postgres) antes de vender para clientes reais, e deixar registrado um
-procedimento de restore validável sem risco para o banco em produção.
+Deixar registrado o procedimento operacional de backup/restore do banco de
+produção (Supabase Postgres) e o critério mínimo aceito para o estágio atual
+do MVP.
+
+**Decisão vigente (`docs/DECISIONS.md`, 2026-08-22):** backup automático pago
+do Supabase e Point-in-Time Recovery (PITR) **não são pré-condição para
+vender ao primeiro cliente**. O mínimo operacional aceito neste estágio é o
+backup lógico manual já utilizado/validado no projeto (mesmo método usado nas
+tranches de limpeza de dados e nas validações de schema em Produção — ver
+`docs/PROJECT_STATE.md`): `pg_dump` em formato custom, checksum conferido,
+listagem via `pg_restore --list` validada, executado manualmente antes de
+qualquer operação de risco em Produção. Automação de backup, maior retenção
+e/ou solução paga (incluindo PITR) ficam para reavaliação pós-MVP — ver
+"Pós-MVP / gatilho de reavaliação" abaixo.
 
 ## Escopo
 
@@ -61,8 +72,8 @@ para gerar este documento.
 ## Riscos
 
 - **Documentos vivem dentro do próprio Postgres** (`storage_objects_db`, bytes em `Bytes`). Isso significa que um backup de banco que cubra essa tabela já cobre os documentos — mas também significa que o banco de produção é hoje o único lugar onde eles existem. Não há cópia redundante em um object storage separado.
-- Hoje **não há confirmação registrada** de que o backup automático do Supabase está ativo, nem da retenção configurada, nem de que um restore já foi testado alguma vez neste projeto.
-- Point-in-Time Recovery (PITR) normalmente é recurso pago/plano superior no Supabase — precisa ser confirmado no painel, não pode ser assumido.
+- Hoje **não há confirmação registrada** de que o backup automático do Supabase está ativo, nem da retenção configurada, nem de que o plano atual (Free ou superior) oferece o recurso — nenhuma capacidade do plano Free deve ser presumida sem checar o painel. Por decisão de 2026-08-22 (`docs/DECISIONS.md`), isso deixou de bloquear o MVP: o backup lógico manual é o mínimo aceito enquanto essa confirmação não existir.
+- Point-in-Time Recovery (PITR) normalmente é recurso pago/plano superior no Supabase — precisa ser confirmado no painel, não pode ser assumido, e não é requisito do MVP (ver "Pós-MVP / gatilho de reavaliação" abaixo).
 - Um restore mal feito (restaurar por cima do banco de produção, ou apontar a aplicação para o banco errado) é uma operação destrutiva grave — por isso este runbook **exige testar restore só em projeto separado**, nunca em produção.
 
 ## Checklist de configuração Supabase
@@ -77,7 +88,7 @@ Faça isso **só de leitura** — nenhum destes passos altera dados, é conferê
 2. **Verificar backups automáticos**
    - Menu lateral → **Database** → **Backups**
    - Veja se existe uma lista de backups diários já acontecendo (data/hora do mais recente)
-   - **Anote/print:** se há backups listados, data do mais recente, e se a tela menciona o plano atual (Free/Pro/Team) — o Supabase Free tier historicamente tem backup diário com retenção curta (dias), planos pagos têm retenção maior e PITR
+   - **Anote/print:** se há backups listados, data do mais recente, e se a tela menciona o plano atual (Free/Pro/Team) — frequência, retenção e disponibilidade de PITR variam por plano e não devem ser presumidas; confirmar diretamente na tela o que o plano atual oferece
 
 3. **Verificar retenção**
    - Na mesma tela de **Backups**, veja quantos dias/quantos backups ficam disponíveis para restore
@@ -94,24 +105,68 @@ Faça isso **só de leitura** — nenhum destes passos altera dados, é conferê
 
 Não é necessário fazer nada além de olhar e registrar essas 5 telas.
 
-## Plano mínimo antes do Go Live
+## Plano mínimo do MVP atual
 
-Recomendação objetiva, sem gold-plating:
+**MVP atual (mínimo aceito, sem contratação de recurso pago novo):**
 
-- **Frequência:** backup diário automático (o padrão do Supabase, incluindo no Free tier) já é suficiente para o volume atual do negócio (dezenas de empresas). Não é necessário configurar nada extra além de confirmar que está ativo.
-- **Retenção mínima recomendada:** pelo menos **7 dias**. Se o plano atual oferecer menos que isso, é motivo para avaliar upgrade de plano antes do Go Live — dado financeiro (`payments`, `commissions`) e documentos (`storage_objects_db`) não podem ficar sem essa margem de segurança.
-- **PITR agora ou P1:** **pode ficar para P1.** No volume atual (sem alto tráfego de escrita), um backup diário com restore testado já cobre o risco principal ("perdi o banco inteiro" ou "preciso voltar pro estado de ontem"). PITR vale a pena quando o custo de perder algumas horas de dados fica alto — reavaliar quando houver clientes pagantes reais em volume.
-- **Documentos em `storage_objects_db`:** como os bytes moram no mesmo Postgres, eles **já estão** cobertos por qualquer backup de banco padrão — não é necessário nenhum backup separado enquanto esse provider estiver em uso. É importante só ter clareza de que restaurar o banco também restaura (ou perde) os documentos junto.
-- **Se migrar para Supabase Storage no futuro:** nesse dia, o backup de banco **deixa de cobrir os arquivos automaticamente** — Supabase Storage é um serviço separado do Postgres, com sua própria política de backup/retenção (hoje o Supabase não replica automaticamente Storage do mesmo jeito que Postgres). Neste runbook fica registrado: **quando `src/lib/storage/index.ts` trocar de `DbStorageProvider` para um provider de Supabase Storage, este documento precisa ser revisado** para incluir backup do bucket separadamente.
-- **Quem deve ter acesso ao painel Supabase:** o mínimo de pessoas possível com papel de **Owner/Admin** — idealmente as sócias e/ou quem for responsável técnico. Acesso de leitura (se o Supabase permitir um papel mais restrito) para qualquer pessoa adicional que precise só consultar.
-- **Cuidados com LGPD:** o banco contém dados pessoais de clientes (CPF/CNPJ, e-mail, WhatsApp) e, potencialmente, dados sensíveis via documentos de PCMSO. Backups são cópias desses mesmos dados pessoais — precisam do mesmo cuidado de acesso restrito que o banco de produção. Evitar exportar backups para fora do painel Supabase (ex.: baixar dump para laptop pessoal) sem necessidade — se for preciso, criptografar e apagar depois do uso.
+- **Estratégia:** backup lógico manual (`pg_dump` formato custom) executado
+  como procedimento operacional conhecido antes de qualquer operação de
+  risco em Produção (rollout de schema, tranche de limpeza de dados,
+  migration) — mesmo método já usado e validado nas tranches anteriores (ver
+  `docs/PROJECT_STATE.md`), com checksum conferido e listagem via
+  `pg_restore --list` validada.
+- **Backup automático do Supabase e sua frequência/retenção:** não
+  confirmados neste documento — disponibilidade, frequência e retenção não
+  devem ser presumidas para o plano atual sem checar o painel (ver
+  "Checklist de configuração Supabase" acima). Verificação só é necessária
+  quando houver necessidade operacional concreta de confirmar o mecanismo;
+  não é pré-condição para o primeiro cliente.
+- **PITR:** não é requisito do MVP — ver "Pós-MVP / gatilho de reavaliação"
+  abaixo.
+- **Documentos em `storage_objects_db`:** como os bytes moram no mesmo
+  Postgres, eles já estão cobertos pelo mesmo backup lógico manual do banco —
+  não é necessário nenhum backup separado enquanto esse provider estiver em
+  uso. É importante só ter clareza de que restaurar o banco também restaura
+  (ou perde) os documentos junto.
+- **Se migrar para Supabase Storage no futuro:** nesse dia, o backup de banco
+  **deixa de cobrir os arquivos automaticamente** — Supabase Storage é um
+  serviço separado do Postgres, com sua própria política de backup/retenção
+  (hoje o Supabase não replica automaticamente Storage do mesmo jeito que
+  Postgres). Neste runbook fica registrado: **quando `src/lib/storage/index.ts`
+  trocar de `DbStorageProvider` para um provider de Supabase Storage, este
+  documento precisa ser revisado** para incluir backup do bucket
+  separadamente.
+- **Quem deve ter acesso ao painel Supabase:** o mínimo de pessoas possível
+  com papel de **Owner/Admin** — idealmente as sócias e/ou quem for
+  responsável técnico. Acesso de leitura (se o Supabase permitir um papel
+  mais restrito) para qualquer pessoa adicional que precise só consultar.
+- **Cuidados com LGPD:** o banco contém dados pessoais de clientes
+  (CPF/CNPJ, e-mail, WhatsApp) e, potencialmente, dados sensíveis via
+  documentos de PCMSO. Backups (automáticos ou manuais) são cópias desses
+  mesmos dados pessoais — precisam do mesmo cuidado de acesso restrito que o
+  banco de produção. Evitar exportar backups para fora do painel Supabase ou
+  do ambiente controlado (ex.: baixar dump para laptop pessoal) sem
+  necessidade — se for preciso, criptografar e apagar depois do uso.
+
+**Pós-MVP / gatilho de reavaliação:** automação de backup, maior retenção
+paga e/ou PITR devem ser reavaliados quando houver:
+
+- crescimento relevante do número de clientes;
+- aumento do impacto financeiro de uma eventual perda de dados;
+- receita recorrente suficiente para custear o plano pago;
+- necessidade operacional real de menor RPO/RTO (recuperação mais rápida ou
+  mais recente do que o backup manual permite).
+
+Nenhuma dessas condições está confirmada como atendida nesta tarefa
+documental — a reavaliação é responsabilidade de tarefa futura própria,
+conforme `docs/DECISIONS.md` (2026-08-22).
 
 ## Procedimento de restore em ambiente separado
 
 **Importante: nunca restaurar por cima do projeto de produção.** Este procedimento cria um projeto novo e descartável só para validar que o backup funciona.
 
-1. Criar um **novo projeto Supabase separado** (ex.: `sublime-sst-restore-test`), mesma região (sa-east-1), plano Free é suficiente para o teste
-2. No painel do projeto de **produção**, ir em **Database → Backups**, escolher o backup mais recente e usar a opção de restore **apontando para o projeto novo** (o Supabase permite restaurar um backup para um projeto diferente do de origem — confirmar essa opção existe no plano atual antes de prosseguir; se só permitir restore no próprio projeto de origem, anotar essa limitação como pendência P1, ver seção abaixo)
+1. Criar um **novo projeto Supabase separado** (ex.: `sublime-sst-restore-test`), mesma região (sa-east-1) — confirmar no painel se o plano a ser usado no projeto de teste é adequado para o volume atual de dados, sem presumir nenhuma capacidade específica
+2. No painel do projeto de **produção**, ir em **Database → Backups**, escolher o backup mais recente e verificar no próprio painel se existe a opção de restore **apontando para o projeto novo** (a disponibilidade dessa opção depende do plano atual e não deve ser presumida — confirmar antes de prosseguir; se só permitir restore no próprio projeto de origem, anotar essa limitação como pendência P1, ver seção abaixo)
 3. Aguardar o restore terminar (pode levar minutos)
 4. Pegar a nova `DATABASE_URL` do projeto de teste (**Project Settings → Database → Connection string**)
 5. **Não apontar a aplicação Vercel/produção para essa URL.** Rodar consultas de validação só localmente, com uma cópia separada de `.env.local` que aponte para o projeto de teste (nunca sobrescrever o `.env.local` real)
@@ -135,7 +190,7 @@ Depois do restore no projeto de teste, validar:
 ## Frequência de revisão
 
 - Repetir o checklist de configuração (backups ativos, retenção, PITR) **a cada 3 meses**, ou imediatamente após qualquer mudança de plano Supabase
-- Repetir o teste de restore completo (com projeto separado) **antes do Go Live** e depois **1x a cada 6 meses**, ou depois de qualquer migração de schema grande
+- O teste de restore completo (com projeto separado, via painel do Supabase) não é pré-condição para o primeiro cliente (ver "Decisão vigente" no topo deste documento) — recomenda-se repeti-lo **1x a cada 6 meses**, ou depois de qualquer migração de schema grande, assim que a reavaliação pós-MVP ocorrer
 
 ## Pendências / P1
 

@@ -29,7 +29,7 @@ export interface ArticleProps {
   related?: RelatedArticle[]
 }
 
-const BASE_URL = 'https://sublimesst.com'
+const BASE_URL = 'https://www.sublimesst.com'
 
 export function ArticleLayout({
   title, description, publishedAt, updatedAt, readTime, category, slug, children, cta, related,

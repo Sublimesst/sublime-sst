@@ -32,6 +32,7 @@ export default function PrimeiroFuncionarioArticle() {
       updatedAt={PUBLICATION_DATE}
       readTime="8 min"
       category="Primeiro funcionário"
+      reviewedBy={{ name: 'Ariane', jobTitle: 'Técnica em Segurança do Trabalho' }}
       related={[
         { href: '/conteudos/pgr-e-pcmso', title: 'PGR e PCMSO: o que são, para que servem e quem precisa ter', readTime: '7 min' },
         { href: '/conteudos/esocial-e-sst', title: 'eSocial e SST: o que sua empresa precisa enviar', readTime: '8 min' },

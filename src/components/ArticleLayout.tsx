@@ -11,6 +11,11 @@ export interface RelatedArticle {
   readTime: string
 }
 
+export interface TechnicalReviewer {
+  name: string
+  jobTitle: string
+}
+
 export interface ArticleProps {
   title: string
   description: string
@@ -27,12 +32,13 @@ export interface ArticleProps {
     label: string
   }
   related?: RelatedArticle[]
+  reviewedBy?: TechnicalReviewer
 }
 
 const BASE_URL = 'https://www.sublimesst.com'
 
 export function ArticleLayout({
-  title, description, publishedAt, updatedAt, readTime, category, slug, children, cta, related,
+  title, description, publishedAt, updatedAt, readTime, category, slug, children, cta, related, reviewedBy,
 }: ArticleProps) {
   const articleSchema = {
     '@context': 'https://schema.org',
@@ -49,6 +55,7 @@ export function ArticleLayout({
       logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo.jpeg` },
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': `${BASE_URL}/conteudos/${slug}` },
+    ...(reviewedBy && { reviewedBy: { '@type': 'Person', name: reviewedBy.name, jobTitle: reviewedBy.jobTitle } }),
   }
 
   const breadcrumbSchema = {
@@ -91,7 +98,7 @@ export function ArticleLayout({
               {title}
             </h1>
             <p className="text-[17px] text-gray-500 leading-relaxed mb-5">{description}</p>
-            <div className="flex items-center gap-4 text-[12px] text-gray-400 pt-4 border-t border-gray-100">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-gray-400 pt-4 border-t border-gray-100">
               <span className="flex items-center gap-1.5">
                 <Calendar size={12} />
                 Publicado em {new Date(publishedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
@@ -100,6 +107,9 @@ export function ArticleLayout({
                 <span>· Atualizado em {new Date(updatedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
               )}
               <span>· Sublime SST</span>
+              {reviewedBy && (
+                <span>· Revisão técnica: {reviewedBy.name} — {reviewedBy.jobTitle}</span>
+              )}
             </div>
           </div>
 

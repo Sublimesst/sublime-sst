@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArticleLayout } from '@/components/ArticleLayout'
 
-// Confirmar a data real de publicação ao autorizar o primeiro deploy em produção.
 const PUBLICATION_DATE = '2026-09-08'
 const SLUG = 'empresa-contratou-funcionario-obrigacoes-sst'
 const URL = `https://www.sublimesst.com/conteudos/${SLUG}`

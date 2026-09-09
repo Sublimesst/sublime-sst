@@ -6,26 +6,28 @@ import { Footer } from '@/components/layout/Footer'
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import { JsonLd } from '@/components/JsonLd'
 
+const TITLE = 'SST para Contadores e Escritórios Contábeis | Sublime SST'
+const DESCRIPTION = 'Conte com apoio técnico em SST para os clientes da sua contabilidade. Conheça o atendimento da Sublime e as condições do programa de parceiros.'
+const URL = 'https://www.sublimesst.com/sst-para-contadores'
+
 export const metadata: Metadata = {
-  title: 'SST para Contadores e Escritórios Contábeis | Sublime SST',
-  description: 'Ajude seus clientes a regularizarem SST e eSocial sem aumentar sua estrutura interna. Seja parceiro da Sublime SST e amplie os serviços do seu escritório.',
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
+  alternates: { canonical: URL },
 }
 
-const PAINS = [
-  { icon: '📋', title: 'eSocial obrigatório e cobranças dos clientes', body: 'Clientes perguntam sobre SST e eSocial, mas isso está fora do escopo do escritório contábil.' },
-  { icon: '⚖️', title: 'Responsabilidade indireta', body: 'O contador conhece a empresa e sabe dos riscos, mas não tem estrutura para resolver a conformidade de SST.' },
-  { icon: '⏰', title: 'Sem tempo para resolver', body: 'A equipe já está sobrecarregada com obrigações fiscais. SST é mais um problema sem solução clara.' },
-  { icon: '🔄', title: 'Oportunidade de serviço não aproveitada', body: 'Cada cliente com necessidade de SST é uma indicação que vai para outro fornecedor.' },
-  { icon: '📉', title: 'Risco de perder o cliente', body: 'Se o cliente busca SST em outro lugar, pode acabar sendo abordado por concorrentes do seu escritório.' },
-  { icon: '🤷', title: 'Falta de um parceiro confiável', body: 'Indicar sem conhecer o fornecedor é um risco para a reputação do escritório.' },
+const WHEN_TO_REFER = [
+  { icon: '📝', title: 'Cliente vai contratar um funcionário', body: 'É um bom momento para indicar a avaliação do perfil de SST da empresa.' },
+  { icon: '❓', title: 'Dúvidas sobre organização de SST', body: 'PGR, PCMSO, ASO ou eSocial: o cliente pode perguntar e o escritório pode encaminhar.' },
+  { icon: '🧭', title: 'Necessidade de orientação técnica', body: 'Quando o caso exige avaliação especializada, a Sublime assume a análise.' },
+  { icon: '📈', title: 'Busca por acompanhamento', body: 'Clientes que já têm SST organizada também podem buscar continuidade no acompanhamento.' },
 ]
 
 const FAQ = [
-  { q: 'Como funciona a parceria?', a: 'Você indica seus clientes que precisam de SST usando seu link exclusivo. A Sublime SST cuida de todo o processo — avaliação, documentação, conformidade e acompanhamento. Você não precisa se envolver na execução.' },
-  { q: 'Quanto o escritório recebe por indicação?', a: 'Comissão recorrente de 10% sobre cada mensalidade paga pelos clientes que você indicar, por até 12 meses por cliente. Uma carteira com poucas indicações convertidas já gera uma receita recorrente relevante para o escritório.' },
-  { q: 'O contador precisa entender de SST para ser parceiro?', a: 'Não. Basta identificar que o cliente tem funcionários CLT e pode precisar de SST. A nossa equipe faz a avaliação técnica e orienta o cliente.' },
-  { q: 'Existe algum custo para se tornar parceiro?', a: 'Não. O cadastro de parceiro é gratuito. Você indica, a Sublime cuida do resto — e paga comissão pelas conversões.' },
-  { q: 'Como funciona o acompanhamento das indicações?', a: 'Pelo Portal do Parceiro você acompanha cada indicação, o status de conversão e o extrato de comissões — com transparência total para informar seus clientes com segurança.' },
+  { q: 'Preciso executar o trabalho técnico de SST?', a: 'A equipe da Sublime realiza o trabalho técnico incluído no serviço contratado. As responsabilidades e informações necessárias são alinhadas com a empresa e o escritório.' },
+  { q: 'Todo cliente pode contratar o Digital?', a: 'Não. O perfil deve ser avaliado pelo processo de elegibilidade. Demandas que exigem presença técnica ou maior complexidade seguem para análise de Consultoria.' },
+  { q: 'Como conheço as condições e comissões?', a: 'Consulte a página do programa e o Termo de Parceria. A remuneração segue as condições vigentes e não substitui a avaliação técnica de cada cliente.' },
+  { q: 'Como começar?', a: 'Conheça o programa, esclareça suas dúvidas e, se as condições fizerem sentido, conclua o cadastro existente.' },
 ]
 
 const faqSchema = {
@@ -62,37 +64,41 @@ export default function SstParaContadoresPage() {
               Para contadores e escritórios contábeis
             </div>
             <h1 className="font-display text-4xl md:text-5xl text-white leading-[1.15] mb-5">
-              Ajude seus clientes a regularizarem SST e eSocial{' '}
-              <em className="text-teal-light not-italic">sem aumentar sua estrutura interna.</em>
+              Apoio técnico em SST para os clientes da sua contabilidade
             </h1>
             <p className="text-[17px] text-white/70 leading-relaxed mb-10 max-w-2xl mx-auto">
-              A Sublime SST atua como extensão especializada do seu escritório. Você indica,
-              a gente cuida de tudo — e você recebe <strong className="text-white">comissão
-              recorrente de 10%</strong> sobre cada mensalidade dos clientes convertidos, por até 12 meses.
+              Quando surgir uma demanda de SST, seu escritório tem para onde encaminhar o cliente.
+              A Sublime avalia o perfil da empresa e conduz o atendimento contratado, com orientação
+              clara e acompanhamento.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho" className="btn btn-primary btn-lg">
                 <CheckCircle size={17} />
-                Quero ser parceiro
+                Conhecer o programa de parceiros
               </Link>
-              <Link href="/elegibilidade?utm_source=lp-contadores&utm_campaign=nicho&utm_medium=indicacao" className="btn btn-outline btn-lg">
-                Indicar um cliente agora
+              <Link href="/conteudos/empresa-contratou-funcionario-obrigacoes-sst" className="btn btn-outline btn-lg">
+                Ver o guia do primeiro funcionário
               </Link>
             </div>
           </div>
         </section>
 
-        {/* Dores */}
+        {/* Quando encaminhar */}
         <section className="py-20 px-6 bg-gray-50">
           <div className="max-w-[1120px] mx-auto">
             <div className="text-center max-w-xl mx-auto mb-12">
-              <span className="section-tag">O desafio</span>
+              <span className="section-tag">Quando encaminhar</span>
               <h2 className="font-display text-3xl md:text-4xl text-gray-900">
-                O que os contadores enfrentam com SST
+                Uma referência para as dúvidas que chegam ao escritório
               </h2>
+              <p className="text-[15px] text-gray-500 leading-relaxed mt-4">
+                Uma admissão, uma dúvida sobre exames ou a organização de informações de SST pode exigir
+                avaliação técnica. O escritório pode orientar o cliente a procurar a Sublime para entender
+                o que se aplica ao caso.
+              </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {PAINS.map((p) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {WHEN_TO_REFER.map((p) => (
                 <div key={p.title} className="card p-7">
                   <div className="text-[28px] mb-4">{p.icon}</div>
                   <h3 className="text-[15px] font-bold text-gray-900 mb-2">{p.title}</h3>
@@ -109,21 +115,20 @@ export default function SstParaContadoresPage() {
             <div>
               <span className="section-tag">A solução</span>
               <h2 className="font-display text-3xl md:text-4xl text-gray-900 leading-tight mb-5">
-                A Sublime SST como extensão do seu escritório contábil.
+                A Sublime SST como referência técnica para o seu escritório contábil.
               </h2>
               <p className="text-[16px] text-gray-500 leading-relaxed mb-6">
-                Quando um cliente seu precisar de SST, você indica para a Sublime SST. Nossa equipe
-                assume a avaliação técnica, a documentação e o acompanhamento — sem que você
-                precise se envolver nos detalhes.
+                Quando um cliente seu precisar de SST, você encaminha para a Sublime SST. Nossa equipe
+                avalia o perfil da empresa e conduz o atendimento contratado — sem que você precise se
+                envolver na execução técnica.
               </p>
               <ul className="flex flex-col gap-3 mb-7">
                 {[
-                  'Comissão recorrente: 10% de cada mensalidade, por até 12 meses por cliente',
-                  'Avaliação gratuita para os clientes indicados',
-                  'PGR, PCMSO, LTCAT e outros documentos obrigatórios',
-                  'Atendimento do GR1 ao GR4 — todos os portes de cliente',
-                  'Portal do Parceiro: link exclusivo, indicações e extrato de comissões',
-                  'Sem custo para o escritório parceiro',
+                  'Apoio técnico: avaliação do perfil, documentação e acompanhamento',
+                  'Dois caminhos de atendimento: Digital (nacional) ou Consultoria (Rio de Janeiro, casos mais complexos)',
+                  'Portal do Parceiro para acompanhar os encaminhamentos',
+                  'Cadastro gratuito, sem custo para o escritório',
+                  'Condições do programa de parceiros, incluindo comissão, disponíveis em /parceiros e no Termo de Parceria',
                 ].map((b) => (
                   <li key={b} className="flex items-start gap-3">
                     <CheckCircle size={17} className="text-teal shrink-0 mt-0.5" />
@@ -138,15 +143,24 @@ export default function SstParaContadoresPage() {
                 Cadastrar meu escritório como parceiro
                 <ArrowRight size={16} />
               </Link>
+              <p className="text-[13px] text-gray-500 mt-4">
+                Já sabe qual empresa quer indicar?{' '}
+                <Link
+                  href="/elegibilidade?utm_source=lp-contadores&utm_campaign=nicho&utm_medium=indicacao"
+                  className="text-petrol underline"
+                >
+                  Faça o teste de elegibilidade diretamente
+                </Link>.
+              </p>
             </div>
 
             {/* Steps */}
             <div className="flex flex-col gap-4">
               {[
-                { n: '01', title: 'Cadastre seu escritório', body: 'Preencha o formulário de parceiros — é gratuito e leva menos de 5 minutos.' },
-                { n: '02', title: 'Identifique clientes com SST pendente', body: 'Qualquer cliente com funcionários CLT pode precisar de SST. Você já tem essa visão.' },
-                { n: '03', title: 'Indique para a Sublime SST', body: 'Compartilhe o link do teste de elegibilidade ou nos passe o contato direto.' },
-                { n: '04', title: 'A gente cuida do resto', body: 'Avaliação, documentação, conformidade e acompanhamento — tudo com a Sublime SST.' },
+                { n: '01', title: 'Conheça a parceria', body: 'Consulte as condições e esclareça suas dúvidas.' },
+                { n: '02', title: 'Encaminhe uma demanda', body: 'Compartilhe o canal da Sublime com o cliente; após adesão, utilize o link do parceiro conforme as regras do programa.' },
+                { n: '03', title: 'A Sublime avalia o perfil', body: 'Digital para empresas compatíveis com atendimento sem visita técnica; Consultoria para demandas personalizadas.' },
+                { n: '04', title: 'Acompanhe o encaminhamento', body: 'Consulte as informações disponíveis no Portal do Parceiro, respeitando o escopo do programa.' },
               ].map((s) => (
                 <div key={s.n} className="card p-5 flex gap-4 items-start">
                   <div
@@ -165,8 +179,38 @@ export default function SstParaContadoresPage() {
           </div>
         </section>
 
-        {/* FAQ */}
+        {/* Duas formas de atendimento */}
         <section className="py-20 px-6 bg-gray-50">
+          <div className="max-w-[1120px] mx-auto">
+            <div className="text-center max-w-xl mx-auto mb-12">
+              <span className="section-tag">Como a Sublime atende</span>
+              <h2 className="font-display text-3xl md:text-4xl text-gray-900">
+                Duas formas de atendimento
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="card p-7">
+                <h3 className="text-[16px] font-bold text-gray-900 mb-2">Sublime Digital</h3>
+                <p className="text-[14px] text-gray-500 leading-relaxed">
+                  Atendimento nacional para empresas compatíveis com o modelo e aprovadas na elegibilidade.
+                </p>
+              </div>
+              <div className="card p-7">
+                <h3 className="text-[16px] font-bold text-gray-900 mb-2">Sublime Consultoria</h3>
+                <p className="text-[14px] text-gray-500 leading-relaxed">
+                  Atendimento personalizado para demandas de maior complexidade ou que exigem visita, com
+                  atuação prioritária no Rio de Janeiro.
+                </p>
+              </div>
+            </div>
+            <p className="text-[13px] text-gray-500 text-center mt-8 max-w-2xl mx-auto">
+              Exames, documentos e demais entregas dependem do escopo contratado com cada cliente.
+            </p>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="py-20 px-6">
           <div className="max-w-[720px] mx-auto">
             <div className="text-center mb-12">
               <span className="section-tag">Dúvidas</span>
@@ -189,23 +233,18 @@ export default function SstParaContadoresPage() {
           style={{ background: 'linear-gradient(135deg, var(--petrol), var(--teal))' }}
         >
           <h2 className="font-display text-3xl md:text-4xl text-white mb-3">
-            Pronto para ampliar os serviços do seu escritório?
+            Tenha uma referência de SST para o próximo cliente que pedir ajuda
           </h2>
           <p className="text-[16px] text-white/70 mb-8 max-w-lg mx-auto">
-            Cadastre-se como parceiro ou indique um cliente agora — sem burocracia.
+            Conheça como a Sublime pode apoiar o seu escritório e qual caminho de atendimento faz sentido
+            para cada empresa.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
               href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho"
               className="btn btn-white btn-lg"
             >
-              Quero ser parceiro
-            </Link>
-            <Link
-              href="/elegibilidade?utm_source=lp-contadores&utm_campaign=nicho&utm_medium=indicacao"
-              className="btn btn-outline btn-lg"
-            >
-              Indicar um cliente
+              Conhecer o programa de parceiros
             </Link>
           </div>
         </section>

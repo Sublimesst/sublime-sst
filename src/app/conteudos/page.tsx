@@ -8,10 +8,17 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Conteúdos sobre SST — Guias e Explicações | Sublime SST',
   description: 'Guias práticos sobre Segurança e Saúde Ocupacional: PGR, PCMSO, NR-1, eSocial, obrigações para MEI e microempresas. Conteúdo confiável para empresários brasileiros.',
-  alternates: { canonical: 'https://sublimesst.com/conteudos' },
+  alternates: { canonical: 'https://www.sublimesst.com/conteudos' },
 }
 
 const ARTICLES = [
+  {
+    href: '/conteudos/empresa-contratou-funcionario-obrigacoes-sst',
+    title: 'Contratei um funcionário. E agora, o que preciso organizar em SST?',
+    description: 'Contratou um funcionário? Veja o que verificar em SST, quando pode haver dispensas e como organizar exames, documentos e eSocial com tranquilidade.',
+    category: 'Primeiro funcionário',
+    readTime: '8 min',
+  },
   {
     href: '/conteudos/o-que-e-sst',
     title: 'O que é SST e por que sua empresa precisa se preocupar com isso',

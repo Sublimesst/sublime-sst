@@ -4,12 +4,13 @@ import { ArticleLayout } from '@/components/ArticleLayout'
 export const metadata: Metadata = {
   title: 'PGR e PCMSO: o que são, para que servem e quem precisa ter',
   description: 'Os dois documentos mais importantes da SST explicados de forma clara. Saiba o que é PGR, o que é PCMSO, quem é obrigado e o que acontece sem eles.',
-  alternates: { canonical: 'https://sublimesst.com/conteudos/pgr-e-pcmso' },
+  alternates: { canonical: 'https://www.sublimesst.com/conteudos/pgr-e-pcmso' },
   openGraph: {
     title: 'PGR e PCMSO: o que são, para que servem e quem precisa ter',
     description: 'Guia completo sobre os dois documentos mais importantes de SST para empresas brasileiras.',
     type: 'article',
     publishedTime: '2026-06-19',
+    modifiedTime: '2026-09-08',
   },
 }
 
@@ -20,6 +21,7 @@ export default function ArtPgrPcmso() {
       title="PGR e PCMSO: o que são, para que servem e quem precisa ter"
       description="Os dois documentos mais importantes da SST explicados de forma clara. Saiba quem é obrigado, o que cada um cobre e como obtê-los."
       publishedAt="2026-06-19"
+      updatedAt="2026-09-08"
       readTime="7 min"
       category="Documentos"
       cta={{
@@ -37,15 +39,15 @@ export default function ArtPgrPcmso() {
       <h2>Resposta direta</h2>
       <p>
         <strong>PGR</strong> (Programa de Gerenciamento de Riscos) e <strong>PCMSO</strong> (Programa de Controle
-        Médico de Saúde Ocupacional) são os dois documentos centrais da SST. Todo empregador com funcionários CLT
-        é obrigado a ter ambos — independentemente do tamanho da empresa ou do tipo de atividade.
+        Médico de Saúde Ocupacional) são programas centrais da SST. Sua aplicação depende do perfil da empresa:
+        a NR-1 e a NR-7 preveem dispensas, que devem ser verificadas conforme o enquadramento e os riscos da operação.
       </p>
 
       <h2>O que é o PGR?</h2>
       <p>
         O PGR é o documento que identifica, avalia e controla os <strong>riscos ocupacionais</strong> presentes no
         ambiente de trabalho da empresa. Ele é exigido pela <strong>NR-1</strong> (Norma Regulamentadora número 1),
-        que foi atualizada em 2021 para tornar o programa obrigatório para todas as empresas com trabalhadores.
+        respeitadas as dispensas previstas para MEI e, sob condições específicas, para ME e EPP.
       </p>
       <p>O PGR deve conter:</p>
       <ul>
@@ -56,8 +58,9 @@ export default function ArtPgrPcmso() {
         <li>Cronograma de revisões periódicas</li>
       </ul>
       <p>
-        O PGR deve ser <strong>revisado anualmente</strong> ou sempre que houver mudança significativa no processo
-        produtivo, nas condições de trabalho ou após acidentes graves.
+        O gerenciamento de riscos é <strong>contínuo</strong>. A avaliação de riscos deve ser revista nos prazos
+        e nas situações previstos na NR-1, incluindo mudanças na operação, acidentes ou doenças relacionadas
+        ao trabalho e inadequação das medidas de prevenção. Não existe uma regra geral de renovação anual do PGR.
       </p>
 
       <h2>O que é o PCMSO?</h2>
@@ -83,13 +86,14 @@ export default function ArtPgrPcmso() {
         enquanto o PCMSO foca nas <strong>pessoas</strong> (como monitorar a saúde dos trabalhadores expostos a esses riscos).
       </p>
       <p>
-        Os dois programas são complementares e devem estar alinhados. Um PCMSO elaborado sem conhecer o PGR da empresa
-        está incompleto.
+        Quando aplicáveis, os programas são complementares e devem estar alinhados aos riscos da operação.
+        Uma dispensa de elaboração precisa ser verificada pelos critérios da norma.
       </p>
 
       <h2>Quem precisa ter PGR e PCMSO?</h2>
       <p>
-        Toda empresa com <strong>pelo menos um funcionário CLT</strong>. Isso inclui:
+        Empresas com <strong>funcionários CLT</strong> devem verificar o enquadramento, considerando atividade,
+        grau de risco, ambiente e exposições. Essa avaliação pode envolver:
       </p>
       <ul>
         <li>Escritórios de advocacia, contabilidade e consultoria</li>
@@ -100,16 +104,23 @@ export default function ArtPgrPcmso() {
         <li>Microempresas com 1 ou 2 funcionários</li>
       </ul>
       <p>
-        <strong>MEI sem funcionários</strong> não tem obrigação — mas MEI que contrata um empregado passa a ser obrigado.
+        O <strong>MEI é dispensado de elaborar o PGR</strong>, inclusive quando tem empregado. ME e EPP dos graus
+        de risco 1 e 2 podem ser dispensadas se o levantamento preliminar não identificar exposições a agentes
+        físicos, químicos e biológicos e forem feitas as declarações digitais exigidas.
+      </p>
+      <p>
+        A dispensa de PCMSO para MEI, ME e EPP dos graus de risco 1 e 2 também depende das declarações digitais
+        e da ausência das exposições e dos riscos relacionados a fatores ergonômicos previstos na NR-1.
+        <strong> Mesmo dispensada do PCMSO, a empresa deve realizar exames ocupacionais e emitir o ASO.</strong>
       </p>
 
       <h2>O que acontece se a empresa não tiver PGR ou PCMSO?</h2>
-      <p>As consequências práticas são:</p>
+      <p>Quando os programas são exigidos e não são elaborados ou implementados, podem ocorrer:</p>
       <ul>
         <li><strong>Autuação fiscal</strong> — o Ministério do Trabalho pode multar a empresa durante uma fiscalização</li>
         <li><strong>Passivo trabalhista</strong> — a ausência dos documentos é argumento em reclamações na Justiça do Trabalho</li>
-        <li><strong>Pendências no eSocial</strong> — sem o PGR, a empresa não consegue enviar corretamente os eventos de SST no eSocial</li>
-        <li><strong>Invalidação de ASOs</strong> — sem o PCMSO, os atestados de saúde dos funcionários podem não ter validade legal</li>
+        <li><strong>Informações inconsistentes</strong> — a falta de avaliação dos riscos pode comprometer os registros de SST e os eventos aplicáveis no eSocial</li>
+        <li><strong>Falhas no acompanhamento da saúde</strong> — exames e ASO continuam necessários mesmo nos casos de dispensa do PCMSO</li>
       </ul>
 
       <h2>Como obter PGR e PCMSO?</h2>
@@ -119,13 +130,18 @@ export default function ArtPgrPcmso() {
       </p>
       <p>
         Para empresas de baixo risco operacional (GR1) com até 20 funcionários, a Sublime SST oferece um modelo
-        digital que organiza PGR e PCMSO de forma simplificada, com valor mensal fixo e sem necessidade de
-        visitas presenciais na maioria dos casos.
+        digital que organiza as entregas aplicáveis, conforme os critérios de elegibilidade e a compatibilidade
+        da operação com atendimento sem visita técnica presencial.
       </p>
       <p>
         Para empresas com atividades de maior risco ou porte maior, a consultoria personalizada é o caminho mais
         adequado — com análise técnica específica para o perfil da operação.
       </p>
+      <h2>Fontes oficiais</h2>
+      <ul>
+        <li><a href="https://www.gov.br/trabalho-e-emprego/pt-br/assuntos/inspecao-do-trabalho/pgr/principal">MTE — PGR: aplicação, dispensas e revisão</a></li>
+        <li><a href="https://www.gov.br/empresas-e-negocios/pt-br/empreendedor/perguntas-frequentes/seguranca-e-saude-no-trabalho/sou-mei-e-tenho-um">Gov.br — MEI, dispensa do PCMSO e exames ocupacionais</a></li>
+      </ul>
     </ArticleLayout>
   )
 }

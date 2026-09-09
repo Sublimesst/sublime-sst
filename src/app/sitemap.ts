@@ -1,9 +1,10 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://sublimesst.com'
+  const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.sublimesst.com'
 
   return [
+    { url: `${base}/conteudos/empresa-contratou-funcionario-obrigacoes-sst`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.8 },
     { url: base,                                          lastModified: new Date(), changeFrequency: 'weekly',  priority: 1 },
     { url: `${base}/consultoria-sst`,                     lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },
     { url: `${base}/digital`,                             lastModified: new Date(), changeFrequency: 'monthly', priority: 0.9 },

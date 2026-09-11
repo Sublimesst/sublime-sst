@@ -128,9 +128,9 @@ export default function SstParaContadoresPage() {
                   'Dois caminhos de atendimento: Digital (nacional) ou Consultoria (Rio de Janeiro, casos mais complexos)',
                   'Portal do Parceiro para acompanhar os encaminhamentos',
                   'Cadastro gratuito, sem custo para o escritório',
-                  'Condições do programa de parceiros, incluindo comissão, disponíveis em /parceiros e no Termo de Parceria',
-                ].map((b) => (
-                  <li key={b} className="flex items-start gap-3">
+                  <>Condições e comissões disponíveis na <Link href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho" className="text-petrol underline">página do programa</Link> e no <Link href="/termos-parceria" className="text-petrol underline">Termo de Parceria</Link></>,
+                ].map((b, i) => (
+                  <li key={i} className="flex items-start gap-3">
                     <CheckCircle size={17} className="text-teal shrink-0 mt-0.5" />
                     <span className="text-[15px] text-gray-700">{b}</span>
                   </li>

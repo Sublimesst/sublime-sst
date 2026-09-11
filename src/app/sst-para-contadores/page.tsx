@@ -72,11 +72,11 @@ export default function SstParaContadoresPage() {
               clara e acompanhamento.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
-              <Link href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho" className="btn btn-primary btn-lg">
+              <Link href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho" className="btn btn-primary btn-lg whitespace-normal text-center">
                 <CheckCircle size={17} />
                 Conhecer o programa de parceiros
               </Link>
-              <Link href="/conteudos/empresa-contratou-funcionario-obrigacoes-sst" className="btn btn-outline btn-lg">
+              <Link href="/conteudos/empresa-contratou-funcionario-obrigacoes-sst" className="btn btn-outline btn-lg whitespace-normal text-center">
                 Ver o guia do primeiro funcionário
               </Link>
             </div>
@@ -112,7 +112,7 @@ export default function SstParaContadoresPage() {
         {/* Como funciona */}
         <section className="py-20 px-6">
           <div className="max-w-[1120px] mx-auto grid md:grid-cols-2 gap-14 items-center">
-            <div>
+            <div className="min-w-0">
               <span className="section-tag">A solução</span>
               <h2 className="font-display text-3xl md:text-4xl text-gray-900 leading-tight mb-5">
                 A Sublime SST como referência técnica para o seu escritório contábil.
@@ -138,7 +138,7 @@ export default function SstParaContadoresPage() {
               </ul>
               <Link
                 href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho"
-                className="btn btn-primary"
+                className="btn btn-primary whitespace-normal text-center"
               >
                 Cadastrar meu escritório como parceiro
                 <ArrowRight size={16} />
@@ -242,7 +242,7 @@ export default function SstParaContadoresPage() {
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
               href="/parceiros?utm_source=lp-contadores&utm_campaign=nicho"
-              className="btn btn-white btn-lg"
+              className="btn btn-white btn-lg whitespace-normal text-center"
             >
               Conhecer o programa de parceiros
             </Link>

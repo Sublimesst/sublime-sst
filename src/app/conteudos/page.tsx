@@ -6,7 +6,7 @@ import { WhatsAppButton } from '@/components/layout/WhatsAppButton'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Conteúdos sobre SST — Guias e Explicações | Sublime SST',
+  title: { absolute: 'Conteúdos sobre SST — Guias e Explicações | Sublime SST' },
   description: 'Guias práticos sobre Segurança e Saúde Ocupacional: PGR, PCMSO, NR-1, eSocial, obrigações para MEI e microempresas. Conteúdo confiável para empresários brasileiros.',
   alternates: { canonical: 'https://www.sublimesst.com/conteudos' },
 }

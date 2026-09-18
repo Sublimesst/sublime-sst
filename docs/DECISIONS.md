@@ -803,9 +803,10 @@ nunca por aprovação administrativa no lugar do cliente.
 
 **O rótulo user-visible do status técnico `liberada` passa a ser "Apta para
 pagamento" no Portal do Parceiro e no Admin.**
-- Status: implantada (decisão de terminologia, tomada depois do merge de
-  `docs/PARTNER_PORTAL_V2_SPEC.md` pela PR #50, aplicada durante a
-  implementação de PPV2-01)
+- Status: aprovada e implementada na branch PPV2-01 (PR #51); pendente de
+  merge e de validação em Produção (decisão de terminologia, tomada depois
+  do merge de `docs/PARTNER_PORTAL_V2_SPEC.md` pela PR #50, aplicada
+  durante a implementação de PPV2-01)
 - O status técnico/valor persistido no banco **continua exatamente
   `liberada`** — nenhum enum foi renomeado, nenhuma migration foi criada,
   nenhuma lógica de domínio (webhook, cron, PATCH do admin) foi alterada

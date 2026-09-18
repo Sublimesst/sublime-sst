@@ -10,13 +10,18 @@ import { timingSafeEqual } from 'crypto'
 // mesmo tamanho, por isso o length check vem antes — nunca lança exceção
 // por segredo ausente ou tamanho diferente.
 //
-// Usado apenas pelo endpoint de encerramento efetivo de cancelamento
-// (src/app/api/cron/process-cancellations) — esse é o único cron cuja
-// autenticação pode acionar uma operação financeira real (cancelamento de
-// assinatura na Asaas), o que torna o fail-open aqui crítico. Os crons
-// pré-existentes (remind-onboarding, remind-payment, document-expiry)
-// continuam com a checagem própria deles, deliberadamente fora do escopo
-// desta correção — dívida técnica pré-existente registrada à parte.
+// Centraliza a autenticação fail-closed dos crons sensíveis que a
+// reutilizam:
+// - process-cancellations (src/app/api/cron/process-cancellations) — pode
+//   acionar uma operação financeira real (cancelamento de assinatura na
+//   Asaas), o que torna o fail-closed aqui crítico;
+// - release-commissions (src/app/api/cron/release-commissions) — só
+//   transiciona o status local de Commission (em_carencia -> liberada);
+//   não executa pagamento nem chama a Asaas.
+// Os crons pré-existentes (remind-onboarding, remind-payment,
+// document-expiry) continuam com a checagem própria deles, deliberadamente
+// fora do escopo desta correção — dívida técnica pré-existente registrada
+// à parte.
 export function verifyCronSecret(authorizationHeader: string | null | undefined): boolean {
   const expected = process.env.CRON_SECRET ?? ''
   if (!expected) return false

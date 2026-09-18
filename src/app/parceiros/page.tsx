@@ -154,7 +154,8 @@ export default function ParceirosPage() {
                 <p className="text-[12px] text-gray-500 mt-2">
                   O repasse é mensal e condicionado à adimplência do cliente (comissão incide sobre
                   mensalidade efetivamente paga, com carência de 30 dias para cobertura de estorno).
-                  Pagamento via PIX até o dia 10 do mês seguinte à liberação. Para recebimento
+                  Pagamento via PIX até o dia 10 do mês seguinte ao momento em que a comissão se torna
+                  apta para pagamento. Para recebimento
                   recorrente é necessário CNPJ para emissão de nota fiscal.
                 </p>
               </div>

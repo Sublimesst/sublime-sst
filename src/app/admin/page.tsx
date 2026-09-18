@@ -128,7 +128,7 @@ export default function AdminDashboard() {
         <StatCard icon={Clock} label="Parceiros pendentes" value={stats?.partners.pending ?? 0} color="bg-amber-500" />
         <StatCard icon={TrendingUp} label="Indicações manuais" value={stats?.partners.referrals ?? 0} color="bg-blue-500" />
         <StatCard icon={Clock} label="Comissões em carência" value={brl(stats?.commissions['em_carencia']?.totalCentavos ?? 0)} color="bg-amber-500" />
-        <StatCard icon={CheckCircle} label="Comissões liberadas" value={brl(stats?.commissions['liberada']?.totalCentavos ?? 0)} color="bg-green-600" />
+        <StatCard icon={CheckCircle} label="Comissões aptas para pagamento" value={brl(stats?.commissions['liberada']?.totalCentavos ?? 0)} color="bg-green-600" />
         <StatCard icon={CheckCircle} label="Comissões pagas" value={brl(stats?.commissions['paga']?.totalCentavos ?? 0)} color="bg-petrol" />
       </div>
 

@@ -796,3 +796,68 @@ nunca por aprovação administrativa no lugar do cliente.
   passar a sustentar operação real com parceiros contadores, sem reabrir
   discussão de escopo a cada tranche técnica futura
 - Fonte: `docs/PARTNER_PORTAL_V2_SPEC.md`
+
+---
+
+## Terminologia de status de comissão — `liberada` → "Apta para pagamento"
+
+**O rótulo user-visible do status técnico `liberada` passa a ser "Apta para
+pagamento" no Portal do Parceiro e no Admin.**
+- Status: aprovada e implementada na branch PPV2-01 (PR #51); pendente de
+  merge e de validação em Produção (decisão de terminologia, tomada depois
+  do merge de `docs/PARTNER_PORTAL_V2_SPEC.md` pela PR #50, aplicada
+  durante a implementação de PPV2-01)
+- O status técnico/valor persistido no banco **continua exatamente
+  `liberada`** — nenhum enum foi renomeado, nenhuma migration foi criada,
+  nenhuma lógica de domínio (webhook, cron, PATCH do admin) foi alterada
+  por esta decisão
+- "Apta para pagamento" significa: a carência de 30 dias terminou e a
+  comissão cumpriu os critérios para ser processada para pagamento — **não
+  significa que o pagamento já ocorreu**
+- Só o status técnico `paga` corresponde ao rótulo "Paga" (pagamento já
+  registrado como realizado no sistema); nenhum teste ou tela trata "Apta
+  para pagamento" como equivalente a "Paga"
+- Motivo: evitar confusão de produto entre uma comissão apta a ser paga e
+  uma comissão efetivamente paga, sem reabrir a decisão já fechada de não
+  alterar o identificador técnico `liberada`
+- A varredura de consistência também alcançou textos que descreviam o
+  *momento*/processo de liberação (não só o badge de status): o rodapé do
+  extrato do parceiro, a copy pública de `/parceiros`, a mensagem de erro
+  do PATCH admin (`Só comissões liberadas...` → `Só comissões aptas para
+  pagamento...`), e os rótulos da view/coluna de data no Admin (`A liberar`
+  → `Em carência`; `Data de liberação`/`Liberada em` → `Fim da carência`) —
+  sempre preservando os identificadores técnicos (`status='liberada'`,
+  `liberadaEm`, `VIEW_CONFIG.a_liberar`)
+- **Correção de semântica de `liberadaEm` (revisão da PR #51):**
+  `Commission.liberadaEm` é gravado no momento da criação da comissão como
+  a **data-alvo** do fim da carência (`now + 30 dias`,
+  `src/app/api/webhooks/asaas/route.ts`) — não como o timestamp factual de
+  quando o cron efetivamente executou a transição
+  `em_carencia`→`liberada`. Por isso uma primeira versão desta terminologia
+  chegou a rotular esse campo, no Admin e no Portal do Parceiro, como "Data
+  em que ficou apta para pagamento"/"Apta em" — o que afirmaria, de forma
+  factualmente incorreta, que a transição já ocorreu mesmo para uma
+  `Commission` ainda `em_carencia` (cujo `liberadaEm` é sempre uma data
+  futura). Correção: `liberadaEm` passou a ser apresentado de forma neutra
+  como **"Fim da carência"**, tanto no Admin (`DATE_BASE_LABELS`, `<option>`
+  e cabeçalho de coluna) quanto no Portal do Parceiro (rodapé do extrato) —
+  válido tanto antes quanto depois da transição, sem inferir um evento que
+  o banco não registra. O rótulo do **status** `liberada` continua "Apta
+  para pagamento" — só a apresentação do **campo de data** mudou. Nenhum
+  timestamp novo de transição foi criado nesta correção.
+- **Deliberadamente fora desta varredura:** a cláusula "4ª — Da Liberação e
+  do Pagamento" do Termo de Parceria (`src/app/termos-parceria/page.tsx`) —
+  é texto jurídico/contratual; o sistema tem capacidade estrutural de
+  registrar aceite por data/versão por Partner (ver decisão "Novo Partner
+  com dados obrigatórios válidos... entra diretamente como `active`" acima
+  neste documento), mas esta tarefa **não consultou Produção** e **não
+  afirma** que exista aceite real por parceiro sob a redação atual — a
+  Administração já confirmou que não há clientes/parceiros/indicadores
+  reais na base que gerem preocupação de legado para esta regra específica.
+  Independentemente disso, alterar redação jurídica segue o mesmo princípio
+  já aplicado ao contrato do cliente (`docs/CONTRACT_MVP_V1.md`) e exige
+  frente própria, não uma correção de terminologia de UI
+- Fonte: `src/app/parceiro/dashboard/page.tsx`, `src/app/admin/comissoes/page.tsx`,
+  `src/app/admin/page.tsx`, `src/app/parceiros/page.tsx`,
+  `src/app/api/admin/comissoes/route.ts`, `docs/PARTNER_PORTAL_V2_SPEC.md`
+  Seção 8

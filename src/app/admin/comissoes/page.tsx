@@ -7,7 +7,7 @@ type View = 'a_pagar' | 'a_liberar' | 'pagas' | 'competencia' | 'auditoria'
 
 const VIEWS: { value: View; label: string }[] = [
   { value: 'a_pagar',     label: 'A pagar' },
-  { value: 'a_liberar',   label: 'A liberar' },
+  { value: 'a_liberar',   label: 'Em carência' },
   { value: 'pagas',       label: 'Pagas' },
   { value: 'competencia', label: 'Por competência' },
   { value: 'auditoria',   label: 'Todas / Auditoria' },
@@ -17,14 +17,14 @@ const STATUS_ORDER = ['em_carencia', 'liberada', 'paga', 'bloqueada', 'estornada
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   em_carencia: { label: 'Em carência', color: 'bg-amber-100 text-amber-700' },
-  liberada:    { label: 'Liberada',    color: 'bg-blue-100 text-blue-700' },
+  liberada:    { label: 'Apta para pagamento', color: 'bg-blue-100 text-blue-700' },
   paga:        { label: 'Paga',        color: 'bg-green-100 text-green-700' },
   bloqueada:   { label: 'Bloqueada',   color: 'bg-red-100 text-red-700' },
   estornada:   { label: 'Estornada',   color: 'bg-gray-100 text-gray-500' },
 }
 
 const DATE_BASE_LABELS: Record<string, string> = {
-  liberadaEm: 'Data de liberação',
+  liberadaEm: 'Fim da carência',
   pagaEm:     'Data de pagamento',
   createdAt:  'Data de criação',
   referencia: 'Competência (ano-mês)',
@@ -213,7 +213,7 @@ export default function ComissoesPage() {
             <label className="text-[10px] text-gray-400 uppercase tracking-wide block mb-1">Base da data</label>
             <select value={dateBaseAuditoria} onChange={e => setDateBaseAuditoria(e.target.value)}
               className="px-3 py-2 border border-gray-200 rounded-[8px] text-[13px] bg-white">
-              <option value="liberadaEm">Data de liberação</option>
+              <option value="liberadaEm">Fim da carência</option>
               <option value="pagaEm">Data de pagamento</option>
               <option value="createdAt">Data de criação</option>
             </select>
@@ -277,7 +277,7 @@ export default function ComissoesPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  {['Parceiro', 'Cliente', 'Competência', 'Valor', 'Status', 'Liberada em', 'Paga em', 'Pagamento', 'Ação'].map(h => (
+                  {['Parceiro', 'Cliente', 'Competência', 'Valor', 'Status', 'Fim da carência', 'Paga em', 'Pagamento', 'Ação'].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600 text-[11px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>

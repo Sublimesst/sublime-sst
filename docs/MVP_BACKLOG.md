@@ -185,6 +185,37 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
   programa de parceiros (Parceiro Estratégico, white label, Partner PF)
   seguem fora de escopo — ver Pós-MVP.
 
+- Portal do Parceiro V2 — Central de Relacionamento do Parceiro
+  — **Estado:** direção de produto aprovada, especificada em
+  `docs/PARTNER_PORTAL_V2_SPEC.md` — **nenhuma tranche implementada ainda**.
+  Aprovação registrada em `docs/DECISIONS.md` ("Programa de Parceiros —
+  direção de produto do Portal V2", 2026-09-18). Evolui o Portal do
+  Parceiro existente (não reescreve) para incluir navegação em seções,
+  fluxo de indicação pelo próprio portal, extrato de comissão enriquecido,
+  uma classificação própria de "parceiro contador" (distinta de
+  `Partner.tier`) e uma visão read-only de status de SST da carteira,
+  condicionada a um modelo de autorização explícita do cliente. **Presença
+  aqui não autoriza implementação de nenhuma tranche** — cada uma segue o
+  protocolo de sessão/branch do `CLAUDE.md`, estritamente sequencial (uma
+  tranche por tarefa/branch, sem paralelismo entre elas):
+  - PPV2-01 — correção da liberação automática de comissão (hoje
+    `Commission` nunca transiciona de `em_carencia` para `liberada` sem
+    intervenção manual — pré-requisito de toda a frente);
+  - PPV2-02 — fundação visual/UX (navegação em seções, Visão Geral);
+  - PPV2-03 — indicar cliente pelo portal;
+  - PPV2-04 — comissões enriquecidas (calendário de liberação, explicação
+    de status);
+  - PPV2-05 — partner type + modelo de autorização (dois gates
+    cumulativos: vínculo comercial existente + autorização explícita do
+    cliente; `Company.partnerId` sozinho nunca concede acesso técnico);
+  - PPV2-06 — SST da Carteira, status/vigência agregados de PGR/PCMSO/
+    LTCAT e eventos eSocial, somente leitura, sem download de documento.
+  - **PPV2-07** (documentos/recibos/download autorizado) **permanece
+    pós-MVP/candidato — não promovido, não faz parte do ciclo atual.**
+  - **Bloqueia novo cliente:** não. **Bloqueia abertura pública:** não
+    isoladamente — é evolução de um fluxo já concluído e validado (fluxo
+    mínimo MVP, acima), não um bloqueador novo.
+
 - Alinhar Termo de Parceria ao gate operacional PJ-only do MVP
   — **Estado:** pendente. O texto vigente de `/termos-parceria` ainda
   identifica o parceiro como "a pessoa física ou jurídica identificada no

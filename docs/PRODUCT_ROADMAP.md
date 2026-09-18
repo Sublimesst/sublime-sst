@@ -146,19 +146,28 @@ plataforma, ou importação de relatórios como alternativa. Distinto e
 posterior à exportação Modelo I já concluída (PR #30). Origem: análise de
 produto anterior; sem fonte em `MVP_BACKLOG.md`.
 
-**E. Painel/visão do contador** — `CANDIDATE`
-Foco fiscal/folha/eSocial, permissões segregadas, nunca expor informação
-clínica. Origem: `sublime-sst-roadmap.md` (canal de contadores como motor
-de crescimento) e análise de produto; não há painel de contador
-implementado nem planejado em `MVP_BACKLOG.md`.
+**E. Painel/visão do contador** — `CANDIDATE`, parcialmente coberto por
+decisão aprovada
+Foco fiscal/folha/eSocial completo, permissões segregadas, nunca expor
+informação clínica, permanece `CANDIDATE` como painel amplo. Origem:
+`sublime-sst-roadmap.md` (canal de contadores como motor de crescimento) e
+análise de produto. **O escopo mais restrito de "SST da Carteira"
+read-only** (status/vigência de PGR/PCMSO/LTCAT, visão agregada de
+S-2210/S-2220/S-2240, sem download) foi aprovado e especificado como
+`PENDING_OFFICIAL` — ver `docs/DECISIONS.md` ("Programa de Parceiros —
+direção de produto do Portal V2", 2026-09-18) e
+`docs/PARTNER_PORTAL_V2_SPEC.md` (tranche PPV2-06, dependente de PPV2-05).
 
-**F. Evoluções adicionais do Portal do Parceiro** — `CANDIDATE`
+**F. Evoluções adicionais do Portal do Parceiro** — parcialmente promovido
 Itens que permaneceram apenas como candidatos em `docs/plano-admin-e-area-parceiro.md`
-e não entraram no fluxo mínimo já concluído (PR #36): "Indicar cliente"
-pelo próprio Portal do Parceiro (hoje só há vínculo no cadastro inicial),
-extrato do parceiro enriquecido com mais detalhes de comissão,
-impersonation administrativa auditada ("Ver como parceiro"). Distinto do
-Parceiro Estratégico e White Label (Pós-MVP oficial, Seção 4).
+e não entraram no fluxo mínimo já concluído (PR #36). **Promovidos a
+`PENDING_OFFICIAL`** por `docs/DECISIONS.md` ("Programa de Parceiros —
+direção de produto do Portal V2", 2026-09-18) e especificados em
+`docs/PARTNER_PORTAL_V2_SPEC.md`: "Indicar cliente" pelo próprio Portal do
+Parceiro (PPV2-03) e extrato do parceiro enriquecido com mais detalhes de
+comissão (PPV2-04). **Permanece `CANDIDATE`**, não aprovado por essa
+decisão: impersonation administrativa auditada ("Ver como parceiro").
+Distinto do Parceiro Estratégico e White Label (Pós-MVP oficial, Seção 4).
 
 **G. Rate limiting distribuído** — `CANDIDATE`
 Origem: `sublime-sst-roadmap.md` (Sprint 7). Revalidado nesta tarefa:
@@ -256,7 +265,7 @@ promovido explicitamente por decisão humana.
 | `sublime-sst-roadmap.md` (Sprint 9 — Marketplace de Clínicas) | Marketplace com split de pagamento | `CANDIDATE` | Ver Seção 5.I |
 | `docs/plano-admin-e-area-parceiro.md` (bugs B1–B6: motor de comissão, pipeline pós-pagamento, dashboard, cookies) | Correções críticas listadas em 2026-07-07 | `SUPERSEDED` | Pipeline pós-pagamento, cobrança de mensalidade, cookies assinados e fluxo de comissão evoluíram desde então (webhook, `activatedAt`, PR #40, Portal do Parceiro PR #36) — este documento não reflete o código atual e não deve ser lido como bug list vigente |
 | `docs/plano-admin-e-area-parceiro.md` (P0.1–P0.8 do plano) | Ciclo de vida de comissão, recorrência Asaas, pipeline, stats, cookies assinados | `SUPERSEDED` | A arquitetura financeira e de assinatura atual (Asaas + webhook + `Company.activatedAt`) diverge do desenho descrito no plano; não usar como especificação |
-| `docs/plano-admin-e-area-parceiro.md` (P1.9–P1.15: indicar cliente pelo portal, extrato enriquecido, checklist estendido, comissão manual, impersonation, ajuste Cláusula 2ª) | Itens de produtividade do parceiro/Admin | `CANDIDATE` | Ver Seção 5.B, 5.C, 5.F; ajuste da Cláusula 2ª também aparece como `UNKNOWN` (Seção 6) |
+| `docs/plano-admin-e-area-parceiro.md` (P1.9–P1.15: indicar cliente pelo portal, extrato enriquecido, checklist estendido, comissão manual, impersonation, ajuste Cláusula 2ª) | Itens de produtividade do parceiro/Admin | `CANDIDATE` misto — indicar cliente pelo portal e extrato enriquecido promovidos a `PENDING_OFFICIAL` (2026-09-18) | Ver Seção 5.B, 5.C, 5.F; checklist estendido e comissão manual seguem `CANDIDATE` (Seção 5.C); impersonation segue `CANDIDATE` (Seção 5.F); ajuste da Cláusula 2ª também aparece como `UNKNOWN` (Seção 6) |
 | `docs/plano-admin-e-area-parceiro.md` (P2/Futuro: audit trail, upload de documentos, white label, SOC, gamificação) | Itens de longo prazo do plano | `PENDING_OFFICIAL` / `CANDIDATE` misto | Audit trail é Pós-MVP oficial (Seção 4); upload de documentos já implementado (`DONE`, ver `docs/PROJECT_STATE.md`); white label é Pós-MVP oficial; SOC evoluído e gamificação são candidatos (Seção 5.D) |
 | `docs/revisao-juridica-contrato-v4.md` (blocos A–E) | Contradições `/termos` × PDF, NR-7, gaps vs. contrato tradicional | `SUPERSEDED` (bloco A) / `UNKNOWN` (blocos B, C) | Bloco A (unificação `/termos` × PDF) foi resolvido pelo Eixo A (PR #18, fonte única); blocos B (NR-7, prontuários) e C (gaps jurídicos) permanecem como cláusulas sensíveis não resolvidas em `docs/CONTRACT_MVP_V1.md` Seção 17 — ver Seção 6 deste documento |
 | `docs/revisao-juridica-contrato-v4.md` (bloco D — defeitos do contrato tradicional/"NR Soluções") | Correção de template do contrato tradicional (consultoria) | `UNKNOWN` | Fora do escopo do Sublime Digital/SaaS; pertence à operação de consultoria tradicional, não verificado nesta tarefa |

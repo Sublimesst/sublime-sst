@@ -158,7 +158,7 @@ export async function PATCH(req: NextRequest) {
 
   if (transition.count === 0) {
     return NextResponse.json(
-      { success: false, error: 'Só comissões liberadas podem ser marcadas como pagas.' },
+      { success: false, error: 'Só comissões aptas para pagamento podem ser marcadas como pagas.' },
       { status: 422 }
     )
   }

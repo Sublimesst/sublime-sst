@@ -32,7 +32,7 @@ function formatDate(s: string) {
 
 const COMMISSION_STATUS: Record<string, { label: string; color: string }> = {
   em_carencia:  { label: 'Em carência',  color: 'bg-amber-100 text-amber-700' },
-  liberada:     { label: 'Liberada',      color: 'bg-blue-100 text-blue-700' },
+  liberada:     { label: 'Apta para pagamento', color: 'bg-blue-100 text-blue-700' },
   paga:         { label: 'Paga',          color: 'bg-green-100 text-green-700' },
   estornada:    { label: 'Estornada',     color: 'bg-red-100 text-red-700' },
   bloqueada:    { label: 'Em análise',    color: 'bg-orange-100 text-orange-700' },
@@ -148,7 +148,7 @@ export default function PartnerDashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           {[
             { label: 'Total comissões', value: formatBRL(summary.totalComissoes), sub: 'previsto' },
-            { label: 'Liberadas',       value: formatBRL(summary.liberadas),      sub: 'a receber' },
+            { label: 'Aptas para pagamento', value: formatBRL(summary.liberadas), sub: 'a receber' },
             { label: 'Pagas',           value: formatBRL(summary.pagas),          sub: 'recebido' },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-[12px] border border-gray-200 p-5">
@@ -237,7 +237,7 @@ export default function PartnerDashboardPage() {
                         <td className="px-5 py-3.5 font-semibold text-teal">{formatBRL(c.valorComissao)}</td>
                         <td className="px-5 py-3.5">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${st.color}`}>{st.label}</span>
-                          {c.liberadaEm && <p className="text-[10px] text-gray-400 mt-0.5">Liberada: {formatDate(c.liberadaEm)}</p>}
+                          {c.liberadaEm && <p className="text-[10px] text-gray-400 mt-0.5">Apta para pagamento: {formatDate(c.liberadaEm)}</p>}
                           {c.pagaEm && <p className="text-[10px] text-gray-400 mt-0.5">Paga: {formatDate(c.pagaEm)}</p>}
                         </td>
                         <td className="px-5 py-3.5 text-gray-400 text-[11px]">{c.referencia ?? '—'}</td>
@@ -253,7 +253,7 @@ export default function PartnerDashboardPage() {
         <div className="mt-6 p-4 bg-gray-50 rounded-[10px] text-[12px] text-gray-500">
           <strong>Comissão:</strong> 10% sobre o valor líquido de cada mensalidade por até 12 meses.
           As comissões ficam em carência por 30 dias após o pagamento para cobrir possíveis chargeback/estorno.
-          Pagamentos via PIX até o dia 10 do mês seguinte ao da liberação.
+          Pagamentos via PIX até o dia 10 do mês seguinte ao momento em que a comissão se torna apta para pagamento.
           Dúvidas: <a href="https://wa.me/5521997248630" className="text-teal hover:underline">(21) 99724-8630</a>
         </div>
       </main>

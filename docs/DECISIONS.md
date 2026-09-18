@@ -796,3 +796,50 @@ nunca por aprovação administrativa no lugar do cliente.
   passar a sustentar operação real com parceiros contadores, sem reabrir
   discussão de escopo a cada tranche técnica futura
 - Fonte: `docs/PARTNER_PORTAL_V2_SPEC.md`
+
+---
+
+## Terminologia de status de comissão — `liberada` → "Apta para pagamento"
+
+**O rótulo user-visible do status técnico `liberada` passa a ser "Apta para
+pagamento" no Portal do Parceiro e no Admin.**
+- Status: implantada (decisão de terminologia, tomada depois do merge de
+  `docs/PARTNER_PORTAL_V2_SPEC.md` pela PR #50, aplicada durante a
+  implementação de PPV2-01)
+- O status técnico/valor persistido no banco **continua exatamente
+  `liberada`** — nenhum enum foi renomeado, nenhuma migration foi criada,
+  nenhuma lógica de domínio (webhook, cron, PATCH do admin) foi alterada
+  por esta decisão
+- "Apta para pagamento" significa: a carência de 30 dias terminou e a
+  comissão cumpriu os critérios para ser processada para pagamento — **não
+  significa que o pagamento já ocorreu**
+- Só o status técnico `paga` corresponde ao rótulo "Paga" (pagamento já
+  registrado como realizado no sistema); nenhum teste ou tela trata "Apta
+  para pagamento" como equivalente a "Paga"
+- Motivo: evitar confusão de produto entre uma comissão apta a ser paga e
+  uma comissão efetivamente paga, sem reabrir a decisão já fechada de não
+  alterar o identificador técnico `liberada`
+- A varredura de consistência também alcançou textos que descreviam o
+  *momento*/processo de liberação (não só o badge de status): o rodapé do
+  extrato do parceiro, a copy pública de `/parceiros`, a mensagem de erro
+  do PATCH admin (`Só comissões liberadas...` → `Só comissões aptas para
+  pagamento...`), e os rótulos da view/coluna de data no Admin (`A liberar`
+  → `Em carência`; `Data de liberação`/`Liberada em` → `Data em que ficou
+  apta para pagamento`/`Apta em`) — sempre preservando os identificadores
+  técnicos (`status='liberada'`, `liberadaEm`, `VIEW_CONFIG.a_liberar`)
+- **Deliberadamente fora desta varredura:** a cláusula "4ª — Da Liberação e
+  do Pagamento" do Termo de Parceria (`src/app/termos-parceria/page.tsx`) —
+  é texto jurídico/contratual; o sistema tem capacidade estrutural de
+  registrar aceite por data/versão por Partner (ver decisão "Novo Partner
+  com dados obrigatórios válidos... entra diretamente como `active`" acima
+  neste documento), mas esta tarefa **não consultou Produção** e **não
+  afirma** que exista aceite real por parceiro sob a redação atual — a
+  Administração já confirmou que não há clientes/parceiros/indicadores
+  reais na base que gerem preocupação de legado para esta regra específica.
+  Independentemente disso, alterar redação jurídica segue o mesmo princípio
+  já aplicado ao contrato do cliente (`docs/CONTRACT_MVP_V1.md`) e exige
+  frente própria, não uma correção de terminologia de UI
+- Fonte: `src/app/parceiro/dashboard/page.tsx`, `src/app/admin/comissoes/page.tsx`,
+  `src/app/admin/page.tsx`, `src/app/parceiros/page.tsx`,
+  `src/app/api/admin/comissoes/route.ts`, `docs/PARTNER_PORTAL_V2_SPEC.md`
+  Seção 8

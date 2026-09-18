@@ -193,12 +193,12 @@ cards de comissão), mantendo os mesmos componentes visuais.
 - Bloco "Seu link de indicação" (igual ao atual, sem mudança funcional).
 - Cards de funil de indicações: Recebidas / Em andamento / Convertidas
   (mesma lógica de `classifyLead`, sem mudança).
-- Cards de comissão: Total previsto / Liberadas (a receber) / Pagas — só
-  fica correto na prática depois de PPV2-01.
+- Cards de comissão: Total previsto / Aptas para pagamento (a receber) /
+  Pagas — só fica correto na prática depois de PPV2-01.
 - Avisos acionáveis (não decorativos): ex. "Você tem N indicações
   aguardando ação" (nenhuma ação nova requerida do parceiro nesta tranche;
-  o aviso é informativo), "N comissões liberadas aguardando pagamento" —
-  dados que já existem, apenas reorganizados.
+  o aviso é informativo), "N comissões aptas para pagamento aguardando
+  pagamento" — dados que já existem, apenas reorganizados.
 - Atalho para "Indicar cliente" (PPV2-03) em destaque.
 - Empty state: parceiro sem nenhuma indicação ainda vê uma chamada clara
   para copiar o link e para "Indicar cliente", não uma tela vazia.
@@ -223,7 +223,7 @@ Evolução da tabela de leads já existente
 
 Ver Seção 9 (especificação de comissões) para o detalhamento completo.
 Resumo de tela: extrato com abas ou filtro por status (`Em carência`,
-`Liberada`, `Paga`, `Em análise`, `Estornada`), calendário/linha do tempo de
+`Apta para pagamento`, `Paga`, `Em análise`, `Estornada`), calendário/linha do tempo de
 mensalidade 1/12 a 12/12 por cliente convertido, e explicação inline do que
 cada status significa (a mesma nota de rodapé já presente hoje, expandida).
 
@@ -284,8 +284,18 @@ Reaproveitar e estender o padrão já estabelecido em
 
 **Status de comissão (já implementado, mantido sem mudança de enum;
 descrição inline pode ser enriquecida):** `em_carencia` ("Em carência"),
-`liberada` ("Liberada"), `paga` ("Paga"), `bloqueada` ("Em análise"),
-`estornada` ("Estornada").
+`liberada` ("Apta para pagamento" — decisão de terminologia posterior a
+esta especificação, ver nota abaixo), `paga` ("Paga"), `bloqueada` ("Em
+análise"), `estornada` ("Estornada").
+
+**Nota de terminologia (decisão posterior a esta especificação, aplicada na
+implementação de PPV2-01):** o status técnico permanece exatamente
+`liberada` — nenhum enum, migration ou lógica de domínio foi alterada. O
+rótulo user-visible desse status passou de "Liberada" para "Apta para
+pagamento", para deixar claro que a comissão cumpriu a carência e está apta
+a ser processada para pagamento, mas o pagamento em si **ainda não
+necessariamente ocorreu**. Só o status técnico `paga` corresponde ao rótulo
+"Paga" (pagamento já registrado como realizado).
 
 **Status agregado de SST da Carteira (novo, PPV2-06)** — deriva de
 `ImplantacaoChecklist` (`pgrStatus`/`pcmsoStatus`/`ltcatStatus`:
@@ -342,8 +352,8 @@ desta tarefa documental):
   `mensalidadeLiq`, `percentual` ou `valorComissao` — é estritamente a
   transição de status baseada em data já gravada.
 - **Esta tranche bloqueia PPV2-04 e qualquer expansão de UI da tela de
-  comissões**: não faz sentido enriquecer a visualização de "Liberadas" e
-  "Pagas" antes de o dado subjacente conseguir chegar lá.
+  comissões**: não faz sentido enriquecer a visualização de "Aptas para
+  pagamento" e "Pagas" antes de o dado subjacente conseguir chegar lá.
 - Notificação (equipe e/ou parceiro) na liberação é candidato razoável para
   esta tranche, mas não é requisito de aceite mínimo desta correção — a
   correção do dado tem prioridade sobre a notificação.
@@ -357,9 +367,10 @@ desta tarefa documental):
 - Total esperado da série de 12 por cliente (soma projetada, deixando claro
   que é projeção, não uma garantia contratual nova).
 - Explicação inline de cada estado (Em carência = aguardando os 30 dias de
-  proteção contra estorno; Liberada = pronta para pagamento; Paga = já
-  recebida; Em análise = disputa/chargeback em andamento na Asaas;
-  Estornada = pagamento revertido, comissão cancelada).
+  proteção contra estorno; Apta para pagamento = carência concluída e
+  disponível para processamento de pagamento; Paga = já recebida; Em
+  análise = disputa/chargeback em andamento na Asaas; Estornada = pagamento
+  revertido, comissão cancelada).
 - Filtro por cliente, por status, por período de referência
   (`Commission.referencia`, já existe).
 - Nenhuma mudança de regra de negócio de comissão (10% × até 12

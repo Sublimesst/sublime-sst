@@ -99,11 +99,39 @@ describe('varredura de consistência — mensagens/rótulos que descrevem o proc
 
   it('Admin: rótulos de data/coluna não usam mais "Data de liberação"/"Liberada em"', () => {
     const src = readSource('src/app/admin/comissoes/page.tsx')
-    expect(src).toContain('Data em que ficou apta para pagamento')
-    expect(src).toContain("'Apta em'")
     expect(src).not.toContain('Data de liberação')
     expect(src).not.toContain('Liberada em')
     // O campo técnico liberadaEm (chave de dados, orderBy, dateBase) permanece intacto.
     expect(src).toContain('liberadaEm')
+  })
+})
+
+describe('liberadaEm é data-alvo/fim da carência — nunca apresentado como timestamp factual da transição', () => {
+  // Commission.liberadaEm é gravado no momento da CRIAÇÃO da comissão como
+  // a data-alvo do fim da carência (now + 30 dias) — não como o instante em
+  // que o cron efetivamente executou em_carencia -> liberada. Uma Commission
+  // ainda em_carencia já tem liberadaEm no futuro, então rotular esse campo
+  // como "Apta para pagamento: <data>"/"Data em que ficou apta para
+  // pagamento" afirmaria falsamente que a transição já ocorreu.
+  it('Admin: rótulos de data usam "Fim da carência" — nunca "Data em que ficou apta para pagamento" ou "Apta em"', () => {
+    const src = readSource('src/app/admin/comissoes/page.tsx')
+    expect(src).toContain("liberadaEm: 'Fim da carência'")
+    expect(src).toContain('<option value="liberadaEm">Fim da carência</option>')
+    expect(src).toContain("'Fim da carência'")
+    expect(src).not.toContain('Data em que ficou apta para pagamento')
+    expect(src).not.toContain("'Apta em'")
+  })
+
+  it('Portal do Parceiro: texto junto à data de liberadaEm usa "Fim da carência", não "Apta para pagamento"', () => {
+    const src = readSource('src/app/parceiro/dashboard/page.tsx')
+    expect(src).toContain('Fim da carência: {formatDate(c.liberadaEm)}')
+    expect(src).not.toContain('Apta para pagamento: {formatDate(c.liberadaEm)}')
+  })
+
+  it('o rótulo do status `liberada` continua "Apta para pagamento" — só a apresentação do campo de data mudou', () => {
+    const parceiro = readSource('src/app/parceiro/dashboard/page.tsx')
+    const admin = readSource('src/app/admin/comissoes/page.tsx')
+    expect(parceiro).toMatch(/liberada:\s*{\s*label:\s*'Apta para pagamento'/)
+    expect(admin).toMatch(/liberada:\s*{\s*label:\s*'Apta para pagamento'/)
   })
 })

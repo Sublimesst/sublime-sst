@@ -824,9 +824,26 @@ pagamento" no Portal do Parceiro e no Admin.**
   extrato do parceiro, a copy pública de `/parceiros`, a mensagem de erro
   do PATCH admin (`Só comissões liberadas...` → `Só comissões aptas para
   pagamento...`), e os rótulos da view/coluna de data no Admin (`A liberar`
-  → `Em carência`; `Data de liberação`/`Liberada em` → `Data em que ficou
-  apta para pagamento`/`Apta em`) — sempre preservando os identificadores
-  técnicos (`status='liberada'`, `liberadaEm`, `VIEW_CONFIG.a_liberar`)
+  → `Em carência`; `Data de liberação`/`Liberada em` → `Fim da carência`) —
+  sempre preservando os identificadores técnicos (`status='liberada'`,
+  `liberadaEm`, `VIEW_CONFIG.a_liberar`)
+- **Correção de semântica de `liberadaEm` (revisão da PR #51):**
+  `Commission.liberadaEm` é gravado no momento da criação da comissão como
+  a **data-alvo** do fim da carência (`now + 30 dias`,
+  `src/app/api/webhooks/asaas/route.ts`) — não como o timestamp factual de
+  quando o cron efetivamente executou a transição
+  `em_carencia`→`liberada`. Por isso uma primeira versão desta terminologia
+  chegou a rotular esse campo, no Admin e no Portal do Parceiro, como "Data
+  em que ficou apta para pagamento"/"Apta em" — o que afirmaria, de forma
+  factualmente incorreta, que a transição já ocorreu mesmo para uma
+  `Commission` ainda `em_carencia` (cujo `liberadaEm` é sempre uma data
+  futura). Correção: `liberadaEm` passou a ser apresentado de forma neutra
+  como **"Fim da carência"**, tanto no Admin (`DATE_BASE_LABELS`, `<option>`
+  e cabeçalho de coluna) quanto no Portal do Parceiro (rodapé do extrato) —
+  válido tanto antes quanto depois da transição, sem inferir um evento que
+  o banco não registra. O rótulo do **status** `liberada` continua "Apta
+  para pagamento" — só a apresentação do **campo de data** mudou. Nenhum
+  timestamp novo de transição foi criado nesta correção.
 - **Deliberadamente fora desta varredura:** a cláusula "4ª — Da Liberação e
   do Pagamento" do Termo de Parceria (`src/app/termos-parceria/page.tsx`) —
   é texto jurídico/contratual; o sistema tem capacidade estrutural de

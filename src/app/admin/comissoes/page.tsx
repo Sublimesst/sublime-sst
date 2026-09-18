@@ -24,7 +24,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 }
 
 const DATE_BASE_LABELS: Record<string, string> = {
-  liberadaEm: 'Data em que ficou apta para pagamento',
+  liberadaEm: 'Fim da carência',
   pagaEm:     'Data de pagamento',
   createdAt:  'Data de criação',
   referencia: 'Competência (ano-mês)',
@@ -213,7 +213,7 @@ export default function ComissoesPage() {
             <label className="text-[10px] text-gray-400 uppercase tracking-wide block mb-1">Base da data</label>
             <select value={dateBaseAuditoria} onChange={e => setDateBaseAuditoria(e.target.value)}
               className="px-3 py-2 border border-gray-200 rounded-[8px] text-[13px] bg-white">
-              <option value="liberadaEm">Data em que ficou apta para pagamento</option>
+              <option value="liberadaEm">Fim da carência</option>
               <option value="pagaEm">Data de pagamento</option>
               <option value="createdAt">Data de criação</option>
             </select>
@@ -277,7 +277,7 @@ export default function ComissoesPage() {
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  {['Parceiro', 'Cliente', 'Competência', 'Valor', 'Status', 'Apta em', 'Paga em', 'Pagamento', 'Ação'].map(h => (
+                  {['Parceiro', 'Cliente', 'Competência', 'Valor', 'Status', 'Fim da carência', 'Paga em', 'Pagamento', 'Ação'].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-semibold text-gray-600 text-[11px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>

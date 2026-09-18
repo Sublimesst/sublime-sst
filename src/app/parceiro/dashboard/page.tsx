@@ -237,7 +237,7 @@ export default function PartnerDashboardPage() {
                         <td className="px-5 py-3.5 font-semibold text-teal">{formatBRL(c.valorComissao)}</td>
                         <td className="px-5 py-3.5">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${st.color}`}>{st.label}</span>
-                          {c.liberadaEm && <p className="text-[10px] text-gray-400 mt-0.5">Apta para pagamento: {formatDate(c.liberadaEm)}</p>}
+                          {c.liberadaEm && <p className="text-[10px] text-gray-400 mt-0.5">Fim da carência: {formatDate(c.liberadaEm)}</p>}
                           {c.pagaEm && <p className="text-[10px] text-gray-400 mt-0.5">Paga: {formatDate(c.pagaEm)}</p>}
                         </td>
                         <td className="px-5 py-3.5 text-gray-400 text-[11px]">{c.referencia ?? '—'}</td>

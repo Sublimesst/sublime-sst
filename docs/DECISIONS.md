@@ -717,3 +717,82 @@ recuperação neste estágio.
   o justifique — decisão consciente de trade-off, não uma omissão
 - Fonte: `docs/runbooks/backup-supabase.md`, `docs/MVP_BACKLOG.md`
   ("Fechamento técnico")
+
+---
+
+## Programa de Parceiros — direção de produto do Portal V2 (2026-09-18)
+
+**Decisão:** o Portal do Parceiro evolui (não é reescrito) para uma Central
+de Relacionamento do Parceiro, com uma persona nova de "parceiro contador"
+sujeita, no MVP, a um modelo de autorização com dois gates cumulativos —
+vínculo comercial/indicador já existente da `Company` **e** autorização
+explícita e revogável do cliente — nunca por vínculo comercial sozinho, e
+nunca por aprovação administrativa no lugar do cliente.
+
+- Status: aprovada pela Administração (Supervisor) na tarefa
+  `PARTNER-PORTAL-V2-SPEC-001` (exclusivamente documental — nenhum código
+  alterado nesta tarefa)
+- **Regras aprovadas:**
+  - Evoluir a identidade visual e os componentes existentes do Portal do
+    Parceiro — não reescrever do zero;
+  - a liberação automática de comissão (hoje quebrada — `Commission` nunca
+    transiciona de `em_carencia` para `liberada` sem intervenção manual,
+    ver `docs/PARTNER_PORTAL_V2_SPEC.md` Seção 2) deve ser corrigida antes
+    da reformulação visual/funcional do V2;
+  - `Partner` contador precisa de uma classificação própria, distinta de
+    `Partner.tier` (que mede volume/relação comercial, não tipo de
+    parceiro) — `tier` não deve ser reaproveitado para representar isso;
+  - `Company.partnerId` continua representando exclusivamente vínculo de
+    indicação/comissão — **nunca, sozinho, concede autorização de acesso
+    técnico**, mesmo depois desta decisão;
+  - **no MVP, acesso do contador a dado técnico de uma `Company` exige
+    CUMULATIVAMENTE dois gates — nenhum dos dois isoladamente basta:**
+    (1) esse Partner já ser classificado como contador **e** ser o vínculo
+    comercial/indicador já existente daquela `Company`
+    (`Company.partnerId` aponta para ele); **e** (2) autorização explícita
+    e ativa concedida pelo próprio cliente logado no Portal do Cliente
+    (nunca por Admin, nunca por indicação isolada), por `Company`,
+    revogável a qualquer momento pelo mesmo cliente, com escopo definido.
+    Um modelo mais amplo — cliente autorizando qualquer Partner contador
+    independente de vínculo comercial prévio — é possível evolução futura,
+    **não aprovada por esta decisão**;
+  - a primeira versão de "SST da Carteira" (visão do contador) é
+    read-only — status/vigência de PGR, PCMSO e LTCAT, visão agregada dos
+    eventos S-2210/S-2220/S-2240 e pendências operacionais — **sem
+    download de documento**; download/recibo fica para tranche posterior,
+    só depois de validado o modelo de autorização e o isolamento entre
+    parceiros;
+  - **vigência só pode ser exibida quando existir uma fonte específica e
+    validada para aquela data** (ex.: um campo introduzido e documentado
+    especificamente para isso, com regra de cálculo própria aprovada); na
+    ausência dessa fonte, a tela mostra apenas status e as datas factuais
+    já disponíveis (ex. data de conclusão) — **nunca uma data de validade
+    inventada, aproximada ou derivada silenciosamente** de upload,
+    conclusão ou constante genérica;
+  - nenhuma tela do Portal do Parceiro, em nenhuma versão, expõe
+    prontuário, CID, diagnóstico, resultado de exame ou qualquer dado
+    médico individualizado;
+  - Materiais & Campanhas começam simples e versionados — sem CMS nem
+    entidade sofisticada de campanha no primeiro MVP desta frente;
+  - decomposição técnica inicial registrada (PPV2-01 a PPV2-07) em
+    `docs/PARTNER_PORTAL_V2_SPEC.md` Seção 24 ("Ordem de implementação")
+    — sequência estritamente serial, uma tranche por tarefa/branch, sem
+    execução em paralelo entre tranches; nenhuma tranche está autorizada a
+    avançar sem a etapa anterior concluída, revisada, publicada e
+    validada, conforme o protocolo do `CLAUDE.md`.
+- **Isso promove a `PENDING_OFFICIAL`** os seguintes itens antes listados
+  como `CANDIDATE` em `docs/PRODUCT_ROADMAP.md` Seção 5.F: "Indicar
+  cliente" pelo próprio Portal do Parceiro (PPV2-03) e extrato de
+  comissão enriquecido (PPV2-04). O item "impersonation administrativa
+  auditada" da mesma Seção 5.F **permanece `CANDIDATE`** — não foi
+  aprovado por esta decisão.
+- **Isso não promove** o candidato mais amplo "Painel/visão do contador"
+  (`docs/PRODUCT_ROADMAP.md` Seção 5.E, foco fiscal/folha/eSocial) como um
+  todo — o que foi aprovado é especificamente o escopo read-only de "SST
+  da Carteira" descrito acima (PPV2-06), não um painel fiscal/folha
+  completo.
+- **Motivo:** consolidar em uma única especificação as decisões de produto
+  necessárias para o Portal do Parceiro deixar de ser um MVP mínimo e
+  passar a sustentar operação real com parceiros contadores, sem reabrir
+  discussão de escopo a cada tranche técnica futura
+- Fonte: `docs/PARTNER_PORTAL_V2_SPEC.md`

@@ -187,21 +187,28 @@ Preços e valores: consultar código de pricing e contrato vigente — não est�
 
 - Portal do Parceiro V2 — Central de Relacionamento do Parceiro
   — **Estado:** direção de produto aprovada, especificada em
-  `docs/PARTNER_PORTAL_V2_SPEC.md` — **nenhuma tranche implementada ainda**.
-  Aprovação registrada em `docs/DECISIONS.md` ("Programa de Parceiros —
-  direção de produto do Portal V2", 2026-09-18). Evolui o Portal do
-  Parceiro existente (não reescreve) para incluir navegação em seções,
-  fluxo de indicação pelo próprio portal, extrato de comissão enriquecido,
-  uma classificação própria de "parceiro contador" (distinta de
-  `Partner.tier`) e uma visão read-only de status de SST da carteira,
-  condicionada a um modelo de autorização explícita do cliente. **Presença
-  aqui não autoriza implementação de nenhuma tranche** — cada uma segue o
-  protocolo de sessão/branch do `CLAUDE.md`, estritamente sequencial (uma
-  tranche por tarefa/branch, sem paralelismo entre elas):
-  - PPV2-01 — correção da liberação automática de comissão (hoje
-    `Commission` nunca transiciona de `em_carencia` para `liberada` sem
-    intervenção manual — pré-requisito de toda a frente);
-  - PPV2-02 — fundação visual/UX (navegação em seções, Visão Geral);
+  `docs/PARTNER_PORTAL_V2_SPEC.md`. Aprovação registrada em
+  `docs/DECISIONS.md` ("Programa de Parceiros — direção de produto do
+  Portal V2", 2026-09-18). Evolui o Portal do Parceiro existente (não
+  reescreve) para incluir navegação em seções, fluxo de indicação pelo
+  próprio portal, extrato de comissão enriquecido, uma classificação
+  própria de "parceiro contador" (distinta de `Partner.tier`) e uma visão
+  read-only de status de SST da carteira, condicionada a um modelo de
+  autorização explícita do cliente. **PPV2-01 é a única tranche
+  concluída até o momento** — mergeada e validada em Produção (ver
+  abaixo); nenhuma outra tranche foi implementada. **Presença aqui não
+  autoriza implementação de nenhuma tranche além da já concluída** — cada
+  uma segue o protocolo de sessão/branch do `CLAUDE.md`, estritamente
+  sequencial (uma tranche por tarefa/branch, sem paralelismo entre elas):
+  - PPV2-01 — correção da liberação automática de comissão — **CONCLUÍDA,
+    mergeada pela PR #51 (merge commit
+    `dc70e7a2801a2183cca8fab25fe9274d3b4d0f8e`) e validada em Produção em
+    2026-09-19** (ver `docs/PROJECT_STATE.md`). Historicamente, era um
+    bug: `Commission` nunca transicionava de `em_carencia` para `liberada`
+    sem intervenção manual — corrigido por um cron diário
+    (`/api/cron/release-commissions`, schedule `0 7 * * *`);
+  - PPV2-02 — fundação visual/UX (navegação em seções, Visão Geral) —
+    próxima tranche da sequência, **NÃO INICIADA**;
   - PPV2-03 — indicar cliente pelo portal;
   - PPV2-04 — comissões enriquecidas (calendário de liberação, explicação
     de status);

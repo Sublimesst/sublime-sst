@@ -505,6 +505,32 @@ Commits exclusivamente documentais não alteram o estado funcional validado.
 
 ---
 
+## PPV2-01 — liberação automática de comissões
+
+**Estado: CONCLUÍDA E VALIDADA EM PRODUÇÃO**
+
+- **PR:** #51
+- **Merge commit:** `dc70e7a2801a2183cca8fab25fe9274d3b4d0f8e`
+- **Validação em Produção:** 2026-09-19
+- Cron diário `/api/cron/release-commissions`, schedule `0 7 * * *`
+  (`vercel.json`)
+- Regra: `status='em_carencia' AND liberadaEm <= now` → `status='liberada'`
+  (`src/lib/commissionRelease.ts`, `updateMany` atômico, idempotente)
+- Autenticação fail-closed via `verifyCronSecret` — `GET
+  /api/cron/release-commissions` sem `Authorization` validado em Produção
+  com HTTP 401
+- Nenhuma execução autenticada do cron foi realizada durante a validação
+- Nenhuma chamada à Asaas e nenhuma operação financeira ocorreram
+- Nomenclatura user-visible: status técnico `liberada` → "Apta para
+  pagamento"; `liberadaEm` → "Fim da carência" (ver `docs/DECISIONS.md`,
+  "Terminologia de status de comissão")
+
+**Próxima tranche da frente:** PPV2-02 — Fundação visual/UX (ver
+`docs/PARTNER_PORTAL_V2_SPEC.md`, Seção 24)
+**Status:** NÃO INICIADA
+
+---
+
 ## Em andamento (não validado em Produção)
 
 - Contrato e PDF — **prioridade P0**:
